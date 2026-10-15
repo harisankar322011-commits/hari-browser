@@ -5,7 +5,9 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 
 import java.io.ByteArrayInputStream;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
@@ -13,7 +15,7 @@ import java.util.Set;
 public final class PrivacyGuard {
     private PrivacyGuard() {}
 
-    private static final Set<String> TRACKER_HOSTS = Set.of(
+    private static final Set<String> TRACKER_HOSTS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "doubleclick.net",
             "googlesyndication.com",
             "googleadservices.com",
@@ -44,7 +46,7 @@ public final class PrivacyGuard {
             "analytics.twitter.com",
             "snap.licdn.com",
             "ads.linkedin.com"
-    );
+    )));
 
     public static boolean isHttpUrl(String value) {
         try {
