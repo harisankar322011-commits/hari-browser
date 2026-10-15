@@ -1,0 +1,97 @@
+package com.haricalcx.haribrowser;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.security.keystore.KeyGenParameterSpec;
+import android.security.keystore.KeyProperties;
+import android.util.Base64;
+
+import java.nio.ByteBuffer;
+import java.security.KeyStore;
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.GCMParameterSpec;
+
+/**
+ * Small encrypted preference store for bookmarks and opt-in history.
+ * AES keys live in Android Keystore; only authenticated ciphertext is persisted.
+ */
+public final class SecureStore {
+    private static final String KEY_ALIAS = "HariBrowser.DataKey.v1";
+    private static final String PREFS_NAME = "hari_encrypted_data";
+    private final SharedPreferences preferences;
+
+    public SecureStore(Context context) {
+        preferences = context.getApplicationContext()
+                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    }
+
+    public synchronized void put(String name, String value) {
+        try {
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey());
+            byte[] iv = cipher.getIV();
+            byte[] encrypted = cipher.doFinal(value.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            ByteBuffer buffer = ByteBuffer.allocate(4 + iv.length + encrypted.length);
+            buffer.putInt(iv.length);
+            buffer.put(iv);
+            buffer.put(encrypted);
+            preferences.edit().putString(name, Base64.encodeToString(buffer.array(), Base64.NO_WRAP)).apply();
+        } catch (Exception ignored) {
+            // Fail closed: do not fall back to storing sensitive data in plaintext.
+            preferences.edit().remove(name).apply();
+        }
+    }
+
+    public synchronized String get(String name, String fallback) {
+        String encoded = preferences.getString(name, null);
+        if (encoded == null) return fallback;
+        try {
+            byte[] all = Base64.decode(encoded, Base64.NO_WRAP);
+            ByteBuffer buffer = ByteBuffer.wrap(all);
+            int ivLength = buffer.getInt();
+            if (ivLength < 12 || ivLength > 16 || buffer.remaining() <= ivLength) {
+                throw new IllegalArgumentException("Invalid encrypted record");
+            }
+            byte[] iv = new byte[ivLength];
+            buffer.get(iv);
+            byte[] encrypted = new byte[buffer.remaining()];
+            buffer.get(encrypted);
+            Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), new GCMParameterSpec(128, iv));
+            byte[] plain = cipher.doFinal(encrypted);
+            return new String(plain, java.nio.charset.StandardCharsets.UTF_8);
+        } catch (Exception ignored) {
+            // Corrupt or unauthenticated records are never returned.
+            preferences.edit().remove(name).apply();
+            return fallback;
+        }
+    }
+
+    public synchronized void remove(String name) {
+        preferences.edit().remove(name).apply();
+    }
+
+    private SecretKey getOrCreateKey() throws Exception {
+        KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
+        keyStore.load(null);
+        if (keyStore.containsAlias(KEY_ALIAS)) {
+            KeyStore.Entry entry = keyStore.getEntry(KEY_ALIAS, null);
+            if (entry instanceof KeyStore.SecretKeyEntry) {
+                return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
+            }
+        }
+        KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+        KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .setRandomizedEncryptionRequired(true)
+                .build();
+        generator.init(spec);
+        return generator.generateKey();
+    }
+}
