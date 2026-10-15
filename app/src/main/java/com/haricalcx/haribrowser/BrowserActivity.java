@@ -107,9 +107,9 @@ public class BrowserActivity extends Activity {
         WebView.setWebContentsDebuggingEnabled(false);
 
         Window window = getWindow();
-        window.setStatusBarColor(Color.rgb(11, 18, 32));
-        window.setNavigationBarColor(Color.rgb(11, 18, 32));
-        window.setNavigationBarDividerColor(Color.rgb(11, 18, 32));
+        window.setStatusBarColor(BG);
+        window.setNavigationBarColor(BG);
+        window.setNavigationBarDividerColor(BG);
 
         buildInterface();
 
@@ -126,6 +126,12 @@ public class BrowserActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
         root.setPadding(dp(12), dp(8), dp(12), dp(6));
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            int topInset = Math.max(0, insets.getSystemWindowInsetTop());
+            int bottomInset = Math.max(0, insets.getSystemWindowInsetBottom());
+            root.setPadding(dp(12), dp(8) + topInset, dp(12), dp(6) + bottomInset);
+            return insets;
+        });
 
         LinearLayout header = new LinearLayout(this);
         header.setGravity(Gravity.CENTER_VERTICAL);
@@ -241,6 +247,7 @@ public class BrowserActivity extends Activity {
         root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(54)));
 
         setContentView(root);
+        root.requestApplyInsets();
         refreshModeBadge();
     }
 
