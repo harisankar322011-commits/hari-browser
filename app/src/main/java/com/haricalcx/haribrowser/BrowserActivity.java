@@ -663,6 +663,8 @@ public class BrowserActivity extends Activity {
         list.setPadding(dp(14), dp(8), dp(14), dp(8));
         ScrollView scroll = new ScrollView(this);
         scroll.addView(list);
+        AlertDialog listDialog = new AlertDialog.Builder(this)
+                .setTitle(title).setView(scroll).setPositiveButton("Done", null).create();
         if (array.length() == 0) {
             TextView empty = new TextView(this);
             empty.setText(bookmarks ? "No bookmarks saved yet." : "No browsing history available.");
@@ -696,12 +698,16 @@ public class BrowserActivity extends Activity {
             actions.setGravity(Gravity.END);
             TextView open = pillButton("Open", true, () -> {
                 navigateTo(currentTab(), url);
+                listDialog.dismiss();
             });
             LinearLayout.LayoutParams openLp = new LinearLayout.LayoutParams(dp(74), dp(36));
             openLp.setMargins(dp(4), dp(6), 0, 0);
             actions.addView(open, openLp);
             if (bookmarks) {
-                TextView remove = pillButton("Remove", false, () -> removeBookmark(url));
+                TextView remove = pillButton("Remove", false, () -> {
+                    listDialog.dismiss();
+                    removeBookmark(url);
+                });
                 LinearLayout.LayoutParams removeLp = new LinearLayout.LayoutParams(dp(82), dp(36));
                 removeLp.setMargins(dp(6), dp(6), 0, 0);
                 actions.addView(remove, removeLp);
@@ -711,8 +717,7 @@ public class BrowserActivity extends Activity {
             rowLp.setMargins(0, dp(5), 0, dp(5));
             list.addView(row, rowLp);
         }
-        new AlertDialog.Builder(this).setTitle(title).setView(scroll)
-                .setPositiveButton("Done", null).show();
+        listDialog.show();
     }
 
     private void removeBookmark(String url) {
