@@ -39,7 +39,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.SslError;
+import android.net.http.SslError;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
