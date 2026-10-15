@@ -808,7 +808,9 @@ public class BrowserActivity extends Activity {
                 "Clear cookies, cache, site storage and history",
                 "Open downloads",
                 "Bookmarks",
-                "About privacy and security"
+                "About privacy and security",
+                "Open private browsing",
+                "Share current page"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -866,6 +868,12 @@ public class BrowserActivity extends Activity {
                             break;
                         case 9:
                             showPrivacyInfo();
+                            break;
+                        case 10:
+                            startActivity(new Intent(BrowserActivity.this, PrivateActivity.class));
+                            break;
+                        case 11:
+                            sharePage();
                             break;
                     }
                 })
