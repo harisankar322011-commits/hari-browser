@@ -435,11 +435,43 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
 .notefoot{font-size:10px;color:var(--muted);margin-top:8px}
 @media(min-width:650px){.shell{padding:24px 22px 40px}.hero{padding:30px}.grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tool-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.directory-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.actions{grid-template-columns:repeat(3,minmax(0,1fr))}.bookmark-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:365px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}.search select{max-width:86px;min-width:75px}.search .primary{padding:10px}.shell{padding-left:11px;padding-right:11px}}
+/* Responsive header and compact-phone layout */
+.brand-copy{flex:1 1 auto;min-width:0}
+@media(max-width:480px){
+ .shell{padding:12px 12px 26px}
+ .top{flex-wrap:wrap;gap:9px;margin:2px 0 15px}
+ .logo{width:42px;height:42px;flex-basis:42px;border-radius:14px}
+ .brand-copy{flex:1 1 calc(100% - 55px);min-width:0}
+ .brand{font-size:13px;letter-spacing:1.15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .brand-sub{font-size:10px;line-height:1.35}
+ .language-select{order:3;flex:1 1 115px;width:auto;max-width:none;margin:0;padding:9px 10px;font-size:12px}
+ .mode{order:4;margin-left:auto;font-size:9px;padding:8px 9px;max-width:calc(100% - 130px)}
+ .hero{padding:21px 15px 16px;border-radius:20px}
+ h1{font-size:clamp(25px,7.3vw,34px);letter-spacing:-.8px}
+ .search{gap:5px;padding:5px}
+ .search select{width:92px;min-width:0;max-width:92px;font-size:11px;padding:8px 0}
+ .search input{font-size:14px;padding:10px 2px}
+ .primary{padding:10px 11px;font-size:12px}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .tile{gap:8px;padding:10px;min-height:68px}
+ .icon{width:32px;height:32px;flex-basis:32px;font-size:16px}
+ .panelnav{gap:5px}
+ .navbtn{padding:9px 2px;font-size:10px}
+ .actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .creator-head>div:nth-child(2){min-width:0;flex:1}
+ .creator-head p{overflow-wrap:anywhere}
+}
+@media(max-width:365px){
+ .shell{padding-left:11px;padding-right:11px}
+ .search select{width:78px;max-width:78px}
+ .search .primary{padding:9px 8px}
+ .mode{max-width:calc(100% - 110px);font-size:8px;padding:7px}
+}
 </style>
 </head>
 <body>
 <div class="shell">
-<header class="top"><div class="logo" aria-label="Hari Browser logo"><svg viewBox="0 0 48 48" role="img" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="white" stroke-width="2.2" opacity=".82"/><ellipse cx="24" cy="24" rx="8" ry="18" fill="none" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M7 24h34" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M17 14v20M17 24h14M31 14v20" stroke="white" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="min-width:0"><div class="brand">HARI BROWSER</div><div class="brand-sub">Your web, your space — designed for privacy</div></div><select class="language-select" id="languageSelect" aria-label="Home page language"><option value="en">English</option><option value="ml">മലയാളം</option><option value="hi">हिन्दी</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="kn">ಕನ್ನಡ</option><option value="es">Español</option><option value="fr">Français</option><option value="ar">العربية</option></select><span class="mode">__MODE__</span></header>
+<header class="top"><div class="logo" aria-label="Hari Browser logo"><svg viewBox="0 0 48 48" role="img" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="white" stroke-width="2.2" opacity=".82"/><ellipse cx="24" cy="24" rx="8" ry="18" fill="none" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M7 24h34" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M17 14v20M17 24h14M31 14v20" stroke="white" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="brand-copy" style="min-width:0"><div class="brand">HARI BROWSER</div><div class="brand-sub">Your web, your space — designed for privacy</div></div><select class="language-select" id="languageSelect" aria-label="Home page language"><option value="en">English</option><option value="ml">മലയാളം</option><option value="hi">हिन्दी</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="kn">ಕನ್ನಡ</option><option value="es">Español</option><option value="fr">Français</option><option value="ar">العربية</option></select><span class="mode">__MODE__</span></header>
 <section class="hero">
   <div class="eyebrow">A BETTER START</div>
   <h1 id="heroTitle">Search. Learn.<br><span class="accent">Make it happen.</span></h1>
