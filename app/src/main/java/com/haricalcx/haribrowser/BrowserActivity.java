@@ -1,6 +1,5 @@
 package com.haricalcx.haribrowser;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
@@ -49,6 +48,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.ComponentActivity;
+import androidx.activity.OnBackPressedCallback;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -59,7 +61,7 @@ import java.util.ArrayList;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class BrowserActivity extends Activity {
+public class BrowserActivity extends ComponentActivity {
     private static final int BG = Color.rgb(244, 247, 250);
     private static final int CARD = Color.WHITE;
     private static final int INK = Color.rgb(17, 29, 48);
@@ -105,6 +107,31 @@ public class BrowserActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         privateMode = this instanceof PrivateActivity;
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                WebView web = currentWebView();
+                if (web != null && web.canGoBack()) {
+                    web.goBack();
+                    return;
+                }
+                if (privateMode) {
+                    finish();
+                    return;
+                }
+                Tab tab = currentTab();
+                if (tab != null && !tab.home) {
+                    loadHome(tab);
+                    return;
+                }
+                setEnabled(false);
+                try {
+                    getOnBackPressedDispatcher().onBackPressed();
+                } finally {
+                    setEnabled(true);
+                }
+            }
+        });
         settings = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
         secureStore = new SecureStore(this);
         defaultUserAgent = WebSettings.getDefaultUserAgent(this);
@@ -1122,20 +1149,6 @@ public class BrowserActivity extends Activity {
             if (manager != null) manager.hideSoftInputFromWindow(addressBar.getWindowToken(), 0);
             addressBar.clearFocus();
         } catch (Exception ignored) {}
-    }
-
-    @Override
-    public void onBackPressed() {
-        WebView web = currentWebView();
-        if (web != null && web.canGoBack()) {
-            web.goBack();
-        } else if (privateMode) {
-            finish();
-        } else {
-            Tab tab = currentTab();
-            if (tab != null && !tab.home) loadHome(tab);
-            else super.onBackPressed();
-        }
     }
 
     @Override
