@@ -89,6 +89,8 @@ public class BrowserActivity extends Activity {
     private boolean desktopEnabled() { return settings.getBoolean("desktop_mode", false); }
     private boolean cookiesEnabled() { return settings.getBoolean("cookies_enabled", true); }
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
+    private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
+    private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
 
     private static final class Tab {
         WebView webView;
@@ -366,6 +368,7 @@ public class BrowserActivity extends Activity {
         WebView webView = tab.webView;
         WebSettings web = webView.getSettings();
         web.setJavaScriptEnabled(javascriptEnabled());
+        web.setBlockNetworkImage(!imagesEnabled());
         web.setDomStorageEnabled(true);
         web.setAllowFileAccess(false);
         web.setAllowContentAccess(false);
@@ -542,7 +545,13 @@ public class BrowserActivity extends Activity {
         }
         if (input.contains(" ") || !input.contains(".")) {
             try {
-                return "https://duckduckgo.com/?q=" + URLEncoder.encode(input, "UTF-8");
+                String encoded = URLEncoder.encode(input, "UTF-8");
+                String engine = searchEngine();
+                if ("Startpage".equals(engine)) return "https://www.startpage.com/sp/search?query=" + encoded;
+                if ("Brave Search".equals(engine)) return "https://search.brave.com/search?q=" + encoded;
+                if ("Google".equals(engine)) return "https://www.google.com/search?q=" + encoded;
+                if ("Bing".equals(engine)) return "https://www.bing.com/search?q=" + encoded;
+                return "https://duckduckgo.com/?q=" + encoded;
             } catch (Exception e) {
                 return "https://duckduckgo.com/";
             }
@@ -831,7 +840,9 @@ public class BrowserActivity extends Activity {
                 "Bookmarks",
                 "About privacy and security",
                 "Open private browsing",
-                "Share current page"
+                "Share current page",
+                "Choose search engine",
+                (imagesEnabled() ? "✓ " : "○ ") + "Load website images"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -896,9 +907,35 @@ public class BrowserActivity extends Activity {
                         case 11:
                             sharePage();
                             break;
+                        case 12:
+                            showSearchEnginePicker();
+                            break;
+                        case 13:
+                            settings.edit().putBoolean("images_enabled", !imagesEnabled()).apply();
+                            reconfigureWebViews();
+                            showToast("Website images " + (imagesEnabled() ? "enabled." : "blocked."));
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void showSearchEnginePicker() {
+        String[] engines = {"DuckDuckGo", "Startpage", "Brave Search", "Google", "Bing"};
+        String current = searchEngine();
+        int selected = 0;
+        for (int i = 0; i < engines.length; i++) {
+            if (engines[i].equals(current)) selected = i;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Default search engine")
+                .setSingleChoiceItems(engines, selected, (dialog, which) -> {
+                    settings.edit().putString("search_engine", engines[which]).apply();
+                    dialog.dismiss();
+                    showToast("Search engine set to " + engines[which] + ".");
+                })
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -907,6 +944,7 @@ public class BrowserActivity extends Activity {
             if (tab.webView != null) {
                 WebSettings web = tab.webView.getSettings();
                 web.setJavaScriptEnabled(javascriptEnabled());
+                web.setBlockNetworkImage(!imagesEnabled());
                 web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
                 CookieManager.getInstance().setAcceptThirdPartyCookies(tab.webView, false);
             }
