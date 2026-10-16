@@ -1107,7 +1107,7 @@ public class BrowserActivity extends Activity {
 
     private void refreshModeBadge() {
         if (modeBadge == null) return;
-        modeBadge.setText(privateMode ? "PRIVATE" : "PRIVATE BY DESIGN");
+        modeBadge.setText(privateMode ? "PRIVATE SESSION" : "STANDARD MODE");
         modeBadge.setTextColor(privateMode ? Color.WHITE : Color.rgb(0, 105, 94));
         modeBadge.setBackground(round(privateMode ? Color.rgb(94, 70, 174) : Color.rgb(216, 247, 241), 0, 12));
     }
