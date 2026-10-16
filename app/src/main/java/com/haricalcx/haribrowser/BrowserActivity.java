@@ -90,6 +90,7 @@ public class BrowserActivity extends Activity {
     private boolean cookiesEnabled() { return settings.getBoolean("cookies_enabled", true); }
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
+    private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
 
     private static final class Tab {
@@ -153,7 +154,7 @@ public class BrowserActivity extends Activity {
         header.addView(brand, new LinearLayout.LayoutParams(0, dp(44), 1));
 
         modeBadge = new TextView(this);
-        modeBadge.setText(privateMode ? "PRIVATE" : "PRIVATE BY DESIGN");
+        modeBadge.setText(privateMode ? "PRIVATE SESSION" : "STANDARD MODE");
         modeBadge.setTextSize(10);
         modeBadge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         modeBadge.setTextColor(privateMode ? Color.WHITE : Color.rgb(0, 105, 94));
@@ -369,6 +370,7 @@ public class BrowserActivity extends Activity {
         WebSettings web = webView.getSettings();
         web.setJavaScriptEnabled(javascriptEnabled());
         web.setBlockNetworkImage(!imagesEnabled());
+        web.setTextZoom(textZoom());
         web.setDomStorageEnabled(true);
         web.setAllowFileAccess(false);
         web.setAllowContentAccess(false);
@@ -842,7 +844,8 @@ public class BrowserActivity extends Activity {
                 "Open private browsing",
                 "Share current page",
                 "Choose search engine",
-                (imagesEnabled() ? "✓ " : "○ ") + "Load website images"
+                (imagesEnabled() ? "✓ " : "○ ") + "Load website images",
+                "Choose page text size"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -915,9 +918,32 @@ public class BrowserActivity extends Activity {
                             reconfigureWebViews();
                             showToast("Website images " + (imagesEnabled() ? "enabled." : "blocked."));
                             break;
+                        case 14:
+                            showTextZoomPicker();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void showTextZoomPicker() {
+        final int[] values = {80, 90, 100, 110, 125, 150};
+        String[] labels = {"Small — 80%", "Compact — 90%", "Normal — 100%", "Large — 110%", "Larger — 125%", "Extra large — 150%"};
+        int selected = 2;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] == textZoom()) selected = i;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Page text size")
+                .setSingleChoiceItems(labels, selected, (dialog, which) -> {
+                    settings.edit().putInt("text_zoom", values[which]).apply();
+                    for (Tab tab : tabs) {
+                        if (tab.webView != null) tab.webView.getSettings().setTextZoom(values[which]);
+                    }
+                    dialog.dismiss();
+                })
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
@@ -945,6 +971,7 @@ public class BrowserActivity extends Activity {
                 WebSettings web = tab.webView.getSettings();
                 web.setJavaScriptEnabled(javascriptEnabled());
                 web.setBlockNetworkImage(!imagesEnabled());
+                web.setTextZoom(textZoom());
                 web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
                 CookieManager.getInstance().setAcceptThirdPartyCookies(tab.webView, false);
             }
@@ -1138,6 +1165,11 @@ public class BrowserActivity extends Activity {
                 try {
                     tab.webView.stopLoading();
                     tab.webView.clearHistory();
+                    if (privateMode) {
+                        tab.webView.clearCache(true);
+                        tab.webView.clearFormData();
+                        tab.webView.clearSslPreferences();
+                    }
                     tab.webView.removeAllViews();
                     tab.webView.destroy();
                 } catch (Exception ignored) {}
