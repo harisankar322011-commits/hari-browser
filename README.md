@@ -16,13 +16,15 @@ A privacy-first Android browser built with the Android System WebView.
 - Full-screen web video, web file-upload picker support, stop-loading control, and site security details.
 - Generate a QR code locally for the current URL, or use Android's print screen to save a page as PDF.
 - Explicit bookmark export/import, with HTTPS-only validation and encrypted on-device storage.
-- Light/dark browser theme including the local start page.
-- Redesigned responsive home dashboard with local date/time greeting, dedicated Home / Tools / Explore / Privacy panels, fast search-engine switching, quick links, encrypted bookmark tiles, and one-tap browser actions.
+- Refreshed light/dark visual themes with a coordinated indigo-blue palette and five browser accent colours: Ocean, Violet, Mint, Sunset and Rose.
+- Responsive home dashboard with Home / Tools / Explore / Privacy panels, quick links, encrypted bookmark tiles, and one-tap browser actions.
+- Home dashboard interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic, including persistent language choice in Settings and the home-page selector.
+- A Hari projects showcase on the start page linking to Hari CalcX, MentalX, VisualX, ChemX, BioQuest, MapX, HariPedia, Hari Editor, Hari GameX, the browser source code and the @inspiring_creatives_minds Instagram account.
 - Searchable directory of 286 curated HTTPS destinations across 16 categories; destinations are not preloaded and open only when tapped.
 - A curated start-page toolbox presents 8 everyday tools first (calculator, unit converter, local notes, password generator, text toolkit, JSON formatter, URL encoder, and word counter); all 34 built-in local tools remain available through “Show all tools”.
 - Add up to 40 personal HTTPS shortcuts stored in the browser profile on the device; no account or external image/script assets are required by the start page.
 - Home page's native shortcut actions open tabs, bookmarks, history, downloads, private browsing, find-in-page, QR, print/PDF, share and security controls without adding a JavaScript bridge to external websites. Internal action URLs are accepted only while the local home page is active, so remote pages cannot forge them.
-- Custom adaptive Hari Browser icon, including a themed monochrome icon on supported Android versions.
+- Redesigned Hari Browser app icon and in-app globe/H logo, including a monochrome adaptive icon on supported Android versions.
 - Website image loading can be disabled to save data and reduce third-party requests.
 - Private browsing screens are hidden from screenshots and recent-app previews where Android honors secure-window flags.
 - Emergency-clear action clears current tabs, cookies, cache, site storage and saved history while retaining bookmarks and explicit downloads.
