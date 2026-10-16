@@ -420,6 +420,33 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
 .action{display:block;text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:13px;padding:12px;font-size:12px;font-weight:800}
 .action span{display:block;color:var(--muted);font-size:10px;font-weight:500;margin-top:4px;line-height:1.35}
 .localnote{font-size:11px;color:var(--muted);text-align:center;margin-top:22px;padding:0 10px}
+/* Bundled offline wallpaper gallery */
+.wallpaper-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:18px 2px 10px}
+.wallpaper-heading h2{margin:0;font-size:16px}
+.wallpaper-heading p{margin:2px 0 0;color:var(--muted);font-size:11px}
+.wallpaper-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.wallpaper-choice{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:13px;padding:5px;background:var(--surface);color:var(--text);font-size:11px;font-weight:800;text-align:left}
+.wallpaper-choice[aria-pressed="true"]{border:2px solid var(--accent);padding:4px;box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}
+.wallpaper-preview{display:block;height:52px;border-radius:8px;margin-bottom:5px;background-size:cover;background-position:center}
+.wallpaper-name{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3px 2px}
+.preview-aurora{background:linear-gradient(145deg,#051230,#0a4e6f 54%,#79399d)}
+.preview-ocean{background:linear-gradient(145deg,#031631,#00658b 52%,#23cabb)}
+.preview-sunset{background:linear-gradient(145deg,#30143e,#bf3f4d 52%,#ffaa4a)}
+.preview-forest{background:linear-gradient(145deg,#071e1f,#125b48 54%,#97a451)}
+.preview-midnight{background:linear-gradient(145deg,#060b1f,#192554 53%,#46388f)}
+.preview-violet{background:linear-gradient(145deg,#180f3a,#602c93 52%,#dc57aa)}
+.preview-desert{background:linear-gradient(145deg,#3d2323,#ab5c3a 54%,#f4be70)}
+.preview-coral{background:linear-gradient(145deg,#2a1230,#9c2f61 54%,#ff7d7e)}
+.preview-glacier{background:linear-gradient(145deg,#08233f,#2d79a2 52%,#afdeec)}
+.preview-nebula{background:linear-gradient(145deg,#0c0922,#4d2b78 51%,#1e7b9a)}
+.preview-original{background:linear-gradient(135deg,#ffffff,#edf0ff)}
+body.wallpaper-on:not(.dark){background-image:linear-gradient(135deg,rgba(246,247,255,.68),rgba(237,240,255,.78)),var(--user-wallpaper);background-size:cover;background-position:center;background-attachment:fixed}
+body.wallpaper-on.dark{background-image:linear-gradient(135deg,rgba(8,12,25,.69),rgba(18,25,45,.76)),var(--user-wallpaper);background-size:cover;background-position:center;background-attachment:fixed}
+body.wallpaper-on .hero{background-image:linear-gradient(130deg,rgba(255,255,255,.78),rgba(237,240,255,.84)),var(--user-wallpaper);background-size:cover;background-position:center}
+body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,45,.82),rgba(26,37,64,.87)),var(--user-wallpaper);background-size:cover;background-position:center}
+@media(max-width:480px){.wallpaper-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wallpaper-preview{height:58px}.wallpaper-heading h2{font-size:15px}}
+@media(min-width:481px) and (max-width:649px){.wallpaper-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 .modal{position:fixed;inset:0;background:#050a14b8;z-index:50;display:none;align-items:center;justify-content:center;padding:12px}
 .modal.open{display:flex}
 .modalbox{width:min(100%,650px);max-height:88vh;overflow:auto;border:1px solid var(--line);border-radius:20px;background:var(--bg);padding:17px;box-shadow:0 25px 90px #0006}
@@ -469,7 +496,7 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
 }
 </style>
 </head>
-<body>
+<body class="__DARKCLASS__">
 <div class="shell">
 <header class="top"><div class="logo" aria-label="Hari Browser logo"><svg viewBox="0 0 48 48" role="img" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="white" stroke-width="2.2" opacity=".82"/><ellipse cx="24" cy="24" rx="8" ry="18" fill="none" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M7 24h34" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M17 14v20M17 24h14M31 14v20" stroke="white" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="brand-copy" style="min-width:0"><div class="brand">HARI BROWSER</div><div class="brand-sub">Your web, your space — designed for privacy</div></div><select class="language-select" id="languageSelect" aria-label="Home page language"><option value="en">English</option><option value="ml">മലയാളം</option><option value="hi">हिन्दी</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="kn">ಕನ್ನಡ</option><option value="es">Español</option><option value="fr">Français</option><option value="ar">العربية</option></select><span class="mode">__MODE__</span></header>
 <section class="hero">
@@ -515,6 +542,20 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
   </div>
   <div class="section-head"><h2>Personal shortcuts</h2><span class="mini">Saved only on this device</span></div>
   <div class="card"><h3>Make the start page yours</h3><p>Add your favourite HTTPS websites. Shortcuts stay on this device in the browser profile; no account is needed.</p><div class="row" style="margin-top:10px"><button class="btn" id="addShortcut2">＋ Add a shortcut</button><button class="btn" id="resetShortcuts">Reset local shortcuts</button></div></div>
+  <div class="wallpaper-heading"><div><h2>Offline wallpapers</h2><p>Ten built-in backgrounds. No downloads or external image requests.</p></div><span class="mini">On-device</span></div>
+  <div class="wallpaper-grid" id="wallpaperGrid" aria-label="Choose a home screen wallpaper">
+    <button type="button" class="wallpaper-choice" data-wallpaper="none" aria-pressed="true"><span class="wallpaper-preview preview-original"></span><span class="wallpaper-name">Original</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="aurora" aria-pressed="false"><span class="wallpaper-preview preview-aurora"></span><span class="wallpaper-name">Aurora</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="ocean" aria-pressed="false"><span class="wallpaper-preview preview-ocean"></span><span class="wallpaper-name">Ocean</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="sunset" aria-pressed="false"><span class="wallpaper-preview preview-sunset"></span><span class="wallpaper-name">Sunset</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="forest" aria-pressed="false"><span class="wallpaper-preview preview-forest"></span><span class="wallpaper-name">Forest</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="midnight" aria-pressed="false"><span class="wallpaper-preview preview-midnight"></span><span class="wallpaper-name">Midnight</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="violet" aria-pressed="false"><span class="wallpaper-preview preview-violet"></span><span class="wallpaper-name">Violet</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="desert" aria-pressed="false"><span class="wallpaper-preview preview-desert"></span><span class="wallpaper-name">Desert</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="coral" aria-pressed="false"><span class="wallpaper-preview preview-coral"></span><span class="wallpaper-name">Coral</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="glacier" aria-pressed="false"><span class="wallpaper-preview preview-glacier"></span><span class="wallpaper-name">Glacier</span></button>
+    <button type="button" class="wallpaper-choice" data-wallpaper="nebula" aria-pressed="false"><span class="wallpaper-preview preview-nebula"></span><span class="wallpaper-name">Nebula</span></button>
+  </div>
   <div class="card creator-card">
     <div class="creator-head"><div class="creator-mark">H</div><div><h3 id="creatorHeading">Explore more from Hari</h3><p id="creatorBlurb">Useful tools and creative projects made by Hari. Open a project only when you choose it.</p></div></div>
     <h3 id="creatorSitesTitle" style="margin:15px 0 8px">Hari websites</h3>
@@ -572,6 +613,7 @@ const BOOKMARKS = __BOOKMARKS__;
 const ENGINE_SETTING = __ENGINE__;
 const PRIVATE_MODE = __PRIVATE__;
 const LANGUAGE_SETTING = __LANGUAGE__;
+const WALLPAPER_NAMES = ['aurora','ocean','sunset','forest','midnight','violet','desert','coral','glacier','nebula'];
 const FEATURED = [
  {name:'Wikipedia',url:'https://www.wikipedia.org/',icon:'📚',desc:'Quick reference'},
  {name:'YouTube',url:'https://www.youtube.com/',icon:'▶️',desc:'Video and learning'},
@@ -681,6 +723,37 @@ $('languageSelect').value = currentLanguage;
 $('languageSelect').addEventListener('change',()=>{window.location.href=internalAction('language-'+$('languageSelect').value);});
 applyLanguage(currentLanguage);
 setDateTime();
+function applyWallpaper(name, saveChoice) {
+ const choice = name === 'none' || WALLPAPER_NAMES.includes(name) ? name : 'none';
+ if (choice === 'none') {
+   document.body.classList.remove('wallpaper-on');
+   document.documentElement.style.removeProperty('--user-wallpaper');
+ } else {
+   const localUrl = 'https://hari-browser-home.invalid/assets/wallpapers/' + choice + '.jpg';
+   document.documentElement.style.setProperty('--user-wallpaper', 'url("' + localUrl + '")');
+   document.body.classList.add('wallpaper-on');
+ }
+ document.querySelectorAll('.wallpaper-choice').forEach(button => {
+   button.setAttribute('aria-pressed', String(button.dataset.wallpaper === choice));
+ });
+ if (saveChoice && !PRIVATE_MODE) {
+   try {
+     if (choice === 'none') localStorage.removeItem('hari.home.wallpaper.v1');
+     else localStorage.setItem('hari.home.wallpaper.v1', choice);
+   } catch (e) {}
+ }
+}
+document.querySelectorAll('.wallpaper-choice').forEach(button => {
+ button.addEventListener('click', () => applyWallpaper(button.dataset.wallpaper, true));
+});
+let startingWallpaper = 'none';
+if (!PRIVATE_MODE) {
+ try {
+   const saved = localStorage.getItem('hari.home.wallpaper.v1');
+   if (WALLPAPER_NAMES.includes(saved)) startingWallpaper = saved;
+ } catch (e) {}
+}
+applyWallpaper(startingWallpaper, false);
 $('engine').value=['DuckDuckGo','Startpage','Brave Search','Google','Bing'].includes(ENGINE_SETTING)?ENGINE_SETTING:'DuckDuckGo';
 $('searchForm').addEventListener('submit',e=>{e.preventDefault();const q=$('query').value.trim();if(!q)return;let url;if(/^https:\\/\\//i.test(q)){url=q;}else if(/^http:\\/\\//i.test(q)){alert('Insecure HTTP is blocked. Use HTTPS.');return;}else if(/^[a-z][a-z0-9+.-]*:/i.test(q)&&!/^https?:/i.test(q)){alert('Only HTTPS web addresses are allowed.');return;}else if(!q.includes(' ')&&q.includes('.')&&/^[\\w.-]+(?::\\d+)?(?:\\/.*)?$/.test(q)){url='https://'+q;}else{const engine=$('engine').value;const encoded=encodeURIComponent(q);url=engine==='Startpage'?'https://www.startpage.com/sp/search?query='+encoded:engine==='Brave Search'?'https://search.brave.com/search?q='+encoded:engine==='Google'?'https://www.google.com/search?q='+encoded:engine==='Bing'?'https://www.bing.com/search?q='+encoded:'https://duckduckgo.com/?q='+encoded;}if(validHttps(url))window.location.href=url;else alert('Please enter a valid HTTPS website address.');});
 // The native browser preference seeds the selected provider on every home load.
@@ -838,6 +911,7 @@ $('directoryCount').textContent=DIRECTORY.length+' sites';
         """);
     String html = htmlBuilder.toString();
         return html.replace("THEME", theme)
+                .replace("__DARKCLASS__", dark ? "dark" : "")
                 .replace("__MODE__", mode)
                 .replace("__DIRECTORY__", linksJson)
                 .replace("__BOOKMARKS__", savedJson)
