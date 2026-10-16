@@ -3,7 +3,8 @@
 A privacy-first Android browser built with the Android System WebView.
 
 ## Features
-- DuckDuckGo search by default; URL-or-search address bar.
+- DuckDuckGo search by default; selectable DuckDuckGo, Startpage, Brave Search, Google, or Bing search providers.
+- URL-or-search address bar.
 - HTTPS-only navigation and blocked cleartext traffic.
 - Android WebView Safe Browsing, certificate-error cancellation, and strict mixed-content policy.
 - Local ad/tracker host blocking (best-effort, not a complete filter list).
@@ -11,8 +12,11 @@ A privacy-first Android browser built with the Android System WebView.
 - Separate private-browsing process/profile on Android 9+, with best-effort data cleanup on exit.
 - Encrypted bookmarks and optional encrypted history using an Android Keystore AES-GCM key.
 - Tabs, bookmarks, optional history, page sharing, in-page find, desktop mode, reader-style mode, and downloads.
+- Custom adaptive Hari Browser icon, including a themed monochrome icon on supported Android versions.
+- Website image loading can be disabled to save data and reduce third-party requests.
+- Private browsing screens are hidden from screenshots and recent-app previews where Android honors secure-window flags.
 - No app analytics, advertising SDKs, remote blocklist downloads, or account requirement.
-- GitHub Actions builds a debug APK and publishes it as a workflow artifact.
+- GitHub Actions builds a debug APK and publishes it as a workflow artifact using the open-source MIT cache provider.
 
 ## Build the APK
 1. Open the **Actions** tab of this repository.
