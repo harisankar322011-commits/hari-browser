@@ -537,7 +537,7 @@ const TOOLS = [
  {id:'lorem',name:'Lorem ipsum generator',icon:'📄',desc:'Create offline placeholder text'},
  {id:'readtime',name:'Reading-time estimator',icon:'📖',desc:'Estimate reading time and count words'},
  {id:'stats',name:'Statistics calculator',icon:'📊',desc:'Mean, median, mode, range and standard deviation'},
- {id:'gradient',name:'Gradient designer',icon:'🌈',desc:'Preview and copy CSS linear gradients'},
+ {id:'gradient',name:'Gradient designer',icon:'🌈',desc:'Preview CSS linear gradients'},
  {id:'csvjson',name:'CSV to JSON',icon:'🗃️',desc:'Convert comma-separated data into JSON'},
  {id:'textdiff',name:'Text comparison',icon:'↔️',desc:'Show added and removed lines between two texts'}
 ];
