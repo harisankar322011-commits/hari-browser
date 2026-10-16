@@ -21,6 +21,7 @@ import android.os.Environment;
 import android.print.PrintAttributes;
 import android.print.PrintManager;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -237,11 +238,15 @@ public class BrowserActivity extends ComponentActivity {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(BG);
-        root.setPadding(dp(12), dp(8), dp(12), dp(6));
+        int widthDp = getResources().getConfiguration().screenWidthDp;
+        boolean compact = widthDp < 380;
+        int horizontalPadding = compact ? 8 : 12;
+        root.setPadding(dp(horizontalPadding), dp(6), dp(horizontalPadding), dp(4));
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             int topInset = Math.max(0, insets.getSystemWindowInsetTop());
             int bottomInset = Math.max(0, insets.getSystemWindowInsetBottom());
-            root.setPadding(dp(12), dp(8) + topInset, dp(12), dp(6) + bottomInset);
+            root.setPadding(dp(horizontalPadding), dp(6) + topInset,
+                    dp(horizontalPadding), dp(4) + bottomInset);
             return insets;
         });
 
@@ -252,16 +257,24 @@ public class BrowserActivity extends ComponentActivity {
         TextView brand = new TextView(this);
         brand.setText("◈  HARI BROWSER");
         brand.setTextColor(INK);
-        brand.setTextSize(17);
+        brand.setTextSize(widthDp < 380 ? 13 : (widthDp < 480 ? 15 : 17));
         brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        brand.setSingleLine(true);
+        brand.setEllipsize(TextUtils.TruncateAt.END);
+        brand.setIncludeFontPadding(false);
         header.addView(brand, new LinearLayout.LayoutParams(0, dp(44), 1));
 
         modeBadge = new TextView(this);
-        modeBadge.setText(privateMode ? "PRIVATE SESSION" : "STANDARD MODE");
-        modeBadge.setTextSize(10);
+        modeBadge.setText(compact
+                ? (privateMode ? "PRIVATE" : "STANDARD")
+                : (privateMode ? "PRIVATE SESSION" : "STANDARD MODE"));
+        modeBadge.setSingleLine(true);
+        modeBadge.setMaxWidth(dp(compact ? 98 : 160));
+        modeBadge.setTextSize(compact ? 8 : (widthDp < 480 ? 9 : 10));
         modeBadge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         modeBadge.setTextColor(privateMode ? Color.WHITE : Color.rgb(0, 105, 94));
-        modeBadge.setPadding(dp(9), dp(7), dp(9), dp(7));
+        modeBadge.setPadding(dp(compact ? 6 : 9), dp(compact ? 6 : 7),
+                dp(compact ? 6 : 9), dp(compact ? 6 : 7));
         modeBadge.setBackground(round(privateMode ? Color.rgb(94, 70, 174) : Color.rgb(216, 247, 241), 0, 12));
         header.addView(modeBadge);
         root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
@@ -276,8 +289,10 @@ public class BrowserActivity extends ComponentActivity {
         addressBar.setSingleLine(true);
         addressBar.setTextColor(INK);
         addressBar.setHintTextColor(MUTED);
-        addressBar.setHint("Search privately or enter an HTTPS address");
-        addressBar.setTextSize(15);
+        addressBar.setHint(compact
+                ? "Search or enter an HTTPS address"
+                : "Search privately or enter an HTTPS address");
+        addressBar.setTextSize(compact ? 13 : (widthDp < 480 ? 14 : 15));
         addressBar.setSelectAllOnFocus(false);
         addressBar.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         addressBar.setImeOptions(EditorInfo.IME_ACTION_GO);
@@ -368,7 +383,7 @@ public class BrowserActivity extends ComponentActivity {
         addBottomButton(bottom, "◷\nHistory", () -> showHistory());
         addBottomButton(bottom, "⌕\nFind", () -> showFindDialog());
         addBottomButton(bottom, "⚙\nSettings", () -> showSettings());
-        root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(54)));
+        root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(compact ? 58 : 54)));
 
         setContentView(root);
         root.requestApplyInsets();
@@ -386,7 +401,9 @@ public class BrowserActivity extends ComponentActivity {
         view.setContentDescription(description);
         view.setGravity(Gravity.CENTER);
         view.setTextColor(INK);
-        view.setTextSize(text.length() > 2 ? 12 : 20);
+        int widthDp = getResources().getConfiguration().screenWidthDp;
+        view.setTextSize(text.length() > 2 ? (widthDp < 380 ? 10 : 12)
+                : (widthDp < 380 ? 17 : 20));
         view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         view.setBackground(round(Color.WHITE, OUTLINE, 11));
         view.setPadding(dp(2), dp(2), dp(2), dp(2));
@@ -410,13 +427,16 @@ public class BrowserActivity extends ComponentActivity {
         TextView view = new TextView(this);
         view.setText(text);
         view.setGravity(Gravity.CENTER);
-        view.setTextSize(11);
+        view.setTextSize(getResources().getConfiguration().screenWidthDp < 380 ? 9 : 10);
         view.setLineSpacing(0f, 0.9f);
+        view.setIncludeFontPadding(false);
+        view.setMaxLines(2);
         view.setTextColor(INK);
         view.setPadding(dp(1), dp(2), dp(1), dp(2));
         view.setBackground(round(Color.WHITE, OUTLINE, 12));
         view.setOnClickListener(v -> action.run());
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(48), 1);
+        int itemHeight = getResources().getConfiguration().screenWidthDp < 380 ? 52 : 48;
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(itemHeight), 1);
         lp.setMargins(dp(2), 0, dp(2), 0);
         parent.addView(view, lp);
     }
