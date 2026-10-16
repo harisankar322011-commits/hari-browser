@@ -8,6 +8,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
 import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
@@ -22,6 +23,7 @@ import android.print.PrintAttributes;
 import android.print.PrintManager;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.View;
@@ -69,6 +71,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -234,6 +238,16 @@ public class BrowserActivity extends ComponentActivity {
         }
     }
 
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Keep each WebView alive while rebuilding the UI for the new orientation.
+        if (fullscreenCustomView != null || tabs.isEmpty()) return;
+        int selected = Math.max(0, Math.min(currentTabIndex, tabs.size() - 1));
+        buildInterface();
+        selectTab(selected);
+    }
+
     private void buildInterface() {
         root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -262,15 +276,21 @@ public class BrowserActivity extends ComponentActivity {
         brand.setSingleLine(true);
         brand.setEllipsize(TextUtils.TruncateAt.END);
         brand.setIncludeFontPadding(false);
+        brand.setAutoSizeTextTypeUniformWithConfiguration(12, 17, 1, TypedValue.COMPLEX_UNIT_SP);
         header.addView(brand, new LinearLayout.LayoutParams(0, dp(44), 1));
 
         modeBadge = new TextView(this);
-        modeBadge.setText(compact
-                ? (privateMode ? "PRIVATE" : "STANDARD")
-                : (privateMode ? "PRIVATE SESSION" : "STANDARD MODE"));
+        // A compact visible label avoids clipping at large system font sizes and in landscape.
+        modeBadge.setText(privateMode ? "PRIVATE" : "STANDARD");
+        modeBadge.setContentDescription(privateMode ? "Private browsing session" : "Standard browsing mode");
         modeBadge.setSingleLine(true);
-        modeBadge.setMaxWidth(dp(compact ? 98 : 160));
-        modeBadge.setTextSize(compact ? 8 : (widthDp < 480 ? 9 : 10));
+        modeBadge.setMaxLines(1);
+        modeBadge.setEllipsize(TextUtils.TruncateAt.END);
+        modeBadge.setGravity(Gravity.CENTER);
+        modeBadge.setIncludeFontPadding(false);
+        modeBadge.setMaxWidth(dp(compact ? 88 : 136));
+        modeBadge.setTextSize(10);
+        modeBadge.setAutoSizeTextTypeUniformWithConfiguration(8, 10, 1, TypedValue.COMPLEX_UNIT_SP);
         modeBadge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         modeBadge.setTextColor(privateMode ? Color.WHITE : Color.rgb(0, 105, 94));
         modeBadge.setPadding(dp(compact ? 6 : 9), dp(compact ? 6 : 7),
@@ -289,10 +309,10 @@ public class BrowserActivity extends ComponentActivity {
         addressBar.setSingleLine(true);
         addressBar.setTextColor(INK);
         addressBar.setHintTextColor(MUTED);
-        addressBar.setHint(compact
-                ? "Search or enter an HTTPS address"
-                : "Search privately or enter an HTTPS address");
+        addressBar.setHint("Search or enter an HTTPS address");
+        addressBar.setContentDescription("Search privately or enter a secure HTTPS website address");
         addressBar.setTextSize(compact ? 13 : (widthDp < 480 ? 14 : 15));
+        addressBar.setAutoSizeTextTypeUniformWithConfiguration(11, 15, 1, TypedValue.COMPLEX_UNIT_SP);
         addressBar.setSelectAllOnFocus(false);
         addressBar.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         addressBar.setImeOptions(EditorInfo.IME_ACTION_GO);
@@ -416,6 +436,7 @@ public class BrowserActivity extends ComponentActivity {
         view.setText(text);
         view.setGravity(Gravity.CENTER);
         view.setTextSize(13);
+        view.setAutoSizeTextTypeUniformWithConfiguration(10, 13, 1, TypedValue.COMPLEX_UNIT_SP);
         view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         view.setTextColor(primary ? Color.WHITE : INK);
         view.setBackground(round(primary ? ACCENT : CARD, primary ? ACCENT : OUTLINE, 12));
@@ -427,7 +448,8 @@ public class BrowserActivity extends ComponentActivity {
         TextView view = new TextView(this);
         view.setText(text);
         view.setGravity(Gravity.CENTER);
-        view.setTextSize(getResources().getConfiguration().screenWidthDp < 380 ? 9 : 10);
+        view.setTextSize(10);
+        view.setAutoSizeTextTypeUniformWithConfiguration(8, 10, 1, TypedValue.COMPLEX_UNIT_SP);
         view.setLineSpacing(0f, 0.9f);
         view.setIncludeFontPadding(false);
         view.setMaxLines(2);
@@ -533,6 +555,26 @@ public class BrowserActivity extends ComponentActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Uri requestUri = request.getUrl();
+                String requestPath = requestUri.getPath();
+                if ("https".equalsIgnoreCase(requestUri.getScheme())
+                        && "hari-browser-home.invalid".equalsIgnoreCase(requestUri.getHost())
+                        && requestPath != null
+                        && requestPath.startsWith("/assets/wallpapers/")) {
+                    String fileName = requestPath.substring("/assets/wallpapers/".length());
+                    if (!isBundledWallpaperName(fileName)) {
+                        return new WebResourceResponse("text/plain", "UTF-8",
+                                new ByteArrayInputStream(new byte[0]));
+                    }
+                    try {
+                        // Serve only explicitly allowed packaged JPEGs; never expose arbitrary files.
+                        return new WebResourceResponse("image/jpeg", null,
+                                getAssets().open("wallpapers/" + fileName));
+                    } catch (IOException ignored) {
+                        return new WebResourceResponse("text/plain", "UTF-8",
+                                new ByteArrayInputStream(new byte[0]));
+                    }
+                }
                 return PrivacyGuard.intercept(request, trackersEnabled());
             }
 
@@ -1910,9 +1952,28 @@ public class BrowserActivity extends ComponentActivity {
         }
     }
 
+    private static boolean isBundledWallpaperName(String fileName) {
+        switch (fileName) {
+            case "aurora.jpg":
+            case "ocean.jpg":
+            case "sunset.jpg":
+            case "forest.jpg":
+            case "midnight.jpg":
+            case "violet.jpg":
+            case "desert.jpg":
+            case "coral.jpg":
+            case "glacier.jpg":
+            case "nebula.jpg":
+                return true;
+            default:
+                return false;
+        }
+    }
+
     private void refreshModeBadge() {
         if (modeBadge == null) return;
-        modeBadge.setText(privateMode ? "PRIVATE SESSION" : "STANDARD MODE");
+        modeBadge.setText(privateMode ? "PRIVATE" : "STANDARD");
+        modeBadge.setContentDescription(privateMode ? "Private browsing session" : "Standard browsing mode");
         modeBadge.setTextColor(privateMode ? Color.WHITE : Color.rgb(0, 105, 94));
         modeBadge.setBackground(round(privateMode ? Color.rgb(94, 70, 174) : Color.rgb(216, 247, 241), 0, 12));
     }
