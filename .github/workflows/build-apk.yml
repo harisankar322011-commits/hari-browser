@@ -39,9 +39,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
         with:
           gradle-version: '9.6.0'
+          # Avoid the separately licensed enhanced cache; use the open-source MIT cache provider.
+          cache-provider: basic
 
       - name: Build and run lint
-        run: gradle --no-daemon assembleDebug lint
+        run: gradle --no-daemon clean assembleDebug lint
 
       - name: Publish debug APK
         uses: actions/upload-artifact@v7
