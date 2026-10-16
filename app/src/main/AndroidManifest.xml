@@ -19,6 +19,7 @@
 
         <activity
             android:name=".PrivateActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
             android:process=":private"
             android:label="Hari Browser Private" />
