@@ -10,6 +10,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ActivityInfo;
 import android.content.res.ColorStateList;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -17,6 +18,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.print.PrintAttributes;
+import android.print.PrintManager;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -44,6 +47,7 @@ import android.webkit.WebViewClient;
 import android.net.http.SslError;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.ScrollView;
@@ -54,6 +58,11 @@ import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+
+import com.google.zxing.BarcodeFormat;
+import com.google.zxing.WriterException;
+import com.google.zxing.common.BitMatrix;
+import com.google.zxing.qrcode.QRCodeWriter;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -745,16 +754,23 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private String homeHtml() {
+        String pageBg = darkTheme() ? "#0d121e" : "#f4f7fa";
+        String cardBg = darkTheme() ? "#182030" : "#ffffff";
+        String textColor = darkTheme() ? "#ebf1fa" : "#111d30";
+        String mutedColor = darkTheme() ? "#9dabbf" : "#667488";
+        String borderColor = darkTheme() ? "#313e52" : "#dee5ed";
+        String badgeBg = darkTheme() ? "#16433f" : "#d8f7f1";
+        String badgeText = darkTheme() ? "#8ff4e4" : "#00695e";
         return "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>" +
                 "<meta charset='utf-8'><title>Hari Browser</title><style>" +
-                "*{box-sizing:border-box}body{margin:0;background:#f4f7fa;color:#111d30;font-family:Arial,sans-serif}" +
-                ".wrap{max-width:760px;margin:0 auto;padding:32px 18px 26px}.logo{font-size:13px;letter-spacing:2px;color:#168d80;font-weight:800}" +
-                "h1{font-size:34px;line-height:1.12;margin:12px 0 10px}p{color:#667488;line-height:1.65}" +
-                ".badge{display:inline-block;background:#d8f7f1;color:#00695e;border-radius:18px;padding:7px 11px;font-size:12px;font-weight:bold}" +
+                "*{box-sizing:border-box}body{margin:0;background:" + pageBg + ";color:" + textColor + ";font-family:Arial,sans-serif}" +
+                ".wrap{max-width:760px;margin:0 auto;padding:32px 18px 26px}.logo{font-size:13px;letter-spacing:2px;color:#16b8a6;font-weight:800}" +
+                "h1{font-size:34px;line-height:1.12;margin:12px 0 10px}p{color:" + mutedColor + ";line-height:1.65}" +
+                ".badge{display:inline-block;background:" + badgeBg + ";color:" + badgeText + ";border-radius:18px;padding:7px 11px;font-size:12px;font-weight:bold}" +
                 ".grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:22px}" +
-                "a.tile{display:block;text-decoration:none;background:#fff;border:1px solid #dee5ed;border-radius:16px;padding:16px;color:#111d30;font-weight:bold;min-height:78px}" +
-                "a.tile span{display:block;font-size:12px;color:#667488;font-weight:normal;margin-top:5px;line-height:1.4}" +
-                ".note{font-size:12px;background:#fff;border:1px solid #dee5ed;border-radius:14px;padding:14px;margin-top:22px}" +
+                "a.tile{display:block;text-decoration:none;background:" + cardBg + ";border:1px solid " + borderColor + ";border-radius:16px;padding:16px;color:" + textColor + ";font-weight:bold;min-height:78px}" +
+                "a.tile span{display:block;font-size:12px;color:" + mutedColor + ";font-weight:normal;margin-top:5px;line-height:1.4}" +
+                ".note{font-size:12px;background:" + cardBg + ";border:1px solid " + borderColor + ";border-radius:14px;padding:14px;margin-top:22px}" +
                 "</style></head><body><div class='wrap'><div class='logo'>◈ HARI BROWSER</div>" +
                 "<h1>Your web.<br>More private.</h1><p>Search, learn and explore with privacy controls built in.</p>" +
                 "<span class='badge'>HTTPS-only • Local tracker blocking</span>" +
@@ -1014,7 +1030,9 @@ public class BrowserActivity extends ComponentActivity {
                 "Import bookmarks",
                 (darkTheme() ? "✓ " : "○ ") + "Dark browser theme",
                 "Site security details",
-                "Emergency clear browsing data"
+                "Emergency clear browsing data",
+                "Show QR code for current page",
+                "Print / save current page as PDF"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1123,6 +1141,12 @@ public class BrowserActivity extends ComponentActivity {
                         case 25:
                             confirmEmergencyClear();
                             break;
+                        case 26:
+                            showCurrentPageQr();
+                            break;
+                        case 27:
+                            printCurrentPage();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -1165,6 +1189,71 @@ public class BrowserActivity extends ComponentActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void showCurrentPageQr() {
+        Tab tab = currentTab();
+        if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS webpage first.");
+            return;
+        }
+        try {
+            int size = dp(260);
+            BitMatrix matrix = new QRCodeWriter().encode(tab.url, BarcodeFormat.QR_CODE, size, size);
+            Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
+            for (int x = 0; x < size; x++) {
+                for (int y = 0; y < size; y++) {
+                    bitmap.setPixel(x, y, matrix.get(x, y) ? Color.BLACK : Color.WHITE);
+                }
+            }
+            ImageView image = new ImageView(this);
+            image.setImageBitmap(bitmap);
+            image.setAdjustViewBounds(true);
+            image.setPadding(dp(12), dp(12), dp(12), dp(12));
+            LinearLayout box = new LinearLayout(this);
+            box.setOrientation(LinearLayout.VERTICAL);
+            box.setGravity(Gravity.CENTER);
+            TextView host = new TextView(this);
+            host.setText(safeHost(tab.url));
+            host.setTextColor(INK);
+            host.setGravity(Gravity.CENTER);
+            host.setPadding(dp(8), dp(8), dp(8), dp(8));
+            box.addView(image, new LinearLayout.LayoutParams(dp(284), dp(284)));
+            box.addView(host, new LinearLayout.LayoutParams(-1, -2));
+            new AlertDialog.Builder(this).setTitle("Scan to open this page").setView(box)
+                    .setPositiveButton("Done", null)
+                    .setNeutralButton("Copy link", (d, w) -> copyCurrentUrl())
+                    .show();
+        } catch (WriterException e) {
+            showToast("Could not generate the QR code.");
+        } catch (Exception e) {
+            showToast("Could not display the QR code.");
+        }
+    }
+
+    private void printCurrentPage() {
+        Tab tab = currentTab();
+        if (tab == null || tab.home || tab.webView == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS webpage before printing.");
+            return;
+        }
+        try {
+            PrintManager printManager = (PrintManager) getSystemService(Context.PRINT_SERVICE);
+            if (printManager == null) {
+                showToast("Android printing is not available on this device.");
+                return;
+            }
+            String title = tab.title == null || tab.title.trim().isEmpty()
+                    ? safeHost(tab.url) : tab.title;
+            String jobName = title.replaceAll("[\\\\/:*?\"<>|]", "_");
+            if (jobName.length() > 70) jobName = jobName.substring(0, 70);
+            printManager.print("Hari Browser - " + jobName,
+                    tab.webView.createPrintDocumentAdapter("Hari Browser - " + jobName),
+                    new PrintAttributes.Builder().setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+                            .setColorMode(PrintAttributes.COLOR_MODE_COLOR).build());
+        } catch (Exception e) {
+            showToast("Could not open Android's print or PDF screen.");
+        }
     }
 
     private void copyCurrentUrl() {
