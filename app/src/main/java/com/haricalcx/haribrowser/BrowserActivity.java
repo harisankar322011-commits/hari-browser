@@ -117,22 +117,32 @@ public class BrowserActivity extends ComponentActivity {
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
+    private String accentName() { return settings.getString("accent_color", "Ocean"); }
+    private int accentColor() {
+        switch (accentName()) {
+            case "Violet": return Color.rgb(124, 58, 237);
+            case "Mint": return Color.rgb(5, 150, 105);
+            case "Sunset": return Color.rgb(234, 88, 12);
+            case "Rose": return Color.rgb(225, 29, 72);
+            default: return Color.rgb(37, 99, 235);
+        }
+    }
 
     private void applyThemePalette() {
         if (darkTheme()) {
-            BG = Color.rgb(13, 18, 30);
-            CARD = Color.rgb(24, 32, 48);
-            INK = Color.rgb(235, 241, 250);
-            MUTED = Color.rgb(157, 171, 191);
-            ACCENT = Color.rgb(22, 184, 166);
-            OUTLINE = Color.rgb(49, 62, 82);
+            BG = Color.rgb(8, 12, 25);
+            CARD = Color.rgb(18, 25, 45);
+            INK = Color.rgb(238, 243, 255);
+            MUTED = Color.rgb(151, 164, 189);
+            ACCENT = accentColor();
+            OUTLINE = Color.rgb(43, 55, 81);
         } else {
-            BG = Color.rgb(244, 247, 250);
+            BG = Color.rgb(246, 247, 255);
             CARD = Color.WHITE;
-            INK = Color.rgb(17, 29, 48);
-            MUTED = Color.rgb(102, 116, 136);
-            ACCENT = Color.rgb(22, 184, 166);
-            OUTLINE = Color.rgb(222, 229, 237);
+            INK = Color.rgb(22, 31, 55);
+            MUTED = Color.rgb(101, 113, 137);
+            ACCENT = accentColor();
+            OUTLINE = Color.rgb(220, 224, 239);
         }
     }
 
@@ -777,7 +787,8 @@ public class BrowserActivity extends ComponentActivity {
 
     private String homeHtml() {
         String bookmarksJson = readArray(KEY_BOOKMARKS).toString();
-        return HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode);
+        return HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode,
+                accentName(), settings.getString("home_language", "en"));
     }
 
     /**
@@ -894,9 +905,29 @@ public class BrowserActivity extends ComponentActivity {
                 importBookmarks();
                 break;
             default:
-                showToast("That browser action is not available.");
+                if (action != null && action.startsWith("language-")) {
+                    setHomeLanguage(action.substring("language-".length()));
+                } else {
+                    showToast("That browser action is not available.");
+                }
                 break;
         }
+    }
+
+    private void setHomeLanguage(String languageCode) {
+        String[] validCodes = {"en", "ml", "hi", "ta", "te", "kn", "es", "fr", "ar"};
+        boolean valid = false;
+        for (String code : validCodes) {
+            if (code.equals(languageCode)) { valid = true; break; }
+        }
+        if (!valid) {
+            showToast("That language is not available.");
+            return;
+        }
+        settings.edit().putString("home_language", languageCode).apply();
+        Tab tab = currentTab();
+        if (tab != null && tab.home) loadHome(tab);
+        showToast("Home page language updated.");
     }
 
     private void addBookmark() {
@@ -1238,7 +1269,9 @@ public class BrowserActivity extends ComponentActivity {
                 "Site security details",
                 "Emergency clear browsing data",
                 "Show QR code for current page",
-                "Print / save current page as PDF"
+                "Print / save current page as PDF",
+                "Choose home page language",
+                "Choose browser accent colour"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1353,10 +1386,51 @@ public class BrowserActivity extends ComponentActivity {
                         case 27:
                             printCurrentPage();
                             break;
+                        case 28:
+                            showHomeLanguagePicker();
+                            break;
+                        case 29:
+                            showAccentPicker();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
                 .show();
+    }
+
+    private void showHomeLanguagePicker() {
+        String[] labels = {"English", "Malayalam (മലയാളം)", "Hindi (हिन्दी)", "Tamil (தமிழ்)",
+                "Telugu (తెలుగు)", "Kannada (ಕನ್ನಡ)", "Spanish (Español)", "French (Français)", "Arabic (العربية)"};
+        String[] codes = {"en", "ml", "hi", "ta", "te", "kn", "es", "fr", "ar"};
+        String current = settings.getString("home_language", "en");
+        int selected = 0;
+        for (int i = 0; i < codes.length; i++) {
+            if (codes[i].equals(current)) { selected = i; break; }
+        }
+        new AlertDialog.Builder(this).setTitle("Home page language")
+                .setSingleChoiceItems(labels, selected, (dialog, which) -> {
+                    setHomeLanguage(codes[which]);
+                    dialog.dismiss();
+                }).setNegativeButton("Cancel", null).show();
+    }
+
+    private void showAccentPicker() {
+        String[] accents = {"Ocean", "Violet", "Mint", "Sunset", "Rose"};
+        int selected = 0;
+        for (int i = 0; i < accents.length; i++) {
+            if (accents[i].equals(accentName())) { selected = i; break; }
+        }
+        new AlertDialog.Builder(this).setTitle("Browser accent colour")
+                .setSingleChoiceItems(accents, selected, (dialog, which) -> {
+                    settings.edit().putString("accent_color", accents[which]).apply();
+                    applyThemePalette();
+                    getWindow().setStatusBarColor(BG);
+                    getWindow().setNavigationBarColor(BG);
+                    Tab tab = currentTab();
+                    if (tab != null && tab.home) loadHome(tab);
+                    showToast("Accent colour updated.");
+                    dialog.dismiss();
+                }).setNegativeButton("Cancel", null).show();
     }
 
     private void showTextZoomPicker() {
