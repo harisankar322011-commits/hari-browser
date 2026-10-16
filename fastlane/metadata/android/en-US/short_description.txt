@@ -1,0 +1,1 @@
+Privacy-focused Android browser with HTTPS-only browsing, tracker blocking and offline tools
