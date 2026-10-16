@@ -301,9 +301,21 @@ final class HomePage {
             """;
 
     static String render(boolean dark, String engine, String bookmarkJson, boolean privateMode) {
+        return render(dark, engine, bookmarkJson, privateMode, "Ocean", "en");
+    }
+
+    static String render(boolean dark, String engine, String bookmarkJson, boolean privateMode,
+                         String accentName, String language) {
+        String accent = "#2563eb";
+        String accentText = "#ffffff";
+        if ("Violet".equals(accentName)) accent = "#7c3aed";
+        else if ("Mint".equals(accentName)) accent = "#059669";
+        else if ("Sunset".equals(accentName)) accent = "#ea580c";
+        else if ("Rose".equals(accentName)) accent = "#e11d48";
         String theme = dark
-                ? "--bg:#0b1020;--surface:#141d2e;--surface2:#1b2940;--text:#edf3ff;--muted:#a0aec4;--line:#2b3a52;--accent:#43d9c5;--accentText:#082c2a;--shadow:0 14px 40px #0003"
-                : "--bg:#f4f7fb;--surface:#ffffff;--surface2:#eef5f8;--text:#16243b;--muted:#66758b;--line:#dfe7ef;--accent:#13b8a6;--accentText:#ffffff;--shadow:0 14px 40px #17304a0d";
+                ? "--bg:#080c19;--surface:#12192d;--surface2:#1a2540;--text:#eef3ff;--muted:#9aa9c5;--line:#2b3751;--shadow:0 18px 52px #0005"
+                : "--bg:#f6f7ff;--surface:#ffffff;--surface2:#edf0ff;--text:#161f37;--muted:#657189;--line:#dce0ef;--shadow:0 18px 52px #25396515";
+        theme += ";--accent:" + accent + ";--accentText:" + accentText;
         JSONArray directory = new JSONArray();
         for (String row : DIRECTORY.strip().split("\\R")) {
             String[] parts = row.split("\\|", 3);
@@ -320,6 +332,7 @@ final class HomePage {
         String savedJson = bookmarkJson == null || bookmarkJson.trim().isEmpty() ? "[]" : forScript(bookmarkJson);
         String selectedEngine = JSONObject.quote(engine == null ? "DuckDuckGo" : engine);
         String mode = privateMode ? "PRIVATE SESSION" : "NORMAL SESSION";
+        String selectedLanguage = JSONObject.quote(language == null ? "en" : language);
 
         String html = """
 <!doctype html>
@@ -340,7 +353,21 @@ button{cursor:pointer}
 a{color:inherit}
 .shell{max-width:1040px;margin:0 auto;padding:18px 15px 30px}
 .top{display:flex;gap:12px;align-items:center;margin:3px 0 20px}
-.logo{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;background:linear-gradient(145deg,#19c8b5,#177e9b);border-radius:15px;color:white;font-size:24px;font-weight:900;box-shadow:var(--shadow)}
+.logo{width:48px;height:48px;flex:0 0 48px;display:grid;place-items:center;background:linear-gradient(145deg,#7c3aed,#2563eb 58%,#06b6d4);border-radius:17px;color:white;box-shadow:0 10px 26px #4f46e544;position:relative;overflow:hidden}
+ .logo:after{content:"";position:absolute;inset:5px;border:1px solid #ffffff66;border-radius:13px;pointer-events:none}
+ .logo svg{width:34px;height:34px;z-index:1;filter:drop-shadow(0 2px 3px #0003)}
+ .language-select{max-width:116px;margin-left:8px;border:1px solid var(--line);border-radius:11px;background:var(--surface);color:var(--text);padding:7px 8px;font-size:11px;font-weight:750}
+ .creator-card{margin-top:18px;background:linear-gradient(135deg,var(--surface),var(--surface2));border-color:var(--line)}
+ .creator-head{display:flex;align-items:flex-start;gap:10px}.creator-mark{width:38px;height:38px;display:grid;place-items:center;flex:0 0 38px;border-radius:13px;background:var(--accent);color:var(--accentText);font-weight:950;font-size:19px}
+ .creator-head h3{margin:0 0 4px;font-size:15px}.creator-head p{margin:0;color:var(--muted);font-size:12px}
+ .project-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+ .project-link{display:flex;align-items:center;gap:9px;min-width:0;border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:10px;text-decoration:none}
+ .project-icon{width:31px;height:31px;flex:0 0 31px;display:grid;place-items:center;border-radius:10px;background:var(--surface2);font-size:16px}
+ .project-link strong{display:block;font-size:11px;line-height:1.25}.project-link small{display:block;font-size:10px;color:var(--muted);margin-top:3px;overflow-wrap:anywhere}
+ .creator-social{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:13px;padding:12px;text-decoration:none;font-weight:850;font-size:12px}
+ .creator-social .social-icon{width:32px;height:32px;display:grid;place-items:center;background:linear-gradient(135deg,#833ab4,#fd1d1d,#fcb045);color:white;border-radius:10px;font-size:18px}
+ .creator-social small{display:block;color:var(--muted);font-size:10px;font-weight:500;margin-top:3px}
+ @media(max-width:365px){.language-select{max-width:90px;padding:7px 5px}.top{gap:8px}.brand{letter-spacing:1px}.mode{padding:6px 7px;font-size:9px}}
 .brand{font-size:14px;font-weight:900;letter-spacing:1.8px}
 .brand-sub{color:var(--muted);font-size:11px;margin-top:1px}
 .mode{margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.5px;background:var(--surface2);border:1px solid var(--line);padding:7px 10px;border-radius:100px;white-space:nowrap}
@@ -411,10 +438,10 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
 </head>
 <body>
 <div class="shell">
-<header class="top"><div class="logo">H</div><div><div class="brand">HARI BROWSER</div><div class="brand-sub">Your web, your space — designed for privacy</div></div><span class="mode">__MODE__</span></header>
+<header class="top"><div class="logo" aria-label="Hari Browser logo"><svg viewBox="0 0 48 48" role="img" aria-hidden="true"><circle cx="24" cy="24" r="18" fill="none" stroke="white" stroke-width="2.2" opacity=".82"/><ellipse cx="24" cy="24" rx="8" ry="18" fill="none" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M7 24h34" stroke="white" stroke-width="1.6" opacity=".7"/><path d="M17 14v20M17 24h14M31 14v20" stroke="white" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div style="min-width:0"><div class="brand">HARI BROWSER</div><div class="brand-sub">Your web, your space — designed for privacy</div></div><select class="language-select" id="languageSelect" aria-label="Home page language"><option value="en">English</option><option value="ml">മലയാളം</option><option value="hi">हिन्दी</option><option value="ta">தமிழ்</option><option value="te">తెలుగు</option><option value="kn">ಕನ್ನಡ</option><option value="es">Español</option><option value="fr">Français</option><option value="ar">العربية</option></select><span class="mode">__MODE__</span></header>
 <section class="hero">
   <div class="eyebrow">A BETTER START</div>
-  <h1>Search. Learn.<br><span class="accent">Make it happen.</span></h1>
+  <h1 id="heroTitle">Search. Learn.<br><span class="accent">Make it happen.</span></h1>
   <p class="sub" id="greeting">A thoughtful home for your web.</p>
   <form id="searchForm" class="search">
     <select id="engine" aria-label="Search engine"><option>DuckDuckGo</option><option>Startpage</option><option>Brave Search</option><option>Google</option><option>Bing</option></select>
@@ -453,6 +480,23 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
   </div>
   <div class="section-head"><h2>Personal shortcuts</h2><span class="mini">Saved only on this device</span></div>
   <div class="card"><h3>Make the start page yours</h3><p>Add your favourite HTTPS websites. Shortcuts stay on this device in the browser profile; no account is needed.</p><div class="row" style="margin-top:10px"><button class="btn" id="addShortcut2">＋ Add a shortcut</button><button class="btn" id="resetShortcuts">Reset local shortcuts</button></div></div>
+  <div class="card creator-card">
+    <div class="creator-head"><div class="creator-mark">H</div><div><h3 id="creatorHeading">Explore more from Hari</h3><p id="creatorBlurb">Useful tools and creative projects made by Hari. Open a project only when you choose it.</p></div></div>
+    <h3 id="creatorSitesTitle" style="margin:15px 0 8px">Hari websites</h3>
+    <div class="project-grid">
+      <a class="project-link" href="https://haricalcx.netlify.app/" rel="noreferrer noopener"><span class="project-icon">∑</span><span><strong>Hari CalcX</strong><small>Calculator and study tools</small></span></a>
+      <a class="project-link" href="https://harimentalx.netlify.app/" rel="noreferrer noopener"><span class="project-icon">✦</span><span><strong>Hari MentalX</strong><small>Mind and wellness project</small></span></a>
+      <a class="project-link" href="https://harivisualx.netlify.app/" rel="noreferrer noopener"><span class="project-icon">◈</span><span><strong>Hari VisualX</strong><small>Visual and creative tools</small></span></a>
+      <a class="project-link" href="https://harichemx.netlify.app/" rel="noreferrer noopener"><span class="project-icon">⚗</span><span><strong>Hari ChemX</strong><small>Chemistry learning</small></span></a>
+      <a class="project-link" href="https://haribioquest.netlify.app/" rel="noreferrer noopener"><span class="project-icon">⌘</span><span><strong>Hari BioQuest</strong><small>Biology exploration</small></span></a>
+      <a class="project-link" href="https://harimapx.netlify.app/" rel="noreferrer noopener"><span class="project-icon">🌍</span><span><strong>Hari MapX</strong><small>Maps and geography</small></span></a>
+      <a class="project-link" href="https://haripedia.netlify.app/" rel="noreferrer noopener"><span class="project-icon">📚</span><span><strong>HariPedia</strong><small>Knowledge and facts</small></span></a>
+      <a class="project-link" href="https://harieditor.netlify.app/" rel="noreferrer noopener"><span class="project-icon">✎</span><span><strong>Hari Editor</strong><small>Writing and editing</small></span></a>
+      <a class="project-link" href="https://harigamex.netlify.app/" rel="noreferrer noopener"><span class="project-icon">🎮</span><span><strong>Hari GameX</strong><small>Games and challenges</small></span></a>
+      <a class="project-link" href="https://github.com/harisankar322011-commits/hari-browser" rel="noreferrer noopener"><span class="project-icon">⌘</span><span><strong>Hari Browser source</strong><small>Open-source Android browser</small></span></a>
+    </div>
+    <a class="creator-social" id="creatorFollow" href="https://www.instagram.com/inspiring_creatives_minds/" rel="noreferrer noopener"><span class="social-icon">◎</span><span>Follow @inspiring_creatives_minds<small>Education, creativity, facts and motivation</small></span></a>
+  </div>
 </section>
 
 <section id="toolsPanel" class="panel">
@@ -492,6 +536,7 @@ const DIRECTORY = __DIRECTORY__;
 const BOOKMARKS = __BOOKMARKS__;
 const ENGINE_SETTING = __ENGINE__;
 const PRIVATE_MODE = __PRIVATE__;
+const LANGUAGE_SETTING = __LANGUAGE__;
 const FEATURED = [
  {name:'Wikipedia',url:'https://www.wikipedia.org/',icon:'📚',desc:'Quick reference'},
  {name:'YouTube',url:'https://www.youtube.com/',icon:'▶️',desc:'Video and learning'},
@@ -702,7 +747,8 @@ $('directoryCount').textContent=DIRECTORY.length+' sites';
                 .replace("__DIRECTORY__", linksJson)
                 .replace("__BOOKMARKS__", savedJson)
                 .replace("__ENGINE__", selectedEngine)
-                .replace("__PRIVATE__", Boolean.toString(privateMode));
+                .replace("__PRIVATE__", Boolean.toString(privateMode))
+                .replace("__LANGUAGE__", selectedLanguage);
     }
 
     private static String forScript(String json) {
