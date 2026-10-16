@@ -1,0 +1,24 @@
+Hari Browser is a privacy-focused Android browser built on Android System WebView.
+
+FEATURES
+• HTTPS-only navigation and cleartext traffic blocked by default.
+• Android WebView Safe Browsing and strict mixed-content handling.
+• Best-effort local ad and tracker host blocking.
+• Third-party cookies disabled by default.
+• Separate private-browsing process/profile with best-effort cleanup.
+• Encrypted bookmarks and optional encrypted browsing history using Android Keystore.
+• Tabs, downloads, page sharing, in-page find, reader-style view and desktop mode.
+• QR-code generation and Android print-to-PDF support.
+• Light and dark themes, five accent colours and offline home-screen wallpapers.
+• Home-screen interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic.
+• Local tools, personal shortcuts and curated website directory.
+• No account requirement, app analytics, advertising SDKs or remote blocklist downloads.
+
+PRIVACY NOTES
+Hari Browser is not a guarantee of anonymity. Websites and your chosen search provider receive the requests needed to serve content. Safe Browsing and WebView are supplied by Android on your device. The built-in tracker blocker is best-effort and cannot block every tracker. Private mode cannot erase downloaded files, screenshots, network/provider logs or every artifact outside the app's control. The browser rejects HTTP pages rather than silently downgrading to an insecure connection, so some websites may not open.
+
+SOURCE CODE
+https://github.com/harisankar322011-commits/hari-browser
+
+LICENSE
+MIT. The ZXing Core dependency is licensed under Apache-2.0.
