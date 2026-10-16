@@ -22,6 +22,7 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
@@ -107,6 +108,11 @@ public class BrowserActivity extends Activity {
         WebView.setWebContentsDebuggingEnabled(false);
 
         Window window = getWindow();
+        if (privateMode) {
+            // Hide page contents from screenshots, screen recording, and app-switcher previews.
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE,
+                    WindowManager.LayoutParams.FLAG_SECURE);
+        }
         window.setStatusBarColor(BG);
         window.setNavigationBarColor(BG);
         window.setNavigationBarDividerColor(BG);
@@ -381,6 +387,9 @@ public class BrowserActivity extends Activity {
 
         webView.setBackgroundColor(Color.WHITE);
         webView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            webView.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
+        }
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
@@ -806,7 +815,7 @@ public class BrowserActivity extends Activity {
             });
         });
         dialog.show();
-        dialog.getWindow().setSoftInputMode(Window.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
+        dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 
     private void showSettings() {
