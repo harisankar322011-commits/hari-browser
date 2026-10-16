@@ -1423,13 +1423,9 @@ public class BrowserActivity extends ComponentActivity {
         new AlertDialog.Builder(this).setTitle("Browser accent colour")
                 .setSingleChoiceItems(accents, selected, (dialog, which) -> {
                     settings.edit().putString("accent_color", accents[which]).apply();
-                    applyThemePalette();
-                    getWindow().setStatusBarColor(BG);
-                    getWindow().setNavigationBarColor(BG);
-                    Tab tab = currentTab();
-                    if (tab != null && tab.home) loadHome(tab);
                     showToast("Accent colour updated.");
                     dialog.dismiss();
+                    recreateWithSavedTabs();
                 }).setNegativeButton("Cancel", null).show();
     }
 
@@ -1687,6 +1683,11 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void toggleThemeAndRecreate() {
+        settings.edit().putBoolean("dark_theme", !darkTheme()).apply();
+        recreateWithSavedTabs();
+    }
+
+    private void recreateWithSavedTabs() {
         ArrayList<String> urls = new ArrayList<>();
         for (Tab tab : tabs) {
             urls.add(tab.home || !PrivacyGuard.isHttpsUrl(tab.url) ? "" : tab.url);
@@ -1694,7 +1695,6 @@ public class BrowserActivity extends ComponentActivity {
         pendingThemeRestoreUrls = urls;
         pendingThemeRestoreIndex = Math.max(0, currentTabIndex);
         pendingThemeRestorePrivateMode = privateMode;
-        settings.edit().putBoolean("dark_theme", !darkTheme()).apply();
         recreate();
     }
 
