@@ -1275,13 +1275,21 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Open an HTTPS webpage first.");
             return;
         }
-        try {
-            String url = "https://translate.google.com/translate?sl=auto&tl=en&u=" +
-                    URLEncoder.encode(tab.url, "UTF-8");
-            addNewTab(url, true);
-        } catch (Exception e) {
-            showToast("Could not prepare the translation link.");
-        }
+        final String pageUrl = tab.url;
+        new AlertDialog.Builder(this)
+                .setTitle("Translate this page?")
+                .setMessage("The current page URL will be sent to Google Translate. Continue only if you are comfortable sharing that address with the translation service.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Continue", (d, w) -> {
+                    try {
+                        String url = "https://translate.google.com/translate?sl=auto&tl=en&u=" +
+                                URLEncoder.encode(pageUrl, "UTF-8");
+                        addNewTab(url, true);
+                    } catch (Exception e) {
+                        showToast("Could not prepare the translation link.");
+                    }
+                })
+                .show();
     }
 
     private void openCurrentExternally() {
@@ -1566,7 +1574,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void sharePage() {
         Tab tab = currentTab();
-        if (tab == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
+        if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
             showToast("Open an HTTPS webpage before sharing.");
             return;
         }
