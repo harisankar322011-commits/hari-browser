@@ -15,8 +15,8 @@ import javax.imageio.stream.ImageOutputStream;
  * the build machine; no desktop graphics APIs are included in the Android APK.
  */
 public final class WallpaperGenerator {
-    private static final int WIDTH = 1920;
-    private static final int HEIGHT = 1200;
+    private static final int WIDTH = 2560;
+    private static final int HEIGHT = 1600;
 
     private static final Scene[] SCENES = new Scene[] {
         new Scene("aurora",  "Aurora",  new int[][]{{5,18,48},{10,78,111},{104,57,157}}, new int[]{61,242,201}, 0.18,0.23, 11L),
@@ -105,7 +105,7 @@ public final class WallpaperGenerator {
                 image.setRGB(x,y,(r<<16)|(g<<8)|b);
             }
         }
-        writeJpeg(image,destination,0.94f);
+        writeJpeg(image,destination,0.98f);
         image.flush();
     }
 
