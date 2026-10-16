@@ -1042,38 +1042,130 @@ public class BrowserActivity extends ComponentActivity {
             addNewTab(null, true);
             return;
         }
-        String[] labels = new String[tabs.size()];
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(14), dp(8), dp(14), dp(6));
+
+        TextView summary = new TextView(this);
+        summary.setText(tabs.size() + (tabs.size() == 1 ? " open tab" : " open tabs")
+                + "  •  Select a card to switch");
+        summary.setTextColor(MUTED);
+        summary.setTextSize(12);
+        summary.setPadding(dp(2), dp(2), dp(2), dp(12));
+        content.addView(summary);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        LinearLayout tabList = new LinearLayout(this);
+        tabList.setOrientation(LinearLayout.VERTICAL);
+
+        final AlertDialog[] dialogHolder = new AlertDialog[1];
         for (int i = 0; i < tabs.size(); i++) {
+            final int tabIndex = i;
             Tab tab = tabs.get(i);
-            String label = tab.title == null || tab.title.trim().isEmpty()
+            String titleText = tab.title == null || tab.title.trim().isEmpty()
                     ? (tab.home ? "New tab" : safeHost(tab.url)) : tab.title;
-            labels[i] = (i == currentTabIndex ? "● " : "") + label;
+            String subtitle = tab.home ? "Hari Browser start page" : safeHost(tab.url);
+
+            LinearLayout card = new LinearLayout(this);
+            card.setOrientation(LinearLayout.HORIZONTAL);
+            card.setGravity(Gravity.CENTER_VERTICAL);
+            card.setPadding(dp(12), dp(10), dp(9), dp(10));
+            card.setMinimumHeight(dp(68));
+            card.setBackground(round(CARD, tabIndex == currentTabIndex ? ACCENT : OUTLINE, 14));
+            card.setClickable(true);
+            card.setFocusable(true);
+
+            LinearLayout labels = new LinearLayout(this);
+            labels.setOrientation(LinearLayout.VERTICAL);
+            labels.setGravity(Gravity.CENTER_VERTICAL);
+            TextView title = new TextView(this);
+            title.setText((tabIndex == currentTabIndex ? "●  " : "") + titleText);
+            title.setTextColor(tabIndex == currentTabIndex ? ACCENT : INK);
+            title.setTextSize(14);
+            title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+            title.setMaxLines(2);
+            title.setEllipsize(android.text.TextUtils.TruncateAt.END);
+
+            TextView host = new TextView(this);
+            host.setText(subtitle);
+            host.setTextColor(MUTED);
+            host.setTextSize(11);
+            host.setSingleLine(true);
+            host.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            host.setPadding(0, dp(3), 0, 0);
+
+            labels.addView(title);
+            labels.addView(host);
+            card.addView(labels, new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView close = new TextView(this);
+            close.setText("×");
+            close.setTextColor(MUTED);
+            close.setTextSize(24);
+            close.setGravity(Gravity.CENTER);
+            close.setContentDescription("Close tab " + titleText);
+            close.setBackground(round(BG, OUTLINE, 11));
+            LinearLayout.LayoutParams closeParams =
+                    new LinearLayout.LayoutParams(dp(42), dp(42));
+            closeParams.leftMargin = dp(8);
+            card.addView(close, closeParams);
+
+            card.setOnClickListener(v -> {
+                if (dialogHolder[0] != null) dialogHolder[0].dismiss();
+                selectTab(tabIndex);
+            });
+            close.setOnClickListener(v -> {
+                if (dialogHolder[0] != null) dialogHolder[0].dismiss();
+                closeTabAt(tabIndex);
+                if (!isFinishing()) showTabSwitcher();
+            });
+
+            LinearLayout.LayoutParams cardParams =
+                    new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT);
+            cardParams.bottomMargin = dp(8);
+            tabList.addView(card, cardParams);
         }
+        scroll.addView(tabList);
+        int scrollHeight = Math.min(420, Math.max(150, tabs.size() * 82));
+        content.addView(scroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(scrollHeight)));
+
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("Tabs (" + tabs.size() + ")")
-                .setItems(labels, (d, which) -> selectTab(which))
-                .setPositiveButton("+ New tab", (d, w) -> addNewTab(null, true))
-                .setNegativeButton("Close current", (d, w) -> closeCurrentTab())
-                .setNeutralButton("Done", null)
+                .setTitle("Your tabs")
+                .setView(content)
+                .setPositiveButton("＋ New tab", (d, which) -> addNewTab(null, true))
+                .setNegativeButton("Done", null)
                 .create();
+        dialogHolder[0] = dialog;
         dialog.show();
     }
 
     private void closeCurrentTab() {
-        if (tabs.isEmpty()) return;
-        Tab old = tabs.get(currentTabIndex);
+        closeTabAt(currentTabIndex);
+    }
+
+    private void closeTabAt(int index) {
+        if (index < 0 || index >= tabs.size()) return;
+        Tab old = tabs.get(index);
         if (!old.home && PrivacyGuard.isHttpsUrl(old.url)) {
             recentlyClosedUrls.add(old.url);
             if (recentlyClosedUrls.size() > 10) recentlyClosedUrls.remove(0);
         }
-        tabs.remove(currentTabIndex);
+        tabs.remove(index);
         destroyTab(old);
         if (tabs.isEmpty()) {
             currentTabIndex = -1;
             addNewTab(null, true);
-        } else {
-            selectTab(Math.min(currentTabIndex, tabs.size() - 1));
+            return;
         }
+        int nextIndex = currentTabIndex;
+        if (index < currentTabIndex) nextIndex--;
+        else if (index == currentTabIndex) nextIndex = Math.min(index, tabs.size() - 1);
+        selectTab(Math.max(0, nextIndex));
     }
 
     private void showFindDialog() {
