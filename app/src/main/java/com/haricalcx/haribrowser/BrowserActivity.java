@@ -3,6 +3,8 @@ package com.haricalcx.haribrowser;
 import android.app.AlertDialog;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -50,6 +52,8 @@ import android.widget.Toast;
 
 import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -62,12 +66,12 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class BrowserActivity extends ComponentActivity {
-    private static final int BG = Color.rgb(244, 247, 250);
-    private static final int CARD = Color.WHITE;
-    private static final int INK = Color.rgb(17, 29, 48);
-    private static final int MUTED = Color.rgb(102, 116, 136);
-    private static final int ACCENT = Color.rgb(22, 184, 166);
-    private static final int OUTLINE = Color.rgb(222, 229, 237);
+    private static int BG = Color.rgb(244, 247, 250);
+    private static int CARD = Color.WHITE;
+    private static int INK = Color.rgb(17, 29, 48);
+    private static int MUTED = Color.rgb(102, 116, 136);
+    private static int ACCENT = Color.rgb(22, 184, 166);
+    private static int OUTLINE = Color.rgb(222, 229, 237);
     private static final String HOME_URL = "https://hari-browser-home.invalid/";
     private static final String KEY_BOOKMARKS = "bookmarks_v1";
     private static final String KEY_HISTORY = "history_v1";
@@ -85,7 +89,17 @@ public class BrowserActivity extends ComponentActivity {
     private final ArrayList<Tab> tabs = new ArrayList<>();
     private int currentTabIndex = -1;
     private String defaultUserAgent;
+    private ActivityResultLauncher<String> fileChooserLauncher;
+    private ValueCallback<Uri[]> fileChooserCallback;
+    private View fullscreenCustomView;
+    private WebChromeClient.CustomViewCallback fullscreenCallback;
+    private int previousSystemUiVisibility;
+    private final ArrayList<String> recentlyClosedUrls = new ArrayList<>();
+    private static ArrayList<String> pendingThemeRestoreUrls;
+    private static int pendingThemeRestoreIndex;
+    private static boolean pendingThemeRestorePrivateMode;
 
+    private boolean darkTheme() { return settings.getBoolean("dark_theme", false); }
     private boolean trackersEnabled() { return settings.getBoolean("block_trackers", true); }
     private boolean javascriptEnabled() { return settings.getBoolean("javascript", true); }
     private boolean desktopEnabled() { return settings.getBoolean("desktop_mode", false); }
@@ -94,6 +108,24 @@ public class BrowserActivity extends ComponentActivity {
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
+
+    private void applyThemePalette() {
+        if (darkTheme()) {
+            BG = Color.rgb(13, 18, 30);
+            CARD = Color.rgb(24, 32, 48);
+            INK = Color.rgb(235, 241, 250);
+            MUTED = Color.rgb(157, 171, 191);
+            ACCENT = Color.rgb(22, 184, 166);
+            OUTLINE = Color.rgb(49, 62, 82);
+        } else {
+            BG = Color.rgb(244, 247, 250);
+            CARD = Color.WHITE;
+            INK = Color.rgb(17, 29, 48);
+            MUTED = Color.rgb(102, 116, 136);
+            ACCENT = Color.rgb(22, 184, 166);
+            OUTLINE = Color.rgb(222, 229, 237);
+        }
+    }
 
     private static final class Tab {
         WebView webView;
@@ -110,6 +142,10 @@ public class BrowserActivity extends ComponentActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
+                if (fullscreenCustomView != null) {
+                    hideFullscreenCustomView();
+                    return;
+                }
                 WebView web = currentWebView();
                 if (web != null && web.canGoBack()) {
                     web.goBack();
@@ -133,6 +169,15 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
+        applyThemePalette();
+        fileChooserLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (fileChooserCallback != null) {
+                        fileChooserCallback.onReceiveValue(uri == null ? null : new Uri[]{uri});
+                        fileChooserCallback = null;
+                    }
+                });
         secureStore = new SecureStore(this);
         defaultUserAgent = WebSettings.getDefaultUserAgent(this);
         WebView.setWebContentsDebuggingEnabled(false);
@@ -146,11 +191,23 @@ public class BrowserActivity extends ComponentActivity {
         window.setStatusBarColor(BG);
         window.setNavigationBarColor(BG);
         window.setNavigationBarDividerColor(BG);
+        window.getDecorView().setSystemUiVisibility(darkTheme() ? 0 :
+                View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
 
         buildInterface();
 
         Intent intent = getIntent();
-        if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
+        if (pendingThemeRestoreUrls != null && pendingThemeRestorePrivateMode == privateMode) {
+            ArrayList<String> restoreUrls = pendingThemeRestoreUrls;
+            int restoreIndex = pendingThemeRestoreIndex;
+            pendingThemeRestoreUrls = null;
+            pendingThemeRestoreIndex = 0;
+            for (String url : restoreUrls) {
+                if (url == null || url.isEmpty()) addNewTab(null, true);
+                else addNewTab(url, true);
+            }
+            if (!tabs.isEmpty()) selectTab(Math.max(0, Math.min(restoreIndex, tabs.size() - 1)));
+        } else if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
             addNewTab(intent.getData().toString(), true);
         } else {
             addNewTab(null, true);
@@ -236,13 +293,23 @@ public class BrowserActivity extends ComponentActivity {
             WebView w = currentWebView();
             if (w != null && w.canGoForward()) w.goForward();
         });
-        addCompactButton(controls, "↻", "Reload", () -> {
+        TextView reloadButton = compactButton("↻", "Reload page (long press to stop)", () -> {
             WebView w = currentWebView();
             if (w != null) {
                 if (currentTab().home) loadHome(currentTab());
                 else w.reload();
             }
         });
+        reloadButton.setOnLongClickListener(v -> {
+            WebView w = currentWebView();
+            if (w != null) {
+                w.stopLoading();
+                progressBar.setVisibility(View.GONE);
+                showToast("Loading stopped.");
+            }
+            return true;
+        });
+        controls.addView(reloadButton, new LinearLayout.LayoutParams(0, dp(38), 1));
         tabButton = compactButton("Tabs 1", "Open tab switcher", () -> showTabSwitcher());
         controls.addView(tabButton, new LinearLayout.LayoutParams(0, dp(38), 1));
         addCompactButton(controls, "□", "New tab", () -> addNewTab(null, true));
@@ -267,6 +334,8 @@ public class BrowserActivity extends ComponentActivity {
         securityStatus.setGravity(Gravity.CENTER_VERTICAL);
         securityStatus.setPadding(dp(3), dp(2), dp(3), dp(2));
         root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(20)));
+        securityStatus.setContentDescription("Tap to view site security information");
+        securityStatus.setOnClickListener(v -> showSiteSecurity());
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.HORIZONTAL);
@@ -538,10 +607,73 @@ public class BrowserActivity extends ComponentActivity {
                 // Camera, microphone, MIDI, and other site permissions are denied by default.
                 request.deny();
             }
+
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                                             FileChooserParams params) {
+                if (fileChooserCallback != null) fileChooserCallback.onReceiveValue(null);
+                fileChooserCallback = callback;
+                String mime = "*/*";
+                try {
+                    String[] accepted = params.getAcceptTypes();
+                    if (accepted != null && accepted.length > 0 && accepted[0] != null &&
+                            !accepted[0].trim().isEmpty()) mime = accepted[0];
+                } catch (Exception ignored) {}
+                try {
+                    fileChooserLauncher.launch(mime);
+                    return true;
+                } catch (Exception e) {
+                    fileChooserCallback = null;
+                    callback.onReceiveValue(null);
+                    showToast("The system file picker could not be opened.");
+                    return true;
+                }
+            }
+
+            @Override
+            public void onShowCustomView(View view, CustomViewCallback callback) {
+                if (fullscreenCustomView != null) {
+                    callback.onCustomViewHidden();
+                    return;
+                }
+                fullscreenCustomView = view;
+                fullscreenCallback = callback;
+                previousSystemUiVisibility = getWindow().getDecorView().getSystemUiVisibility();
+                root.setVisibility(View.GONE);
+                FrameLayout decor = (FrameLayout) getWindow().getDecorView();
+                decor.addView(view, new FrameLayout.LayoutParams(-1, -1));
+                getWindow().getDecorView().setSystemUiVisibility(
+                        View.SYSTEM_UI_FLAG_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY |
+                        View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+                        View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+                        View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            }
+
+            @Override
+            public void onHideCustomView() {
+                hideFullscreenCustomView();
+            }
         });
 
         webView.setDownloadListener((url, userAgent, contentDisposition, mimeType, contentLength) ->
                 requestDownload(url, contentDisposition, mimeType));
+    }
+
+    private void hideFullscreenCustomView() {
+        if (fullscreenCustomView == null) return;
+        try {
+            ViewGroup parent = (ViewGroup) fullscreenCustomView.getParent();
+            if (parent != null) parent.removeView(fullscreenCustomView);
+        } catch (Exception ignored) {}
+        fullscreenCustomView = null;
+        if (fullscreenCallback != null) {
+            try { fullscreenCallback.onCustomViewHidden(); } catch (Exception ignored) {}
+            fullscreenCallback = null;
+        }
+        if (root != null) root.setVisibility(View.VISIBLE);
+        getWindow().getDecorView().setSystemUiVisibility(previousSystemUiVisibility);
     }
 
     private void navigateFromAddressBar() {
@@ -811,14 +943,13 @@ public class BrowserActivity extends ComponentActivity {
 
     private void closeCurrentTab() {
         if (tabs.isEmpty()) return;
-        Tab old = tabs.remove(currentTabIndex);
-        try {
-            if (old.webView.getParent() instanceof ViewGroup) {
-                ((ViewGroup) old.webView.getParent()).removeView(old.webView);
-            }
-            old.webView.stopLoading();
-            old.webView.destroy();
-        } catch (Exception ignored) {}
+        Tab old = tabs.get(currentTabIndex);
+        if (!old.home && PrivacyGuard.isHttpsUrl(old.url)) {
+            recentlyClosedUrls.add(old.url);
+            if (recentlyClosedUrls.size() > 10) recentlyClosedUrls.remove(0);
+        }
+        tabs.remove(currentTabIndex);
+        destroyTab(old);
         if (tabs.isEmpty()) {
             currentTabIndex = -1;
             addNewTab(null, true);
@@ -872,7 +1003,18 @@ public class BrowserActivity extends ComponentActivity {
                 "Share current page",
                 "Choose search engine",
                 (imagesEnabled() ? "✓ " : "○ ") + "Load website images",
-                "Choose page text size"
+                "Choose page text size",
+                "Copy current page address",
+                "Translate current page to English",
+                "Open current page in another app",
+                "Duplicate current tab",
+                "Close other tabs",
+                "Restore last closed tab",
+                "Export bookmarks",
+                "Import bookmarks",
+                (darkTheme() ? "✓ " : "○ ") + "Dark browser theme",
+                "Site security details",
+                "Emergency clear browsing data"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -948,6 +1090,39 @@ public class BrowserActivity extends ComponentActivity {
                         case 14:
                             showTextZoomPicker();
                             break;
+                        case 15:
+                            copyCurrentUrl();
+                            break;
+                        case 16:
+                            translateCurrentPage();
+                            break;
+                        case 17:
+                            openCurrentExternally();
+                            break;
+                        case 18:
+                            duplicateCurrentTab();
+                            break;
+                        case 19:
+                            closeOtherTabs();
+                            break;
+                        case 20:
+                            restoreRecentlyClosedTab();
+                            break;
+                        case 21:
+                            exportBookmarks();
+                            break;
+                        case 22:
+                            importBookmarks();
+                            break;
+                        case 23:
+                            toggleThemeAndRecreate();
+                            break;
+                        case 24:
+                            showSiteSecurity();
+                            break;
+                        case 25:
+                            confirmEmergencyClear();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -990,6 +1165,211 @@ public class BrowserActivity extends ComponentActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void copyCurrentUrl() {
+        Tab tab = currentTab();
+        if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS webpage first.");
+            return;
+        }
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(ClipData.newPlainText("Hari Browser address", tab.url));
+            showToast("Page address copied.");
+        }
+    }
+
+    private void translateCurrentPage() {
+        Tab tab = currentTab();
+        if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS webpage first.");
+            return;
+        }
+        try {
+            String url = "https://translate.google.com/translate?sl=auto&tl=en&u=" +
+                    URLEncoder.encode(tab.url, "UTF-8");
+            addNewTab(url, true);
+        } catch (Exception e) {
+            showToast("Could not prepare the translation link.");
+        }
+    }
+
+    private void openCurrentExternally() {
+        Tab tab = currentTab();
+        if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS webpage first.");
+            return;
+        }
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(tab.url));
+            startActivity(Intent.createChooser(intent, "Open page with"));
+        } catch (ActivityNotFoundException ignored) {
+            showToast("No compatible app is available.");
+        }
+    }
+
+    private void duplicateCurrentTab() {
+        Tab tab = currentTab();
+        if (tab == null) return;
+        if (tab.home) addNewTab(null, true);
+        else if (PrivacyGuard.isHttpsUrl(tab.url)) addNewTab(tab.url, true);
+        else showToast("Only HTTPS pages can be duplicated.");
+    }
+
+    private void closeOtherTabs() {
+        Tab keep = currentTab();
+        if (keep == null) return;
+        for (Tab tab : new ArrayList<>(tabs)) {
+            if (tab != keep) destroyTab(tab);
+        }
+        tabs.clear();
+        tabs.add(keep);
+        currentTabIndex = 0;
+        selectTab(0);
+        showToast("Other tabs closed.");
+    }
+
+    private void restoreRecentlyClosedTab() {
+        if (recentlyClosedUrls.isEmpty()) {
+            showToast("No recently closed tab to restore.");
+            return;
+        }
+        String url = recentlyClosedUrls.remove(recentlyClosedUrls.size() - 1);
+        addNewTab(url, true);
+    }
+
+    private void exportBookmarks() {
+        JSONArray bookmarks = readArray(KEY_BOOKMARKS);
+        if (bookmarks.length() == 0) {
+            showToast("There are no bookmarks to export.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Export bookmarks?")
+                .setMessage("The export contains readable website addresses and titles. Share it only with people you trust. Private browsing data is never included.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Export", (d, w) -> {
+                    Intent share = new Intent(Intent.ACTION_SEND);
+                    share.setType("application/json");
+                    share.putExtra(Intent.EXTRA_SUBJECT, "Hari Browser bookmarks");
+                    share.putExtra(Intent.EXTRA_TEXT, bookmarks.toString(2));
+                    startActivity(Intent.createChooser(share, "Export bookmarks securely"));
+                })
+                .show();
+    }
+
+    private void importBookmarks() {
+        EditText input = new EditText(this);
+        input.setHint("Paste a Hari Browser bookmark JSON export");
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setMinLines(5);
+        input.setMaxLines(12);
+        input.setGravity(Gravity.TOP | Gravity.START);
+        input.setPadding(dp(12), dp(10), dp(12), dp(10));
+        new AlertDialog.Builder(this)
+                .setTitle("Import bookmarks")
+                .setMessage("Only import files/text you trust. Only HTTPS bookmarks are accepted.")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Import", (d, w) -> mergeImportedBookmarks(input.getText().toString()))
+                .show();
+    }
+
+    private void mergeImportedBookmarks(String source) {
+        if (source == null || source.trim().isEmpty() || source.length() > 500000) {
+            showToast("The bookmark export is empty or too large.");
+            return;
+        }
+        try {
+            JSONArray incoming = new JSONArray(source);
+            JSONArray existing = readArray(KEY_BOOKMARKS);
+            JSONArray merged = new JSONArray();
+            java.util.HashSet<String> seen = new java.util.HashSet<>();
+            for (int pass = 0; pass < 2; pass++) {
+                JSONArray list = pass == 0 ? existing : incoming;
+                for (int i = 0; i < list.length() && merged.length() < 500; i++) {
+                    JSONObject item = list.optJSONObject(i);
+                    if (item == null) continue;
+                    String url = item.optString("url", "");
+                    if (!PrivacyGuard.isHttpsUrl(url) || !seen.add(url)) continue;
+                    JSONObject safe = new JSONObject();
+                    String title = item.optString("title", safeHost(url));
+                    if (title.length() > 300) title = title.substring(0, 300);
+                    safe.put("title", title);
+                    safe.put("url", url);
+                    safe.put("time", item.optLong("time", System.currentTimeMillis()));
+                    merged.put(safe);
+                }
+            }
+            secureStore.put(KEY_BOOKMARKS, merged.toString());
+            showToast("Imported bookmark list saved securely (" + merged.length() + " total).");
+        } catch (Exception e) {
+            showToast("Invalid bookmark JSON. Nothing was imported.");
+        }
+    }
+
+    private void toggleThemeAndRecreate() {
+        ArrayList<String> urls = new ArrayList<>();
+        for (Tab tab : tabs) {
+            urls.add(tab.home || !PrivacyGuard.isHttpsUrl(tab.url) ? "" : tab.url);
+        }
+        pendingThemeRestoreUrls = urls;
+        pendingThemeRestoreIndex = Math.max(0, currentTabIndex);
+        pendingThemeRestorePrivateMode = privateMode;
+        settings.edit().putBoolean("dark_theme", !darkTheme()).apply();
+        recreate();
+    }
+
+    private void showSiteSecurity() {
+        Tab tab = currentTab();
+        if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            new AlertDialog.Builder(this).setTitle("Hari Browser security")
+                    .setMessage("HTTPS-only navigation is enabled. Open an HTTPS website to inspect its current protection settings.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        String message = "Website: " + safeHost(tab.url) + "\n\n" +
+                "Connection: HTTPS (certificate errors are rejected)\n" +
+                "Safe Browsing: enabled where provided by Android WebView\n" +
+                "Mixed content: blocked\n" +
+                "Third-party cookies: blocked\n" +
+                "Tracker blocking: " + (trackersEnabled() ? "enabled (local list)" : "disabled") + "\n" +
+                "JavaScript: " + (javascriptEnabled() ? "enabled" : "disabled") + "\n" +
+                "Images: " + (imagesEnabled() ? "enabled" : "blocked") + "\n" +
+                "Browser mode: " + (privateMode ? "private" : "standard") + "\n\n" +
+                "HTTPS protects the connection in transit; it does not prove a website is trustworthy or prevent the site itself from tracking you.";
+        new AlertDialog.Builder(this).setTitle("Site security").setMessage(message)
+                .setPositiveButton("Copy address", (d, w) -> copyCurrentUrl())
+                .setNegativeButton("Close", null).show();
+    }
+
+    private void confirmEmergencyClear() {
+        new AlertDialog.Builder(this)
+                .setTitle("Emergency privacy clear")
+                .setMessage("This will clear cookies, cache, site storage, SSL preferences, current tabs and saved browsing history. Bookmarks and downloaded files will remain.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Clear now", (d, w) -> {
+                    clearBrowsingData();
+                    for (Tab tab : new ArrayList<>(tabs)) destroyTab(tab);
+                    tabs.clear();
+                    currentTabIndex = -1;
+                    addNewTab(null, true);
+                    recentlyClosedUrls.clear();
+                })
+                .show();
+    }
+
+    private void destroyTab(Tab tab) {
+        if (tab == null || tab.webView == null) return;
+        try {
+            if (tab.webView.getParent() instanceof ViewGroup) {
+                ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
+            }
+            tab.webView.stopLoading();
+            tab.webView.removeAllViews();
+            tab.webView.destroy();
+        } catch (Exception ignored) {}
     }
 
     private void reconfigureWebViews() {
@@ -1103,7 +1483,8 @@ public class BrowserActivity extends ComponentActivity {
         }
         Intent share = new Intent(Intent.ACTION_SEND);
         share.setType("text/plain");
-        share.putExtra(Intent.EXTRA_TEXT, tab.url);
+        share.putExtra(Intent.EXTRA_SUBJECT, tab.title == null ? safeHost(tab.url) : tab.title);
+        share.putExtra(Intent.EXTRA_TEXT, (tab.title == null ? "" : tab.title + "\n") + tab.url);
         startActivity(Intent.createChooser(share, "Share page link"));
     }
 
@@ -1173,6 +1554,11 @@ public class BrowserActivity extends ComponentActivity {
                 WebStorage.getInstance().deleteAllData();
             } catch (Exception ignored) {}
         }
+        if (fileChooserCallback != null) {
+            try { fileChooserCallback.onReceiveValue(null); } catch (Exception ignored) {}
+            fileChooserCallback = null;
+        }
+        if (fullscreenCustomView != null) hideFullscreenCustomView();
         for (Tab tab : tabs) {
             if (tab.webView != null) {
                 try {
