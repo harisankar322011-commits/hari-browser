@@ -1,0 +1,1 @@
+Initial release: HTTPS-only browsing, Safe Browsing, local tracker blocking, private sessions, encrypted bookmarks, tabs, downloads, QR/PDF tools, themes, translations and offline wallpapers.
