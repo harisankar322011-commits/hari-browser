@@ -1,3 +1,5 @@
+import javax.tools.ToolProvider
+
 plugins {
     id 'com.android.application'
 }
@@ -40,4 +42,41 @@ android {
 dependencies {
     implementation 'androidx.activity:activity:1.10.1'
     implementation 'com.google.zxing:core:3.5.3'
+}
+
+/*
+ * Bundle real, selectable offline home-screen wallpapers. The generator runs on
+ * the build JVM only; java.awt is not packaged into the Android application.
+ */
+tasks.register('generateOfflineWallpapers') {
+    inputs.file(file('../tools/WallpaperGenerator.java'))
+    outputs.dir(file('src/main/assets/wallpapers'))
+
+    doLast {
+        def sourceFile = file('../tools/WallpaperGenerator.java')
+        def classesDirectory = layout.buildDirectory.dir('wallpaper-generator/classes').get().asFile
+        def outputDirectory = file('src/main/assets/wallpapers')
+        classesDirectory.mkdirs()
+        outputDirectory.mkdirs()
+
+        def compiler = ToolProvider.getSystemJavaCompiler()
+        if (compiler == null) {
+            throw new GradleException('A full JDK is required to generate offline wallpapers.')
+        }
+        def compileResult = compiler.run(null, null, null,
+                '-d', classesDirectory.absolutePath, sourceFile.absolutePath)
+        if (compileResult != 0) {
+            throw new GradleException('Offline wallpaper generator compilation failed.')
+        }
+
+        def javaExecutable = new File(System.getProperty('java.home'), 'bin/java').absolutePath
+        project.exec {
+            commandLine javaExecutable, '-Djava.awt.headless=true', '-cp',
+                    classesDirectory.absolutePath, 'WallpaperGenerator', outputDirectory.absolutePath
+        }
+    }
+}
+
+tasks.named('preBuild').configure {
+    dependsOn(tasks.named('generateOfflineWallpapers'))
 }
