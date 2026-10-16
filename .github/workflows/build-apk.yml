@@ -45,6 +45,18 @@ jobs:
       - name: Build and run lint
         run: gradle --no-daemon clean assembleDebug lint
 
+      - name: Verify APK exceeds 10 MiB
+        shell: bash
+        run: |
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$apk" || { echo "::error::Debug APK was not created."; exit 1; }
+          bytes="$(stat -c '%s' "$apk")"
+          echo "Debug APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
+          if [ "$bytes" -le 10485760 ]; then
+            echo "::error::APK must be larger than 10 MiB; got $bytes bytes."
+            exit 1
+          fi
+
       - name: Publish debug APK
         uses: actions/upload-artifact@v7
         with:
