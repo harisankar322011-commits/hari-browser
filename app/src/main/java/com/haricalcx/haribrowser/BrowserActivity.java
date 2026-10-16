@@ -783,6 +783,9 @@ public class BrowserActivity extends ComponentActivity {
             case "history":
                 showHistory();
                 break;
+            case "bookmarks":
+                showBookmarks();
+                break;
             case "downloads":
                 openDownloads();
                 break;
