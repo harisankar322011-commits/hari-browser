@@ -511,6 +511,16 @@ public class BrowserActivity extends ComponentActivity {
                 String url = request.getUrl().toString();
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
+                if ("https".equalsIgnoreCase(scheme) &&
+                        "hari-browser-home.invalid".equalsIgnoreCase(uri.getHost())) {
+                    String path = uri.getPath();
+                    if (path != null && path.startsWith("/action/")) {
+                        String action = path.substring("/action/".length());
+                        runOnUiThread(() -> handleHomeAction(action));
+                    }
+                    // Never send the synthetic home URL to the public internet.
+                    return true;
+                }
                 if ("http".equalsIgnoreCase(scheme)) {
                     runOnUiThread(() -> showToast("Blocked insecure HTTP. Use an HTTPS version."));
                     return true;
@@ -754,35 +764,124 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private String homeHtml() {
-        String pageBg = darkTheme() ? "#0d121e" : "#f4f7fa";
-        String cardBg = darkTheme() ? "#182030" : "#ffffff";
-        String textColor = darkTheme() ? "#ebf1fa" : "#111d30";
-        String mutedColor = darkTheme() ? "#9dabbf" : "#667488";
-        String borderColor = darkTheme() ? "#313e52" : "#dee5ed";
-        String badgeBg = darkTheme() ? "#16433f" : "#d8f7f1";
-        String badgeText = darkTheme() ? "#8ff4e4" : "#00695e";
-        return "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'>" +
-                "<meta charset='utf-8'><title>Hari Browser</title><style>" +
-                "*{box-sizing:border-box}body{margin:0;background:" + pageBg + ";color:" + textColor + ";font-family:Arial,sans-serif}" +
-                ".wrap{max-width:760px;margin:0 auto;padding:32px 18px 26px}.logo{font-size:13px;letter-spacing:2px;color:#16b8a6;font-weight:800}" +
-                "h1{font-size:34px;line-height:1.12;margin:12px 0 10px}p{color:" + mutedColor + ";line-height:1.65}" +
-                ".badge{display:inline-block;background:" + badgeBg + ";color:" + badgeText + ";border-radius:18px;padding:7px 11px;font-size:12px;font-weight:bold}" +
-                ".grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:22px}" +
-                "a.tile{display:block;text-decoration:none;background:" + cardBg + ";border:1px solid " + borderColor + ";border-radius:16px;padding:16px;color:" + textColor + ";font-weight:bold;min-height:78px}" +
-                "a.tile span{display:block;font-size:12px;color:" + mutedColor + ";font-weight:normal;margin-top:5px;line-height:1.4}" +
-                ".note{font-size:12px;background:" + cardBg + ";border:1px solid " + borderColor + ";border-radius:14px;padding:14px;margin-top:22px}" +
-                "</style></head><body><div class='wrap'><div class='logo'>◈ HARI BROWSER</div>" +
-                "<h1>Your web.<br>More private.</h1><p>Search, learn and explore with privacy controls built in.</p>" +
-                "<span class='badge'>HTTPS-only • Local tracker blocking</span>" +
-                "<div class='grid'>" +
-                "<a class='tile' href='https://duckduckgo.com/'>Search the web<span>DuckDuckGo search</span></a>" +
-                "<a class='tile' href='https://www.wikipedia.org/'>Wikipedia<span>Knowledge and reference</span></a>" +
-                "<a class='tile' href='https://github.com/'>GitHub<span>Code and open source</span></a>" +
-                "<a class='tile' href='https://developer.mozilla.org/'>Web development<span>MDN documentation</span></a>" +
-                "<a class='tile' href='https://www.nasa.gov/'>Space and science<span>NASA</span></a>" +
-                "<a class='tile' href='https://www.bbc.com/news'>News<span>BBC News</span></a>" +
-                "</div><div class='note'><b>Privacy by default</b><p>Browsing history is off by default. Bookmarks are encrypted on this device. Third-party cookies, HTTP pages, file access, and site permission requests are blocked or disabled.</p>" +
-                "<p>Private mode uses a separate browser profile on Android 9+ and clears common site data when closed. It does not hide traffic from websites, your network, or your internet provider.</p></div></div></body></html>";
+        String bookmarksJson = readArray(KEY_BOOKMARKS).toString();
+        return HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode);
+    }
+
+    /**
+     * The home screen uses HTTPS-shaped internal action URLs so untrusted pages never receive a
+     * JavaScript bridge. Only links on the synthetic home origin reach these native actions.
+     */
+    private void handleHomeAction(String action) {
+        switch (action) {
+            case "newtab":
+                addNewTab(null, true);
+                break;
+            case "tabs":
+                showTabSwitcher();
+                break;
+            case "history":
+                showHistory();
+                break;
+            case "downloads":
+                openDownloads();
+                break;
+            case "private":
+                startActivity(new Intent(BrowserActivity.this, PrivateActivity.class));
+                break;
+            case "settings":
+                showSettings();
+                break;
+            case "find":
+                showFindDialog();
+                break;
+            case "bookmark":
+                addBookmark();
+                break;
+            case "qr":
+                showCurrentPageQr();
+                break;
+            case "print":
+                printCurrentPage();
+                break;
+            case "share":
+                sharePage();
+                break;
+            case "security":
+                showSiteSecurity();
+                break;
+            case "clear":
+                confirmClearData();
+                break;
+            case "emergency":
+                confirmEmergencyClear();
+                break;
+            case "privacy":
+                showPrivacyInfo();
+                break;
+            case "reader":
+                if (currentTab() != null && !currentTab().home) {
+                    currentTab().readerMode = !currentTab().readerMode;
+                    if (currentTab().readerMode) applyReaderStyles(currentTab());
+                    else currentTab().webView.reload();
+                } else {
+                    showToast("Open a webpage first.");
+                }
+                break;
+            case "desktop":
+                settings.edit().putBoolean("desktop_mode", !desktopEnabled()).apply();
+                reconfigureWebViews();
+                showToast("Desktop website mode " + (desktopEnabled() ? "enabled." : "disabled."));
+                break;
+            case "images":
+                settings.edit().putBoolean("images_enabled", !imagesEnabled()).apply();
+                reconfigureWebViews();
+                showToast("Website images " + (imagesEnabled() ? "enabled." : "blocked."));
+                break;
+            case "javascript":
+                settings.edit().putBoolean("javascript", !javascriptEnabled()).apply();
+                reconfigureWebViews();
+                showToast("JavaScript " + (javascriptEnabled() ? "enabled." : "disabled."));
+                break;
+            case "cookies":
+                settings.edit().putBoolean("cookies_enabled", !cookiesEnabled()).apply();
+                CookieManager.getInstance().setAcceptCookie(cookiesEnabled());
+                if (!cookiesEnabled()) CookieManager.getInstance().removeAllCookies(null);
+                reconfigureWebViews();
+                showToast("First-party cookies " + (cookiesEnabled() ? "enabled." : "disabled."));
+                break;
+            case "trackers":
+                settings.edit().putBoolean("block_trackers", !trackersEnabled()).apply();
+                showToast("Tracker blocking " + (trackersEnabled() ? "enabled." : "disabled."));
+                break;
+            case "theme":
+                toggleThemeAndRecreate();
+                break;
+            case "translate":
+                translateCurrentPage();
+                break;
+            case "external":
+                openCurrentExternally();
+                break;
+            case "duplicate":
+                duplicateCurrentTab();
+                break;
+            case "closeothers":
+                closeOtherTabs();
+                break;
+            case "restore":
+                restoreRecentlyClosedTab();
+                break;
+            case "export":
+                exportBookmarks();
+                break;
+            case "import":
+                importBookmarks();
+                break;
+            default:
+                showToast("That browser action is not available.");
+                break;
+        }
     }
 
     private void addBookmark() {
