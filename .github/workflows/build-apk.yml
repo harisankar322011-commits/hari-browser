@@ -11,8 +11,9 @@ permissions:
   contents: read
 
 concurrency:
-  group: hari-browser-build-${{ github.ref }}
-  cancel-in-progress: true
+  # Isolate each revision so a stalled older build cannot block the newest APK.
+  group: hari-browser-build-${{ github.ref }}-${{ github.sha }}
+  cancel-in-progress: false
 
 jobs:
   build:
