@@ -1253,7 +1253,7 @@ public class BrowserActivity extends ComponentActivity {
                     Intent share = new Intent(Intent.ACTION_SEND);
                     share.setType("application/json");
                     share.putExtra(Intent.EXTRA_SUBJECT, "Hari Browser bookmarks");
-                    share.putExtra(Intent.EXTRA_TEXT, bookmarks.toString(2));
+                    share.putExtra(Intent.EXTRA_TEXT, bookmarks.toString());
                     startActivity(Intent.createChooser(share, "Export bookmarks securely"));
                 })
                 .show();
