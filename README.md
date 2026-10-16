@@ -11,7 +11,7 @@ A privacy-first Android browser built with the Android System WebView.
 - Third-party cookies disabled; form-password saving and file/content access disabled.
 - Separate private-browsing process/profile on Android 9+, with best-effort data cleanup on exit.
 - Encrypted bookmarks and optional encrypted history using an Android Keystore AES-GCM key.
-- Tabs, bookmarks, optional history, page sharing, in-page find, desktop mode, reader-style mode, and downloads.
+- Tabs, bookmarks, optional history, page sharing, in-page find, adjustable text size, desktop mode, reader-style mode, and downloads.
 - Custom adaptive Hari Browser icon, including a themed monochrome icon on supported Android versions.
 - Website image loading can be disabled to save data and reduce third-party requests.
 - Private browsing screens are hidden from screenshots and recent-app previews where Android honors secure-window flags.
