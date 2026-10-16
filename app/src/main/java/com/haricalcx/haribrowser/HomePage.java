@@ -457,8 +457,9 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
 
 <section id="toolsPanel" class="panel">
   <div class="section-head"><h2>Built-in toolbox</h2><span class="mini">Works locally, no account</span></div>
-  <p class="mini">Calculations, text utilities and notes run in this start page. Do not store passwords or sensitive secrets in notes.</p>
+  <p class="mini">Start with eight everyday tools. Expand the full toolbox only when needed. Tools run locally; do not store passwords or secrets in notes.</p>
   <div id="toolGrid" class="tool-grid"></div>
+  <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="toggleTools" type="button" aria-expanded="false">Show all 34 tools</button></div>
   <div class="card"><h3>Browser actions</h3><p>Reader-style view, desktop mode, page translation, in-page find, QR, print to PDF, theme and data cleanup are available through native browser controls.</p><a class="action" style="margin-top:9px" href="https://hari-browser-home.invalid/action/settings">Open full browser settings ↗</a></div>
 </section>
 
@@ -576,7 +577,28 @@ $('addShortcut').addEventListener('click',addShortcut);$('addShortcut2').addEven
 $('resetShortcuts').addEventListener('click',()=>{if(confirm('Reset all custom shortcuts on this device? This does not delete bookmarks.')){try{localStorage.removeItem('hari.custom.shortcuts.v1');}catch(e){}renderFeatured();}});
 renderFeatured();renderBookmarks();
 
-function renderTools(){const grid=$('toolGrid');grid.innerHTML='';TOOLS.forEach(t=>{const b=document.createElement('button');b.className='tool';b.type='button';b.innerHTML='<span class="ti">'+esc(t.icon)+'</span><strong>'+esc(t.name)+'</strong><small>'+esc(t.desc)+'</small>';b.addEventListener('click',()=>openTool(t.id));grid.appendChild(b);});}
+const CORE_TOOL_IDS = new Set(['calculator','units','notes','password','text','json','url','wordcount']);
+let allToolsShown = false;
+function renderTools(){
+  const grid=$('toolGrid');
+  grid.innerHTML='';
+  const visible=allToolsShown?TOOLS:TOOLS.filter(t=>CORE_TOOL_IDS.has(t.id));
+  visible.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='tool';
+    b.type='button';
+    b.innerHTML='<span class="ti">'+esc(t.icon)+'</span><strong>'+esc(t.name)+'</strong><small>'+esc(t.desc)+'</small>';
+    b.addEventListener('click',()=>openTool(t.id));
+    grid.appendChild(b);
+  });
+  const toggle=$('toggleTools');
+  toggle.textContent=allToolsShown?'Show fewer tools':'Show all '+TOOLS.length+' tools';
+  toggle.setAttribute('aria-expanded',String(allToolsShown));
+}
+$('toggleTools').addEventListener('click',()=>{
+  allToolsShown=!allToolsShown;
+  renderTools();
+});
 renderTools();
 let activeInterval=null;let timerValue=25*60;let timerMode='focus';let stopwatchStart=0;let stopwatchElapsed=0;
 function closeTool(){if(activeInterval){clearInterval(activeInterval);activeInterval=null;}$('modal').classList.remove('open');}

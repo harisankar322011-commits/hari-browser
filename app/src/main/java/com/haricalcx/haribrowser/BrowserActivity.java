@@ -513,10 +513,15 @@ public class BrowserActivity extends ComponentActivity {
                 String scheme = uri.getScheme();
                 if ("https".equalsIgnoreCase(scheme) &&
                         "hari-browser-home.invalid".equalsIgnoreCase(uri.getHost())) {
-                    String path = uri.getPath();
-                    if (path != null && path.startsWith("/action/")) {
-                        String action = path.substring("/action/".length());
-                        runOnUiThread(() -> handleHomeAction(action));
+                    // Do not let an ordinary website forge an internal action URL.
+                    if (tab.home) {
+                        String path = uri.getPath();
+                        if (path != null && path.startsWith("/action/")) {
+                            String action = path.substring("/action/".length());
+                            runOnUiThread(() -> handleHomeAction(action));
+                        }
+                    } else {
+                        runOnUiThread(() -> showToast("Blocked an invalid internal browser action link."));
                     }
                     // Never send the synthetic home URL to the public internet.
                     return true;
@@ -529,6 +534,8 @@ public class BrowserActivity extends ComponentActivity {
                     runOnUiThread(() -> showToast("This link type is blocked for your safety."));
                     return true;
                 }
+                // Reset JavaScript to the user's website preference before a real HTTPS page loads.
+                view.getSettings().setJavaScriptEnabled(javascriptEnabled());
                 return false;
             }
 
@@ -747,6 +754,8 @@ public class BrowserActivity extends ComponentActivity {
         }
         tab.home = false;
         tab.readerMode = false;
+        // Local dashboard scripts stay available, but website JavaScript follows the user's setting.
+        tab.webView.getSettings().setJavaScriptEnabled(javascriptEnabled());
         tab.url = url;
         tab.webView.loadUrl(url);
         updateTabControls();
@@ -756,6 +765,9 @@ public class BrowserActivity extends ComponentActivity {
         if (tab == null || tab.webView == null) return;
         tab.home = true;
         tab.readerMode = false;
+        // The self-contained start page needs JavaScript for search, tabs and local tools,
+        // even when JavaScript is disabled for ordinary websites.
+        tab.webView.getSettings().setJavaScriptEnabled(true);
         tab.url = HOME_URL;
         tab.title = "Hari Browser";
         if (currentTab() == tab) addressBar.setText("");
@@ -1667,7 +1679,7 @@ public class BrowserActivity extends ComponentActivity {
         for (Tab tab : tabs) {
             if (tab.webView != null) {
                 WebSettings web = tab.webView.getSettings();
-                web.setJavaScriptEnabled(javascriptEnabled());
+                web.setJavaScriptEnabled(tab.home || javascriptEnabled());
                 web.setBlockNetworkImage(!imagesEnabled());
                 web.setTextZoom(textZoom());
                 web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
