@@ -1,0 +1,34 @@
+name: Experimental Chromium Android baseline (self-hosted)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# This workflow intentionally does not run for pushes or pull requests.
+# It fetches and builds a very large upstream source tree on a trusted host.
+concurrency:
+  group: hari-chromium-native-baseline
+  cancel-in-progress: false
+
+jobs:
+  build-chromium:
+    name: Build open-source Chromium for Android (ARM64)
+    runs-on: [self-hosted, linux, x64, chromium-build]
+    timeout-minutes: 360
+    steps:
+      - name: Check out Hari Browser build scripts
+        uses: actions/checkout@v7
+
+      - name: Build Chromium Android APK
+        shell: bash
+        run: bash .github/scripts/build-chromium-android.sh
+
+      - name: Publish prototype APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: chromium-android-arm64-prototype
+          path: ${{ runner.temp }}/hari-chromium/src/out/HariAndroid/apks/*.apk
+          if-no-files-found: error
+          retention-days: 7
