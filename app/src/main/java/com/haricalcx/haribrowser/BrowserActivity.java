@@ -395,6 +395,7 @@ public class BrowserActivity extends ComponentActivity {
         securityStatus.setTextColor(MUTED);
         securityStatus.setTextSize(9);
         securityStatus.setSingleLine(true);
+        securityStatus.setEllipsize(TextUtils.TruncateAt.START);
         securityStatus.setGravity(Gravity.CENTER_VERTICAL);
         securityStatus.setPadding(dp(3), dp(2), dp(3), dp(2));
         root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(15)));
@@ -531,6 +532,7 @@ public class BrowserActivity extends ComponentActivity {
             message += fingerprintProtectionActive(tab) ? " • FP shield ON" :
                     (fingerprintProtectionEnabled() ? " • FP shield unavailable" : " • FP shield OFF");
             securityStatus.setText(message);
+            securityStatus.setContentDescription(message + ". Tap for site security details.");
         }
     }
 
