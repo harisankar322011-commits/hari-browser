@@ -126,6 +126,10 @@ public class BrowserActivity extends ComponentActivity {
     private boolean fingerprintProtectionEnabled() { return settings.getBoolean("fingerprint_protection", true); }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
+    private String privacyReducedUserAgent() {
+        // Preserve the current WebView engine version while removing model/build identifiers.
+        return defaultUserAgent.replaceAll("(?i)Android [0-9.]+; [^;)]+", "Android 14; K");
+    }
     private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
     private String accentName() { return settings.getString("accent_color", "Ocean"); }
     private int accentColor() {
@@ -522,8 +526,10 @@ public class BrowserActivity extends ComponentActivity {
         if (tabButton != null) tabButton.setText("Tabs " + tabs.size());
         Tab tab = currentTab();
         if (tab != null && securityStatus != null) {
-            String message = privateMode ? "Private profile • history not saved" :
+            String message = privateMode ? "Private • history not saved" :
                     (tab.home ? "Ready • HTTPS-only browsing" : "HTTPS • " + safeHost(tab.url));
+            message += fingerprintProtectionActive(tab) ? " • FP shield ON" :
+                    (fingerprintProtectionEnabled() ? " • FP shield unavailable" : " • FP shield OFF");
             securityStatus.setText(message);
         }
     }
@@ -547,7 +553,7 @@ public class BrowserActivity extends ComponentActivity {
         web.setGeolocationEnabled(false);
         web.setCacheMode(privateMode ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
         web.setSafeBrowsingEnabled(true);
-        web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
+        web.setUserAgentString(desktopEnabled() ? privacyReducedUserAgent().replace(" Mobile", "") : privacyReducedUserAgent());
         updateFingerprintProtection(tab);
 
         CookieManager cookies = CookieManager.getInstance();
@@ -1800,6 +1806,9 @@ public class BrowserActivity extends ComponentActivity {
                 "Third-party cookies: blocked\n" +
                 "Tracker blocking: " + (trackersEnabled() ? "enabled (local list)" : "disabled") + "\n" +
                 "JavaScript: " + (javascriptEnabled() ? "enabled" : "disabled") + "\n" +
+                "Anti-fingerprinting: " + (fingerprintProtectionActive(tab) ? "active" :
+                        (fingerprintProtectionEnabled() ? "unsupported by this WebView" : "disabled")) + "\n" +
+                "Reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers.\n" +
                 "Images: " + (imagesEnabled() ? "enabled" : "blocked") + "\n" +
                 "Browser mode: " + (privateMode ? "private" : "standard") + "\n\n" +
                 "HTTPS protects the connection in transit; it does not prove a website is trustworthy or prevent the site itself from tracking you.";
@@ -1843,7 +1852,8 @@ public class BrowserActivity extends ComponentActivity {
                 web.setJavaScriptEnabled(tab.home || javascriptEnabled());
                 web.setBlockNetworkImage(!tab.home && !imagesEnabled());
                 web.setTextZoom(textZoom());
-                web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
+                web.setUserAgentString(desktopEnabled() ? privacyReducedUserAgent().replace(" Mobile", "") : privacyReducedUserAgent());
+                updateFingerprintProtection(tab);
                 CookieManager.getInstance().setAcceptThirdPartyCookies(tab.webView, false);
             }
         }
@@ -1855,6 +1865,11 @@ public class BrowserActivity extends ComponentActivity {
         } catch (RuntimeException ignored) {
             return false;
         }
+    }
+
+    private boolean fingerprintProtectionActive(Tab tab) {
+        return fingerprintProtectionEnabled() && fingerprintScriptSupported() &&
+                tab != null && tab.fingerprintScriptHandler != null;
     }
 
     private void updateFingerprintProtection(Tab tab) {
@@ -1983,7 +1998,7 @@ public class BrowserActivity extends ComponentActivity {
                         "• HTTPS-only navigation; cleartext traffic is disabled.\\n" +
                         "• Android WebView Safe Browsing is enabled; certificate errors are cancelled.\\n" +
                         "• Third-party cookies are disabled; common ad/analytics hosts are blocked locally.\\n" +
-                        "• The anti-fingerprinting shield reduces some hardware-hint, canvas and WebGL signals when supported by Android System WebView.\\n" +
+                        "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\\n" +
                         "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\\n" +
                         "• History is off by default; private mode never saves history.\\n" +
                         "• No app analytics, ad SDKs, account, or remote blocklist.\\n\\n" +
