@@ -440,10 +440,10 @@ h2{font-size:17px;letter-spacing:-.3px;margin:0}
 .preview-glacier{background:linear-gradient(145deg,#08233f,#2d79a2 52%,#afdeec)}
 .preview-nebula{background:linear-gradient(145deg,#0c0922,#4d2b78 51%,#1e7b9a)}
 .preview-original{background:linear-gradient(135deg,#ffffff,#edf0ff)}
-body.wallpaper-on:not(.dark){background-image:linear-gradient(135deg,rgba(246,247,255,.68),rgba(237,240,255,.78)),var(--user-wallpaper);background-size:cover;background-position:center;background-attachment:fixed}
-body.wallpaper-on.dark{background-image:linear-gradient(135deg,rgba(8,12,25,.69),rgba(18,25,45,.76)),var(--user-wallpaper);background-size:cover;background-position:center;background-attachment:fixed}
-body.wallpaper-on .hero{background-image:linear-gradient(130deg,rgba(255,255,255,.78),rgba(237,240,255,.84)),var(--user-wallpaper);background-size:cover;background-position:center}
-body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,45,.82),rgba(26,37,64,.87)),var(--user-wallpaper);background-size:cover;background-position:center}
+body.wallpaper-on:not(.dark){background-image:linear-gradient(135deg,rgba(246,247,255,.18),rgba(237,240,255,.24)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll}
+body.wallpaper-on.dark{background-image:linear-gradient(135deg,rgba(8,12,25,.25),rgba(18,25,45,.34)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll}
+body.wallpaper-on .hero{background-image:linear-gradient(130deg,rgba(255,255,255,.34),rgba(237,240,255,.43)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat}
+body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,45,.43),rgba(26,37,64,.52)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat}
 @media(max-width:480px){.wallpaper-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.wallpaper-preview{height:58px}.wallpaper-heading h2{font-size:15px}}
 @media(min-width:481px) and (max-width:649px){.wallpaper-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
@@ -494,6 +494,43 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
  .search .primary{padding:9px 8px}
  .mode{max-width:calc(100% - 110px);font-size:8px;padding:7px}
 }
+
+/* Compact phone-first home UI: more room for the page, without tiny wallpaper targets. */
+.shell{padding-top:10px;padding-bottom:18px}
+.top{gap:8px;margin:0 0 10px}
+.top .logo{width:36px;height:36px;flex:0 0 36px;border-radius:12px}
+.top .logo:after{inset:4px;border-radius:9px}
+.top .logo svg{width:25px;height:25px}
+.top .brand{font-size:13px;letter-spacing:1px}
+.top .brand-sub{font-size:10px;line-height:1.25}
+.top .mode{padding:4px 7px;font-size:9px;letter-spacing:.2px}
+.top .language-select{padding:5px 7px;font-size:10px}
+.btn,.primary,.action{padding:8px 10px;font-size:11px}
+.navbtn{padding:7px 3px;font-size:10px}
+.search{gap:4px;padding:4px}
+.search input{padding:8px 2px}
+.search select{padding:7px 0}
+.wallpaper-heading{margin-top:13px;margin-bottom:8px}
+.wallpaper-grid{gap:6px}
+.wallpaper-choice{padding:4px;font-size:10px;border-radius:10px}
+.wallpaper-choice[aria-pressed="true"]{padding:3px}
+.wallpaper-preview{height:46px;border-radius:7px}
+@media(max-width:480px){
+ .shell{padding:8px 10px 15px}
+ .top{gap:6px;margin-bottom:8px}
+ .top .logo{width:31px;height:31px;flex-basis:31px;border-radius:10px}
+ .top .logo:after{inset:3px;border-radius:7px}
+ .top .logo svg{width:22px;height:22px}
+ .top .brand{font-size:12px;letter-spacing:.75px}
+ .top .brand-sub{font-size:9px}
+ .top .language-select{padding:5px 6px;font-size:10px}
+ .top .mode{padding:4px 6px;font-size:8px}
+ .hero{padding:16px 12px 13px;border-radius:16px}
+ .primary{padding:8px 9px;font-size:11px}
+ .navbtn{padding:7px 2px;font-size:9px}
+ .wallpaper-preview{height:48px}
+}
+
 </style>
 </head>
 <body class="__DARKCLASS__">
