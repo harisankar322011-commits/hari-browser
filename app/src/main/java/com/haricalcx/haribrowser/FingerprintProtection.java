@@ -11,6 +11,19 @@ final class FingerprintProtection {
         (() => {
           'use strict';
           try {
+            // A per-document salt keeps noise stable for repeat reads within a page,
+            // while avoiding one identical canvas/audio sample across every navigation.
+            let pageSeed = 0x6d2b79f5;
+            try {
+              if (globalThis.crypto && crypto.getRandomValues) {
+                const seedWords = new Uint32Array(1);
+                crypto.getRandomValues(seedWords);
+                pageSeed = seedWords[0] >>> 0;
+              } else {
+                pageSeed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
+              }
+            } catch (_) {}
+
             const defineFixed = (target, key, value) => {
               try {
                 if (!target) return;
@@ -141,15 +154,25 @@ final class FingerprintProtection {
                     value: function () {
                       const result = originalReadPixels.apply(this, arguments);
                       const pixels = arguments[6];
-                      if (pixels && typeof pixels.length === 'number' && pixels.length > 0) {
-                        const stride = Math.max(1, Math.floor(pixels.length / 24));
-                        for (let i = 0; i < pixels.length && i < stride * 24; i += stride) {
-                          if (typeof pixels[i] === 'number' && Number.isFinite(pixels[i])) {
-                            const delta = ((i / stride) % 2 === 0) ? 1 : -1;
+                      if (pixels && typeof pixels.length === 'number' && pixels.length > 0 &&
+                          (pixels instanceof Uint8Array || pixels instanceof Uint8ClampedArray ||
+                           pixels instanceof Float32Array)) {
+                        let state = (pageSeed ^ pixels.length ^
+                          (Number(arguments[2]) || 0) ^ ((Number(arguments[3]) || 0) << 8)) >>> 0;
+                        const count = Math.min(24, pixels.length);
+                        const used = new Set();
+                        for (let n = 0; n < count && used.size < pixels.length; n++) {
+                          state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+                          state >>>= 0;
+                          const index = state % pixels.length;
+                          if (used.has(index)) continue;
+                          used.add(index);
+                          if (typeof pixels[index] === 'number' && Number.isFinite(pixels[index])) {
+                            const delta = (state & 1) ? 1 : -1;
                             if (pixels instanceof Float32Array) {
-                              pixels[i] = pixels[i] + delta * 1e-7;
+                              pixels[index] += delta * 1e-7;
                             } else {
-                              pixels[i] = Math.max(0, Math.min(255, pixels[i] + delta));
+                              pixels[index] = Math.max(0, Math.min(255, pixels[index] + delta));
                             }
                           }
                         }
@@ -169,16 +192,7 @@ final class FingerprintProtection {
             const contextProto = globalThis.CanvasRenderingContext2D &&
                                  globalThis.CanvasRenderingContext2D.prototype;
             if (canvasProto && contextProto) {
-              let seed = 0x6d2b79f5;
-              try {
-                if (globalThis.crypto && crypto.getRandomValues) {
-                  const words = new Uint32Array(1);
-                  crypto.getRandomValues(words);
-                  seed = words[0] >>> 0;
-                } else {
-                  seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) >>> 0;
-                }
-              } catch (_) {}
+              const seed = pageSeed;
 
               const originalGetImageData = contextProto.getImageData;
               const originalPutImageData = contextProto.putImageData;
@@ -260,7 +274,95 @@ final class FingerprintProtection {
                   });
                 } catch (_) {}
               }
+
+              // Protect OffscreenCanvas readbacks used by workers and modern fingerprint scripts.
+              try {
+                const offscreenContext = globalThis.OffscreenCanvasRenderingContext2D &&
+                                         globalThis.OffscreenCanvasRenderingContext2D.prototype;
+                if (offscreenContext && typeof offscreenContext.getImageData === 'function') {
+                  const originalOffscreenGetImageData = offscreenContext.getImageData;
+                  Object.defineProperty(offscreenContext, 'getImageData', {
+                    configurable: true, writable: true,
+                    value: function () {
+                      return perturb(originalOffscreenGetImageData.apply(this, arguments));
+                    }
+                  });
+                }
+              } catch (_) {}
+              try {
+                const offscreenProto = globalThis.OffscreenCanvas &&
+                                       globalThis.OffscreenCanvas.prototype;
+                const originalConvertToBlob = offscreenProto && offscreenProto.convertToBlob;
+                if (typeof originalConvertToBlob === 'function' &&
+                    typeof globalThis.createImageBitmap === 'function') {
+                  Object.defineProperty(offscreenProto, 'convertToBlob', {
+                    configurable: true, writable: true,
+                    value: function (options) {
+                      const source = this;
+                      const args = arguments;
+                      if (!source.width || !source.height ||
+                          source.width * source.height > 1048576) {
+                        return originalConvertToBlob.apply(source, args);
+                      }
+                      return globalThis.createImageBitmap(source).then(bitmap => {
+                        const copy = document.createElement('canvas');
+                        copy.width = source.width;
+                        copy.height = source.height;
+                        const context = copy.getContext('2d', { willReadFrequently: true });
+                        if (!context) throw new Error('Canvas context unavailable');
+                        originalDrawImage.call(context, bitmap, 0, 0);
+                        const imageData = originalGetImageData.call(
+                          context, 0, 0, copy.width, copy.height);
+                        perturb(imageData);
+                        originalPutImageData.call(context, imageData, 0, 0);
+                        return new Promise((resolve, reject) => {
+                          originalToBlob.call(copy, blob => {
+                            if (blob) resolve(blob);
+                            else reject(new Error('Canvas export failed'));
+                          }, options && options.type, options && options.quality);
+                        }).finally(() => {
+                          try { bitmap.close(); } catch (_) {}
+                        });
+                      }).catch(() => originalConvertToBlob.apply(source, args));
+                    }
+                  });
+                }
+              } catch (_) {}
             }
+
+            // Add tiny noise to OfflineAudioContext output, a common audio-fingerprint source.
+            try {
+              const OfflineAudio = globalThis.OfflineAudioContext ||
+                                   globalThis.webkitOfflineAudioContext;
+              const audioProto = OfflineAudio && OfflineAudio.prototype;
+              const originalStartRendering = audioProto && audioProto.startRendering;
+              if (typeof originalStartRendering === 'function') {
+                Object.defineProperty(audioProto, 'startRendering', {
+                  configurable: true, writable: true,
+                  value: function () {
+                    const result = originalStartRendering.apply(this, arguments);
+                    if (!result || typeof result.then !== 'function') return result;
+                    return result.then(buffer => {
+                      try {
+                        const channels = Math.min(buffer.numberOfChannels || 0, 2);
+                        for (let channel = 0; channel < channels; channel++) {
+                          const samples = buffer.getChannelData(channel);
+                          let state = (pageSeed ^ samples.length ^ (channel << 16)) >>> 0;
+                          const stride = Math.max(1, Math.floor(samples.length / 64));
+                          for (let i = 0; i < samples.length; i += stride) {
+                            state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+                            state >>>= 0;
+                            samples[i] = Math.max(-1, Math.min(1,
+                              samples[i] + ((state & 1) ? 1e-7 : -1e-7)));
+                          }
+                        }
+                      } catch (_) {}
+                      return buffer;
+                    });
+                  }
+                });
+              }
+            } catch (_) {}
           } catch (_) {
             // One unsupported API must not prevent a website from loading.
           }
