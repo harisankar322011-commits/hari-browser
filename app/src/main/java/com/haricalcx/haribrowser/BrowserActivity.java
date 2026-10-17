@@ -61,6 +61,9 @@ import androidx.activity.ComponentActivity;
 import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.webkit.ScriptHandler;
+import androidx.webkit.WebViewCompat;
+import androidx.webkit.WebViewFeature;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
@@ -76,6 +79,7 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -119,6 +123,7 @@ public class BrowserActivity extends ComponentActivity {
     private boolean desktopEnabled() { return settings.getBoolean("desktop_mode", false); }
     private boolean cookiesEnabled() { return settings.getBoolean("cookies_enabled", true); }
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
+    private boolean fingerprintProtectionEnabled() { return settings.getBoolean("fingerprint_protection", true); }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
@@ -157,6 +162,7 @@ public class BrowserActivity extends ComponentActivity {
         String url = HOME_URL;
         boolean home = true;
         boolean readerMode = false;
+        ScriptHandler fingerprintScriptHandler;
     }
 
     @Override
@@ -255,12 +261,12 @@ public class BrowserActivity extends ComponentActivity {
         int widthDp = getResources().getConfiguration().screenWidthDp;
         boolean compact = widthDp < 380;
         int horizontalPadding = compact ? 8 : 12;
-        root.setPadding(dp(horizontalPadding), dp(4), dp(horizontalPadding), dp(3));
+        root.setPadding(dp(horizontalPadding), dp(2), dp(horizontalPadding), dp(1));
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             int topInset = Math.max(0, insets.getSystemWindowInsetTop());
             int bottomInset = Math.max(0, insets.getSystemWindowInsetBottom());
-            root.setPadding(dp(horizontalPadding), dp(4) + topInset,
-                    dp(horizontalPadding), dp(3) + bottomInset);
+            root.setPadding(dp(horizontalPadding), dp(2) + topInset,
+                    dp(horizontalPadding), dp(1) + bottomInset);
             return insets;
         });
 
@@ -271,13 +277,13 @@ public class BrowserActivity extends ComponentActivity {
         TextView brand = new TextView(this);
         brand.setText("◈  HARI BROWSER");
         brand.setTextColor(INK);
-        brand.setTextSize(widthDp < 380 ? 12 : (widthDp < 480 ? 14 : 16));
+        brand.setTextSize(widthDp < 380 ? 11 : (widthDp < 480 ? 12 : 14));
         brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         brand.setSingleLine(true);
         brand.setEllipsize(TextUtils.TruncateAt.END);
         brand.setIncludeFontPadding(false);
         brand.setAutoSizeTextTypeUniformWithConfiguration(10, 15, 1, TypedValue.COMPLEX_UNIT_SP);
-        header.addView(brand, new LinearLayout.LayoutParams(0, dp(36), 1));
+        header.addView(brand, new LinearLayout.LayoutParams(0, dp(29), 1));
 
         modeBadge = new TextView(this);
         // A compact visible label avoids clipping at large system font sizes and in landscape.
@@ -289,20 +295,20 @@ public class BrowserActivity extends ComponentActivity {
         modeBadge.setGravity(Gravity.CENTER);
         modeBadge.setIncludeFontPadding(false);
         modeBadge.setMaxWidth(dp(compact ? 88 : 136));
-        modeBadge.setTextSize(10);
-        modeBadge.setAutoSizeTextTypeUniformWithConfiguration(8, 10, 1, TypedValue.COMPLEX_UNIT_SP);
+        modeBadge.setTextSize(9);
+        modeBadge.setAutoSizeTextTypeUniformWithConfiguration(8, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         modeBadge.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         modeBadge.setTextColor(privateMode ? Color.WHITE : Color.rgb(0, 105, 94));
-        modeBadge.setPadding(dp(compact ? 6 : 9), dp(compact ? 6 : 7),
-                dp(compact ? 6 : 9), dp(compact ? 6 : 7));
+        modeBadge.setPadding(dp(compact ? 4 : 6), dp(compact ? 3 : 4),
+                dp(compact ? 4 : 6), dp(compact ? 3 : 4));
         modeBadge.setBackground(round(privateMode ? Color.rgb(94, 70, 174) : Color.rgb(216, 247, 241), 0, 12));
         header.addView(modeBadge);
-        root.addView(header, new LinearLayout.LayoutParams(-1, dp(38)));
+        root.addView(header, new LinearLayout.LayoutParams(-1, dp(31)));
 
         LinearLayout addressRow = new LinearLayout(this);
         addressRow.setGravity(Gravity.CENTER_VERTICAL);
         addressRow.setOrientation(LinearLayout.HORIZONTAL);
-        addressRow.setPadding(dp(10), dp(3), dp(4), dp(3));
+        addressRow.setPadding(dp(7), dp(2), dp(3), dp(2));
         addressRow.setBackground(round(CARD, OUTLINE, 15));
 
         addressBar = new EditText(this);
@@ -311,18 +317,18 @@ public class BrowserActivity extends ComponentActivity {
         addressBar.setHintTextColor(MUTED);
         addressBar.setHint("Search or enter an HTTPS address");
         addressBar.setContentDescription("Search privately or enter a secure HTTPS website address");
-        addressBar.setTextSize(compact ? 13 : (widthDp < 480 ? 14 : 15));
+        addressBar.setTextSize(compact ? 12 : (widthDp < 480 ? 13 : 14));
         addressBar.setAutoSizeTextTypeUniformWithConfiguration(11, 15, 1, TypedValue.COMPLEX_UNIT_SP);
         addressBar.setSelectAllOnFocus(false);
         addressBar.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
         addressBar.setImeOptions(EditorInfo.IME_ACTION_GO);
-        addressBar.setPadding(dp(8), 0, dp(5), 0);
+        addressBar.setPadding(dp(6), 0, dp(4), 0);
         addressBar.setBackgroundColor(Color.TRANSPARENT);
-        addressRow.addView(addressBar, new LinearLayout.LayoutParams(0, dp(42), 1));
+        addressRow.addView(addressBar, new LinearLayout.LayoutParams(0, dp(36), 1));
 
         TextView goButton = pillButton("GO", true, () -> navigateFromAddressBar());
-        addressRow.addView(goButton, new LinearLayout.LayoutParams(dp(46), dp(34)));
-        root.addView(addressRow, new LinearLayout.LayoutParams(-1, dp(48)));
+        addressRow.addView(goButton, new LinearLayout.LayoutParams(dp(42), dp(29)));
+        root.addView(addressRow, new LinearLayout.LayoutParams(-1, dp(42)));
 
         addressBar.setOnEditorActionListener((view, actionId, event) -> {
             boolean go = actionId == EditorInfo.IME_ACTION_GO ||
@@ -338,7 +344,7 @@ public class BrowserActivity extends ComponentActivity {
         LinearLayout controls = new LinearLayout(this);
         controls.setGravity(Gravity.CENTER_VERTICAL);
         controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setPadding(0, dp(2), 0, dp(2));
+        controls.setPadding(0, dp(1), 0, dp(1));
         addCompactButton(controls, "‹", "Back", () -> {
             WebView w = currentWebView();
             if (w != null && w.canGoBack()) w.goBack();
@@ -363,12 +369,12 @@ public class BrowserActivity extends ComponentActivity {
             }
             return true;
         });
-        controls.addView(reloadButton, new LinearLayout.LayoutParams(0, dp(34), 1));
+        controls.addView(reloadButton, new LinearLayout.LayoutParams(0, dp(29), 1));
         tabButton = compactButton("Tabs 1", "Open tab switcher", () -> showTabSwitcher());
-        controls.addView(tabButton, new LinearLayout.LayoutParams(0, dp(34), 1));
+        controls.addView(tabButton, new LinearLayout.LayoutParams(0, dp(29), 1));
         addCompactButton(controls, "□", "New tab", () -> addNewTab(null, true));
         addCompactButton(controls, "⋮", "Menu", () -> showSettings());
-        root.addView(controls, new LinearLayout.LayoutParams(-1, dp(38)));
+        root.addView(controls, new LinearLayout.LayoutParams(-1, dp(32)));
 
         progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setMax(100);
@@ -383,18 +389,18 @@ public class BrowserActivity extends ComponentActivity {
 
         securityStatus = new TextView(this);
         securityStatus.setTextColor(MUTED);
-        securityStatus.setTextSize(10);
+        securityStatus.setTextSize(9);
         securityStatus.setSingleLine(true);
         securityStatus.setGravity(Gravity.CENTER_VERTICAL);
         securityStatus.setPadding(dp(3), dp(2), dp(3), dp(2));
-        root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(18)));
+        root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(15)));
         securityStatus.setContentDescription("Tap to view site security information");
         securityStatus.setOnClickListener(v -> showSiteSecurity());
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.HORIZONTAL);
         bottom.setGravity(Gravity.CENTER);
-        bottom.setPadding(0, dp(2), 0, 0);
+        bottom.setPadding(0, dp(1), 0, 0);
         addBottomButton(bottom, "⌂\nHome", () -> {
             Tab t = currentTab();
             if (t != null) loadHome(t);
@@ -403,7 +409,7 @@ public class BrowserActivity extends ComponentActivity {
         addBottomButton(bottom, "◷\nHistory", () -> showHistory());
         addBottomButton(bottom, "⌕\nFind", () -> showFindDialog());
         addBottomButton(bottom, "⚙\nSettings", () -> showSettings());
-        root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(compact ? 48 : 46)));
+        root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(compact ? 39 : 37)));
 
         setContentView(root);
         root.requestApplyInsets();
@@ -412,7 +418,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void addCompactButton(LinearLayout parent, String icon, String description, Runnable action) {
         parent.addView(compactButton(icon, description, action),
-                new LinearLayout.LayoutParams(0, dp(34), 1));
+                new LinearLayout.LayoutParams(0, dp(29), 1));
     }
 
     private TextView compactButton(String text, String description, Runnable action) {
@@ -422,11 +428,11 @@ public class BrowserActivity extends ComponentActivity {
         view.setGravity(Gravity.CENTER);
         view.setTextColor(INK);
         int widthDp = getResources().getConfiguration().screenWidthDp;
-        view.setTextSize(text.length() > 2 ? (widthDp < 380 ? 10 : 12)
-                : (widthDp < 380 ? 17 : 20));
+        view.setTextSize(text.length() > 2 ? (widthDp < 380 ? 9 : 10)
+                : (widthDp < 380 ? 15 : 17));
         view.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         view.setBackground(round(Color.WHITE, OUTLINE, 11));
-        view.setPadding(dp(2), dp(2), dp(2), dp(2));
+        view.setPadding(dp(1), dp(1), dp(1), dp(1));
         view.setOnClickListener(v -> action.run());
         return view;
     }
@@ -457,9 +463,9 @@ public class BrowserActivity extends ComponentActivity {
         view.setPadding(dp(1), dp(1), dp(1), dp(1));
         view.setBackground(round(Color.WHITE, OUTLINE, 12));
         view.setOnClickListener(v -> action.run());
-        int itemHeight = getResources().getConfiguration().screenWidthDp < 380 ? 44 : 42;
+        int itemHeight = getResources().getConfiguration().screenWidthDp < 380 ? 35 : 34;
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(itemHeight), 1);
-        lp.setMargins(dp(2), 0, dp(2), 0);
+        lp.setMargins(dp(1), 0, dp(1), 0);
         parent.addView(view, lp);
     }
 
@@ -526,7 +532,7 @@ public class BrowserActivity extends ComponentActivity {
         WebView webView = tab.webView;
         WebSettings web = webView.getSettings();
         web.setJavaScriptEnabled(javascriptEnabled());
-        web.setBlockNetworkImage(!imagesEnabled());
+        web.setBlockNetworkImage(!tab.home && !imagesEnabled());
         web.setTextZoom(textZoom());
         web.setDomStorageEnabled(true);
         web.setAllowFileAccess(false);
@@ -542,6 +548,7 @@ public class BrowserActivity extends ComponentActivity {
         web.setCacheMode(privateMode ? WebSettings.LOAD_NO_CACHE : WebSettings.LOAD_DEFAULT);
         web.setSafeBrowsingEnabled(true);
         web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
+        updateFingerprintProtection(tab);
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(cookiesEnabled());
@@ -828,6 +835,7 @@ public class BrowserActivity extends ComponentActivity {
         tab.readerMode = false;
         // Local dashboard scripts stay available, but website JavaScript follows the user's setting.
         tab.webView.getSettings().setJavaScriptEnabled(javascriptEnabled());
+        tab.webView.getSettings().setBlockNetworkImage(!imagesEnabled());
         tab.url = url;
         tab.webView.loadUrl(url);
         updateTabControls();
@@ -840,6 +848,7 @@ public class BrowserActivity extends ComponentActivity {
         // The self-contained start page needs JavaScript for search, tabs and local tools,
         // even when JavaScript is disabled for ordinary websites.
         tab.webView.getSettings().setJavaScriptEnabled(true);
+        tab.webView.getSettings().setBlockNetworkImage(false);
         tab.url = HOME_URL;
         tab.title = "Hari Browser";
         if (currentTab() == tab) addressBar.setText("");
@@ -1333,7 +1342,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Show QR code for current page",
                 "Print / save current page as PDF",
                 "Choose home page language",
-                "Choose browser accent colour"
+                "Choose browser accent colour",
+                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Anti-fingerprinting shield"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1453,6 +1463,21 @@ public class BrowserActivity extends ComponentActivity {
                             break;
                         case 29:
                             showAccentPicker();
+                            break;
+                        case 30:
+                            boolean protectionEnabled = !fingerprintProtectionEnabled();
+                            settings.edit().putBoolean("fingerprint_protection", protectionEnabled).apply();
+                            reconfigureWebViews();
+                            Tab protectionTab = currentTab();
+                            if (protectionTab != null) {
+                                if (protectionTab.home) loadHome(protectionTab);
+                                else protectionTab.webView.reload();
+                            }
+                            if (protectionEnabled && !fingerprintScriptSupported()) {
+                                showToast("Shield saved, but update Android System WebView for full support.");
+                            } else {
+                                showToast(protectionEnabled ? "Anti-fingerprinting shield enabled." : "Anti-fingerprinting shield disabled.");
+                            }
                             break;
                     }
                 })
@@ -1816,11 +1841,34 @@ public class BrowserActivity extends ComponentActivity {
             if (tab.webView != null) {
                 WebSettings web = tab.webView.getSettings();
                 web.setJavaScriptEnabled(tab.home || javascriptEnabled());
-                web.setBlockNetworkImage(!imagesEnabled());
+                web.setBlockNetworkImage(!tab.home && !imagesEnabled());
                 web.setTextZoom(textZoom());
                 web.setUserAgentString(desktopEnabled() ? defaultUserAgent.replace(" Mobile", "") : defaultUserAgent);
                 CookieManager.getInstance().setAcceptThirdPartyCookies(tab.webView, false);
             }
+        }
+    }
+
+    private boolean fingerprintScriptSupported() {
+        try {
+            return WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private void updateFingerprintProtection(Tab tab) {
+        if (tab == null || tab.webView == null) return;
+        if (tab.fingerprintScriptHandler != null) {
+            try { tab.fingerprintScriptHandler.remove(); } catch (RuntimeException ignored) {}
+            tab.fingerprintScriptHandler = null;
+        }
+        if (!fingerprintProtectionEnabled() || !fingerprintScriptSupported()) return;
+        try {
+            tab.fingerprintScriptHandler = WebViewCompat.addDocumentStartJavaScript(
+                    tab.webView, FingerprintProtection.SCRIPT, Collections.singleton("*"));
+        } catch (RuntimeException ignored) {
+            // Fail safely: a protection failure must not prevent ordinary browsing.
         }
     }
 
@@ -1935,6 +1983,7 @@ public class BrowserActivity extends ComponentActivity {
                         "• HTTPS-only navigation; cleartext traffic is disabled.\\n" +
                         "• Android WebView Safe Browsing is enabled; certificate errors are cancelled.\\n" +
                         "• Third-party cookies are disabled; common ad/analytics hosts are blocked locally.\\n" +
+                        "• The anti-fingerprinting shield reduces some hardware-hint, canvas and WebGL signals when supported by Android System WebView.\\n" +
                         "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\\n" +
                         "• History is off by default; private mode never saves history.\\n" +
                         "• No app analytics, ad SDKs, account, or remote blocklist.\\n\\n" +
