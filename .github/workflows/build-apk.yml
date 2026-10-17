@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Build Android APKs
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -42,10 +42,10 @@ jobs:
           # Avoid the separately licensed enhanced cache; use the open-source MIT cache provider.
           cache-provider: basic
 
-      - name: Build and run lint
-        run: gradle --no-daemon clean assembleDebug lint
+      - name: Build debug and release APKs and run lint
+        run: gradle --no-daemon clean assembleDebug assembleRelease lint
 
-      - name: Verify APK exceeds 10 MiB
+      - name: Verify debug APK exceeds 10 MiB
         shell: bash
         run: |
           apk="app/build/outputs/apk/debug/app-debug.apk"
@@ -53,14 +53,25 @@ jobs:
           bytes="$(stat -c '%s' "$apk")"
           echo "Debug APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
           if [ "$bytes" -le 10485760 ]; then
-            echo "::error::APK must be larger than 10 MiB; got $bytes bytes."
+            echo "::error::Debug APK must be larger than 10 MiB; got $bytes bytes."
             exit 1
           fi
 
-      - name: Publish debug APK
+      - name: Verify release APK was produced
+        shell: bash
+        run: |
+          apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -f "$apk" || { echo "::error::Release APK was not created."; exit 1; }
+          bytes="$(stat -c '%s' "$apk")"
+          echo "Release APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
+          echo "Release APK is unsigned; F-Droid builds and signs its own package."
+
+      - name: Publish debug and release build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: hari-browser-debug-apk
-          path: app/build/outputs/apk/debug/*.apk
+          name: hari-browser-android-apks
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
           if-no-files-found: error
           retention-days: 14
