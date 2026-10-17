@@ -255,12 +255,12 @@ public class BrowserActivity extends ComponentActivity {
         int widthDp = getResources().getConfiguration().screenWidthDp;
         boolean compact = widthDp < 380;
         int horizontalPadding = compact ? 8 : 12;
-        root.setPadding(dp(horizontalPadding), dp(6), dp(horizontalPadding), dp(4));
+        root.setPadding(dp(horizontalPadding), dp(4), dp(horizontalPadding), dp(3));
         root.setOnApplyWindowInsetsListener((view, insets) -> {
             int topInset = Math.max(0, insets.getSystemWindowInsetTop());
             int bottomInset = Math.max(0, insets.getSystemWindowInsetBottom());
-            root.setPadding(dp(horizontalPadding), dp(6) + topInset,
-                    dp(horizontalPadding), dp(4) + bottomInset);
+            root.setPadding(dp(horizontalPadding), dp(4) + topInset,
+                    dp(horizontalPadding), dp(3) + bottomInset);
             return insets;
         });
 
@@ -271,13 +271,13 @@ public class BrowserActivity extends ComponentActivity {
         TextView brand = new TextView(this);
         brand.setText("◈  HARI BROWSER");
         brand.setTextColor(INK);
-        brand.setTextSize(widthDp < 380 ? 13 : (widthDp < 480 ? 15 : 17));
+        brand.setTextSize(widthDp < 380 ? 12 : (widthDp < 480 ? 14 : 16));
         brand.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         brand.setSingleLine(true);
         brand.setEllipsize(TextUtils.TruncateAt.END);
         brand.setIncludeFontPadding(false);
-        brand.setAutoSizeTextTypeUniformWithConfiguration(12, 17, 1, TypedValue.COMPLEX_UNIT_SP);
-        header.addView(brand, new LinearLayout.LayoutParams(0, dp(44), 1));
+        brand.setAutoSizeTextTypeUniformWithConfiguration(10, 15, 1, TypedValue.COMPLEX_UNIT_SP);
+        header.addView(brand, new LinearLayout.LayoutParams(0, dp(36), 1));
 
         modeBadge = new TextView(this);
         // A compact visible label avoids clipping at large system font sizes and in landscape.
@@ -297,7 +297,7 @@ public class BrowserActivity extends ComponentActivity {
                 dp(compact ? 6 : 9), dp(compact ? 6 : 7));
         modeBadge.setBackground(round(privateMode ? Color.rgb(94, 70, 174) : Color.rgb(216, 247, 241), 0, 12));
         header.addView(modeBadge);
-        root.addView(header, new LinearLayout.LayoutParams(-1, dp(46)));
+        root.addView(header, new LinearLayout.LayoutParams(-1, dp(38)));
 
         LinearLayout addressRow = new LinearLayout(this);
         addressRow.setGravity(Gravity.CENTER_VERTICAL);
@@ -318,11 +318,11 @@ public class BrowserActivity extends ComponentActivity {
         addressBar.setImeOptions(EditorInfo.IME_ACTION_GO);
         addressBar.setPadding(dp(8), 0, dp(5), 0);
         addressBar.setBackgroundColor(Color.TRANSPARENT);
-        addressRow.addView(addressBar, new LinearLayout.LayoutParams(0, dp(48), 1));
+        addressRow.addView(addressBar, new LinearLayout.LayoutParams(0, dp(42), 1));
 
         TextView goButton = pillButton("GO", true, () -> navigateFromAddressBar());
-        addressRow.addView(goButton, new LinearLayout.LayoutParams(dp(52), dp(40)));
-        root.addView(addressRow, new LinearLayout.LayoutParams(-1, dp(54)));
+        addressRow.addView(goButton, new LinearLayout.LayoutParams(dp(46), dp(34)));
+        root.addView(addressRow, new LinearLayout.LayoutParams(-1, dp(48)));
 
         addressBar.setOnEditorActionListener((view, actionId, event) -> {
             boolean go = actionId == EditorInfo.IME_ACTION_GO ||
@@ -338,7 +338,7 @@ public class BrowserActivity extends ComponentActivity {
         LinearLayout controls = new LinearLayout(this);
         controls.setGravity(Gravity.CENTER_VERTICAL);
         controls.setOrientation(LinearLayout.HORIZONTAL);
-        controls.setPadding(0, dp(4), 0, dp(4));
+        controls.setPadding(0, dp(2), 0, dp(2));
         addCompactButton(controls, "‹", "Back", () -> {
             WebView w = currentWebView();
             if (w != null && w.canGoBack()) w.goBack();
@@ -363,12 +363,12 @@ public class BrowserActivity extends ComponentActivity {
             }
             return true;
         });
-        controls.addView(reloadButton, new LinearLayout.LayoutParams(0, dp(38), 1));
+        controls.addView(reloadButton, new LinearLayout.LayoutParams(0, dp(34), 1));
         tabButton = compactButton("Tabs 1", "Open tab switcher", () -> showTabSwitcher());
-        controls.addView(tabButton, new LinearLayout.LayoutParams(0, dp(38), 1));
+        controls.addView(tabButton, new LinearLayout.LayoutParams(0, dp(34), 1));
         addCompactButton(controls, "□", "New tab", () -> addNewTab(null, true));
         addCompactButton(controls, "⋮", "Menu", () -> showSettings());
-        root.addView(controls, new LinearLayout.LayoutParams(-1, dp(44)));
+        root.addView(controls, new LinearLayout.LayoutParams(-1, dp(38)));
 
         progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
         progressBar.setMax(100);
@@ -387,14 +387,14 @@ public class BrowserActivity extends ComponentActivity {
         securityStatus.setSingleLine(true);
         securityStatus.setGravity(Gravity.CENTER_VERTICAL);
         securityStatus.setPadding(dp(3), dp(2), dp(3), dp(2));
-        root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(20)));
+        root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(18)));
         securityStatus.setContentDescription("Tap to view site security information");
         securityStatus.setOnClickListener(v -> showSiteSecurity());
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.HORIZONTAL);
         bottom.setGravity(Gravity.CENTER);
-        bottom.setPadding(0, dp(4), 0, 0);
+        bottom.setPadding(0, dp(2), 0, 0);
         addBottomButton(bottom, "⌂\nHome", () -> {
             Tab t = currentTab();
             if (t != null) loadHome(t);
@@ -403,7 +403,7 @@ public class BrowserActivity extends ComponentActivity {
         addBottomButton(bottom, "◷\nHistory", () -> showHistory());
         addBottomButton(bottom, "⌕\nFind", () -> showFindDialog());
         addBottomButton(bottom, "⚙\nSettings", () -> showSettings());
-        root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(compact ? 58 : 54)));
+        root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(compact ? 48 : 46)));
 
         setContentView(root);
         root.requestApplyInsets();
@@ -412,7 +412,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void addCompactButton(LinearLayout parent, String icon, String description, Runnable action) {
         parent.addView(compactButton(icon, description, action),
-                new LinearLayout.LayoutParams(0, dp(38), 1));
+                new LinearLayout.LayoutParams(0, dp(34), 1));
     }
 
     private TextView compactButton(String text, String description, Runnable action) {
@@ -448,16 +448,16 @@ public class BrowserActivity extends ComponentActivity {
         TextView view = new TextView(this);
         view.setText(text);
         view.setGravity(Gravity.CENTER);
-        view.setTextSize(10);
-        view.setAutoSizeTextTypeUniformWithConfiguration(8, 10, 1, TypedValue.COMPLEX_UNIT_SP);
+        view.setTextSize(9);
+        view.setAutoSizeTextTypeUniformWithConfiguration(7, 9, 1, TypedValue.COMPLEX_UNIT_SP);
         view.setLineSpacing(0f, 0.9f);
         view.setIncludeFontPadding(false);
         view.setMaxLines(2);
         view.setTextColor(INK);
-        view.setPadding(dp(1), dp(2), dp(1), dp(2));
+        view.setPadding(dp(1), dp(1), dp(1), dp(1));
         view.setBackground(round(Color.WHITE, OUTLINE, 12));
         view.setOnClickListener(v -> action.run());
-        int itemHeight = getResources().getConfiguration().screenWidthDp < 380 ? 52 : 48;
+        int itemHeight = getResources().getConfiguration().screenWidthDp < 380 ? 44 : 42;
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, dp(itemHeight), 1);
         lp.setMargins(dp(2), 0, dp(2), 0);
         parent.addView(view, lp);
