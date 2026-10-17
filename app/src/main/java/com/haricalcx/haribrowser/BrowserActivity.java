@@ -276,7 +276,7 @@ public class BrowserActivity extends ComponentActivity {
         brand.setSingleLine(true);
         brand.setEllipsize(TextUtils.TruncateAt.END);
         brand.setIncludeFontPadding(false);
-        brand.setAutoSizeTextTypeUniformWithConfiguration(12, 17, 1, TypedValue.COMPLEX_UNIT_SP);
+        brand.setAutoSizeTextTypeUniformWithConfiguration(10, 15, 1, TypedValue.COMPLEX_UNIT_SP);
         header.addView(brand, new LinearLayout.LayoutParams(0, dp(36), 1));
 
         modeBadge = new TextView(this);
