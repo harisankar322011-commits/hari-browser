@@ -1349,7 +1349,7 @@ public class BrowserActivity extends ComponentActivity {
                 "Print / save current page as PDF",
                 "Choose home page language",
                 "Choose browser accent colour",
-                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Anti-fingerprinting shield"
+                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
