@@ -26,7 +26,7 @@ final class FingerprintProtection {
 
             const defineFixed = (target, key, value) => {
               try {
-                if (!target) return;
+                if (!target || !(key in target)) return;
                 const own = Object.getOwnPropertyDescriptor(target, key);
                 if (own && !own.configurable) return;
                 Object.defineProperty(target, key, {
