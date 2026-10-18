@@ -78,7 +78,7 @@ jobs:
           permissions="$(apkanalyzer manifest permissions "$release_apk" | sed '/^[[:space:]]*$/d' | sort -u)"
           if [ "$permissions" != "android.permission.INTERNET" ]; then
             echo "::error::Unexpected permissions in release APK:"
-            printf '%s\\n' "$permissions"
+            printf '%s\n' "$permissions"
             exit 1
           fi
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$debug_apk"
