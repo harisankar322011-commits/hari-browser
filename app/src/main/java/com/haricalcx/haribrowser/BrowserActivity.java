@@ -1369,7 +1369,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Print / save current page as PDF",
                 "Choose home page language",
                 "Choose browser accent colour",
-                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield"
+                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
+                "About Hari Browser - What's new in 2.0"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1505,9 +1506,31 @@ public class BrowserActivity extends ComponentActivity {
                                 showToast(protectionEnabled ? "Anti-fingerprinting shield enabled." : "Anti-fingerprinting shield disabled.");
                             }
                             break;
+                        case 31:
+                            showAboutDialog();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void showAboutDialog() {
+        String message =
+                "Version 2.0.0\n\n" +
+                "A major release focused on a cleaner everyday browsing experience and practical privacy controls.\n\n" +
+                "- HTTPS-only navigation and Android WebView Safe Browsing\n" +
+                "- Separate private browsing profile and best-effort site-data cleanup\n" +
+                "- Encrypted bookmarks and optional encrypted browsing history\n" +
+                "- Tab management, downloads, QR codes, print/PDF, reader-style view and in-page search\n" +
+                "- Dark mode, five accent colours and nine home-page languages\n" +
+                "- Offline home-screen wallpapers and built-in local tools\n\n" +
+                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
+        new AlertDialog.Builder(this)
+                .setTitle("Hari Browser 2.0")
+                .setMessage(message)
+                .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
+                .setPositiveButton("Done", null)
                 .show();
     }
 

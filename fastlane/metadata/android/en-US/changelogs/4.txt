@@ -1,0 +1,1 @@
+Hari Browser 2.0.0: refreshed responsive browser controls, customizable themes, multilingual home dashboard, privacy and site-security tools, encrypted bookmarks, optional encrypted history, private browsing, tab management, downloads, QR/PDF tools, and a new in-app What's New panel. Tracker blocking remains best-effort.
