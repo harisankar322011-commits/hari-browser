@@ -86,6 +86,12 @@ try:
     check("Private settings do not alter standard-browser settings", private_settings in browser)
     check("Private start page receives no standard bookmarks",
           'String bookmarksJson = privateMode ? "[]" : readArray(KEY_BOOKMARKS).toString()' in browser)
+    check("Browser constructs a profile-specific encrypted store",
+          "new SecureStore(this, privateMode)" in browser)
+    check("Private encrypted-store namespace and key are isolated",
+          'String suffix = privateProfile ? ".private" : ""' in secure_store and
+          "keyAlias = KEY_ALIAS + suffix" in secure_store and
+          'PREFS_NAME + suffix' in secure_store)
 
     for name, signature in [
         ("private bookmark save blocked", "private void addBookmark()"),
