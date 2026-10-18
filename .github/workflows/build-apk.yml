@@ -76,7 +76,13 @@ jobs:
             exit 1
           fi
           permissions="$(apkanalyzer manifest permissions "$release_apk" | sed '/^[[:space:]]*$/d' | sort -u)"
-          if [ "$permissions" != "android.permission.INTERNET" ]; then
+          # AndroidX Activity contributes this signature-level, non-exported receiver
+          # permission during manifest merging. It does not grant an additional runtime
+          # permission; keep the allowlist exact so unexpected permissions fail CI.
+          expected_permissions="$(printf '%s\n' \
+            'android.permission.INTERNET' \
+            'com.haricalcx.haribrowser.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION')"
+          if [ "$permissions" != "$expected_permissions" ]; then
             echo "::error::Unexpected permissions in release APK:"
             printf '%s\n' "$permissions"
             exit 1
