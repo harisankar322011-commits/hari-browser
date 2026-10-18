@@ -85,7 +85,7 @@ try:
     private_settings = 'getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE)'
     check("Private settings do not alter standard-browser settings", private_settings in browser)
     check("Private start page receives no standard bookmarks",
-          'privateMode ? "[]" : bookmarksJson' in browser)
+          'String bookmarksJson = privateMode ? "[]" : readArray(KEY_BOOKMARKS).toString()' in browser)
 
     for name, signature in [
         ("private bookmark save blocked", "private void addBookmark()"),
