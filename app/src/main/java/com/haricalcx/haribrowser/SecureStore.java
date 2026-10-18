@@ -20,11 +20,23 @@ import javax.crypto.spec.GCMParameterSpec;
 public final class SecureStore {
     private static final String KEY_ALIAS = "HariBrowser.DataKey.v1";
     private static final String PREFS_NAME = "hari_encrypted_data";
+    private final String keyAlias;
     private final SharedPreferences preferences;
 
     public SecureStore(Context context) {
-        preferences = context.getApplicationContext()
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        this(context, false);
+    }
+
+    /**
+     * Keep the private profile's encrypted namespace and Keystore key separate
+     * from the standard profile as defense in depth. Private-mode UI operations
+     * also forbid saving or importing bookmarks/history.
+     */
+    public SecureStore(Context context, boolean privateProfile) {
+        Context app = context.getApplicationContext();
+        String suffix = privateProfile ? ".private" : "";
+        keyAlias = KEY_ALIAS + suffix;
+        preferences = app.getSharedPreferences(PREFS_NAME + suffix, Context.MODE_PRIVATE);
     }
 
     public synchronized void put(String name, String value) {
@@ -76,15 +88,15 @@ public final class SecureStore {
     private SecretKey getOrCreateKey() throws Exception {
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);
-        if (keyStore.containsAlias(KEY_ALIAS)) {
-            KeyStore.Entry entry = keyStore.getEntry(KEY_ALIAS, null);
+        if (keyStore.containsAlias(keyAlias)) {
+            KeyStore.Entry entry = keyStore.getEntry(keyAlias, null);
             if (entry instanceof KeyStore.SecretKeyEntry) {
                 return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
             }
         }
         KeyGenerator generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
         KeyGenParameterSpec spec = new KeyGenParameterSpec.Builder(
-                KEY_ALIAS,
+                keyAlias,
                 KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
                 .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
                 .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
