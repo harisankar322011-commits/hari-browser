@@ -106,7 +106,10 @@ jobs:
           echo "Release APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
           echo "Release APK is unsigned; F-Droid builds and signs its own package."
 
-      - name: Publish debug and release build artifacts
+      # Only publish downloadable artifacts from the protected main branch.
+      # Pull-request builds still validate code, but cannot publish APK artifacts.
+      - name: Publish debug and unsigned release test artifacts
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: hari-browser-android-apks
