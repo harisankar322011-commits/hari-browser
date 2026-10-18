@@ -9,7 +9,7 @@ A privacy-first Android browser built with the Android System WebView.
 - Android WebView Safe Browsing, certificate-error cancellation, and strict mixed-content policy.
 - Local ad/tracker host blocking (best-effort, not a complete filter list).
 - Third-party cookies disabled; form-password saving and file/content access disabled.
-- Separate private-browsing process/profile on Android 9+, with best-effort data cleanup on exit.
+- Separate private-browsing process/profile on Android 9+, with best-effort data cleanup on exit. Private mode cannot view, save, import, remove or export normal-profile bookmarks; its browser preferences use a separate preference store.
 - Encrypted bookmarks and optional encrypted history using an Android Keystore AES-GCM key.
 - Tabs, duplicate tabs, close-other-tabs, and restore recently closed tabs within the current session.
 - Tabs, bookmarks, optional history, page sharing, in-page find, adjustable text size, desktop mode, reader-style mode, and downloads.
@@ -37,9 +37,9 @@ A privacy-first Android browser built with the Android System WebView.
 2. Open **Build Hari Browser APK** and select the latest successful run.
 3. Download the **hari-browser-android-apks** artifact ZIP.
 4. Extract the ZIP. Install `debug/app-debug.apk` for testing/sideloading. Android may ask you to allow installs from your file manager.
-5. The `release/app-release-unsigned.apk` file is for checking that the release build compiles; it is unsigned and is not ready to install or publish.
+5. The `release/app-release-unsigned.apk` file is for checking that the release build compiles; it is unsigned and is not ready to install or publish. The artifact also contains `SHA256SUMS.txt` so you can check whether downloaded APK files match the build output.
 
-The CI debug APK is for testing, not a Play Store release. F-Droid should build and sign its own version from the public source. QR generation uses the ZXing Core library, which is Apache-2.0-licensed; that dependency retains its own licence.
+The CI debug APK is debug-signed and debuggable by design; use it only for testing and never for confidential browsing. CI verifies the debug APK signature and archive, checks the release package ID and that its manifest is not debuggable, checks declared release permissions, and records SHA-256 digests. These checks improve build integrity but do not prove the application is vulnerability-free or malware-free. For sensitive use, create a production release signed with your own protected signing key; do not commit that key or its password to GitHub. F-Droid should build and sign its own version from the public source. QR generation uses the ZXing Core library, which is Apache-2.0-licensed; that dependency retains its own licence.
 
 ## F-Droid
 Hari Browser has an open request for packaging in the F-Droid Requests for Packaging tracker: [request #4588](https://gitlab.com/fdroid/rfp/-/work_items/4588). This is a request for review, not acceptance or a published F-Droid listing. The release build, source metadata, dependencies, licensing and reproducibility still need independent review.
@@ -47,7 +47,7 @@ Hari Browser has an open request for packaging in the F-Droid Requests for Packa
 Before creating an official release tag, confirm that the release build and lint pass, test the app on a real Android device, review release notes and store screenshots, and ensure the published source exactly matches the release version.
 
 ## Security and privacy notes
-This project is a privacy-oriented browser, not a guarantee of anonymity or perfect protection. Websites you visit and your chosen search provider still receive the requests needed to serve pages. Android System WebView and Safe Browsing are provided by the device. The local blocker is deliberately conservative and cannot block every tracker. Private mode separates WebView data on supported Android versions and clears common site data on exit; it cannot erase downloads you explicitly save, screenshots, network/provider logs, or every artifact outside the app's control.
+This project is a privacy-oriented browser, not a guarantee of anonymity or perfect protection. Websites you visit and your chosen search provider still receive the requests needed to serve pages. Android System WebView and Safe Browsing are provided by the device. The local blocker is deliberately conservative and cannot block every tracker. Private mode separates WebView data on supported Android versions, hides normal-profile bookmarks, blocks bookmark import/export/save/remove in private sessions, uses a separate browser-settings preference file and clears common site data on exit. This cleanup is best-effort: it cannot erase downloads you explicitly save, screenshots, network/provider logs, or every artifact outside the app's control.
 
 The browser intentionally rejects HTTP instead of silently downgrading security. Some older sites will not open. JavaScript is enabled by default for compatibility and can be disabled in Settings. Review the source and build output before relying on this for sensitive activities.
 
