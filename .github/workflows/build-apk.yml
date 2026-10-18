@@ -84,8 +84,12 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$debug_apk"
           unzip -tq "$debug_apk"
           unzip -tq "$release_apk"
-          sha256sum "$debug_apk" "$release_apk" > app/build/outputs/apk/SHA256SUMS.txt
-          cat app/build/outputs/apk/SHA256SUMS.txt
+          # Keep checksum paths relative to the extracted artifact root.
+          (
+            cd app/build/outputs/apk
+            sha256sum debug/app-debug.apk release/app-release-unsigned.apk > SHA256SUMS.txt
+            cat SHA256SUMS.txt
+          )
 
       - name: Verify release APK was produced
         shell: bash
