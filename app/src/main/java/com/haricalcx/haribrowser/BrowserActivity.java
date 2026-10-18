@@ -212,7 +212,7 @@ public class BrowserActivity extends ComponentActivity {
                         fileChooserCallback = null;
                     }
                 });
-        secureStore = new SecureStore(this);
+        secureStore = new SecureStore(this, privateMode);
         defaultUserAgent = WebSettings.getDefaultUserAgent(this);
         WebView.setWebContentsDebuggingEnabled(false);
 
