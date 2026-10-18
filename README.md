@@ -2,6 +2,12 @@
 
 A privacy-first Android browser built with the Android System WebView.
 
+## Version 2.0.0
+
+Hari Browser 2.0 brings the current privacy-focused browser experience together as a major release. It includes a compact responsive browsing layout, a customizable light/dark theme with five accent colours, a multilingual start page, built-in local tools and quick actions, tab and download management, QR/PDF utilities, encrypted bookmarks, optional encrypted history, and a separate private-browsing profile. The Settings menu now includes an in-app **About Hari Browser / What's new in 2.0** panel.
+
+Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe Browsing and local tracker blocking provide useful safeguards, but do not guarantee anonymity or block every tracker. The unsigned release APK is for build validation only; it is not ready for installation or publication.
+
 ## Features
 - DuckDuckGo search by default; selectable DuckDuckGo, Startpage, Brave Search, Google, or Bing search providers.
 - URL-or-search address bar.
