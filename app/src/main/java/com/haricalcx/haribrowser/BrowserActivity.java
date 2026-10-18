@@ -202,7 +202,7 @@ public class BrowserActivity extends ComponentActivity {
                 }
             }
         });
-        settings = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
+        settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
         applyThemePalette();
         fileChooserLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
@@ -866,7 +866,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private String homeHtml() {
         String bookmarksJson = readArray(KEY_BOOKMARKS).toString();
-        return HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode,
+        return HomePage.render(darkTheme(), searchEngine(), privateMode ? "[]" : bookmarksJson, privateMode,
                 accentName(), settings.getString("home_language", "en"));
     }
 
@@ -1010,6 +1010,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void addBookmark() {
+        if (privateMode) {
+            showToast("Bookmarks are disabled in private browsing to avoid saving private activity.");
+            return;
+        }
         Tab tab = currentTab();
         if (tab == null || tab.home || !PrivacyGuard.isHttpsUrl(tab.url)) {
             showToast("Open a website before saving a bookmark.");
@@ -1043,6 +1047,7 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void rememberHistory(String title, String url) {
+        if (privateMode) return;
         JSONArray old = readArray(KEY_HISTORY);
         JSONArray updated = new JSONArray();
         try {
@@ -1062,6 +1067,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showBookmarks() {
+        if (privateMode) {
+            showToast("Saved bookmarks are unavailable in private browsing.");
+            return;
+        }
         JSONArray array = readArray(KEY_BOOKMARKS);
         showSavedItems(array, "Bookmarks", true);
     }
@@ -1084,6 +1093,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showSavedItems(JSONArray array, String title, boolean bookmarks) {
+        if (privateMode && bookmarks) {
+            showToast("Saved bookmarks are unavailable in private browsing.");
+            return;
+        }
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding(dp(14), dp(8), dp(14), dp(8));
@@ -1147,6 +1160,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void removeBookmark(String url) {
+        if (privateMode) {
+            showToast("Bookmarks cannot be changed in private browsing.");
+            return;
+        }
         JSONArray old = readArray(KEY_BOOKMARKS);
         JSONArray updated = new JSONArray();
         for (int i = 0; i < old.length(); i++) {
@@ -1708,6 +1725,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void exportBookmarks() {
+        if (privateMode) {
+            showToast("Bookmark export is unavailable in private browsing.");
+            return;
+        }
         JSONArray bookmarks = readArray(KEY_BOOKMARKS);
         if (bookmarks.length() == 0) {
             showToast("There are no bookmarks to export.");
@@ -1728,6 +1749,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void importBookmarks() {
+        if (privateMode) {
+            showToast("Bookmark import is unavailable in private browsing.");
+            return;
+        }
         EditText input = new EditText(this);
         input.setHint("Paste a Hari Browser bookmark JSON export");
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -1745,6 +1770,10 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void mergeImportedBookmarks(String source) {
+        if (privateMode) {
+            showToast("Bookmark import is unavailable in private browsing.");
+            return;
+        }
         if (source == null || source.trim().isEmpty() || source.length() > 500000) {
             showToast("The bookmark export is empty or too large.");
             return;
