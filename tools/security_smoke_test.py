@@ -146,7 +146,8 @@ try:
           "assembleRelease lint" in build_workflow and "assembleDebug" not in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
     check("Release signing is conditional on protected signing secrets",
-          "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and "apksigner sign" in build_workflow)
+          "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
+          "apksigner" in build_workflow and "sign --ks" in build_workflow)
     secret_scan_workflow = read(".github/workflows/secret-scan.yml")
     check("Secret scanner uses complete Git history", "fetch-depth: 0" in secret_scan_workflow)
     check("Secret scanner does not persist checkout credentials",
