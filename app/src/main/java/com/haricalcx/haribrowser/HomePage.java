@@ -569,6 +569,11 @@ h1{font-size:clamp(29px,6vw,47px);line-height:1.07;letter-spacing:-1.3px;margin:
 .wallpaper-choice[aria-pressed="true"]{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}
 .localnote{margin-top:24px;padding:13px 10px 0;border-top:1px solid var(--line);font-size:10px;line-height:1.6}
 #toolsPanel,#explorePanel,#privacyPanel{content-visibility:auto;contain-intrinsic-size:auto 620px}
+/* Preserve selected local wallpapers when the refreshed theme is active. */
+body.wallpaper-on:not(.dark){background-image:linear-gradient(135deg,rgba(246,247,255,.18),rgba(237,240,255,.24)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll}
+body.wallpaper-on.dark{background-image:linear-gradient(135deg,rgba(8,12,25,.25),rgba(18,25,45,.34)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll}
+body.wallpaper-on:not(.dark) .hero{background-image:linear-gradient(130deg,rgba(255,255,255,.34),rgba(237,240,255,.43)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat}
+body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,45,.43),rgba(26,37,64,.52)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat}
 @media(max-width:480px){
  .shell{padding:9px 10px 16px}
  .top{gap:7px;padding:7px;border-radius:15px;margin-bottom:10px}
