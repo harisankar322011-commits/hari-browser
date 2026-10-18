@@ -531,6 +531,80 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
  .wallpaper-preview{height:48px}
 }
 
+
+/* Hari Browser 2.1 — refreshed start page, adaptive spacing and cheaper off-screen painting */
+body{background-image:radial-gradient(ellipse at 2% 0%,color-mix(in srgb,var(--accent) 11%,transparent),transparent 36%),radial-gradient(ellipse at 100% 8%,color-mix(in srgb,#06b6d4 8%,transparent),transparent 32%)}
+body.dark{background-image:radial-gradient(ellipse at 2% 0%,color-mix(in srgb,var(--accent) 18%,transparent),transparent 36%),radial-gradient(ellipse at 100% 8%,#0e749022,transparent 32%)}
+.shell{max-width:1120px;padding:12px 14px 20px}
+.top{gap:10px;margin:0 0 12px;padding:8px 10px;min-height:52px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(120deg,color-mix(in srgb,var(--surface) 91%,var(--accent) 9%),var(--surface));box-shadow:0 8px 28px #14213b10}
+.top .logo{width:40px;height:40px;flex-basis:40px;border-radius:14px;box-shadow:0 7px 18px color-mix(in srgb,var(--accent) 25%,transparent)}
+.top .logo:after{inset:4px;border-radius:10px}
+.top .logo svg{width:27px;height:27px}
+.top .brand{font-size:13px;letter-spacing:1.1px}
+.top .brand-sub{font-size:10px}
+.top .mode{font-size:9px;padding:6px 8px;border-radius:999px}
+.top .language-select{max-width:134px;padding:7px 8px;border-radius:12px;font-size:11px}
+.hero{border-radius:25px;padding:clamp(20px,4vw,34px);border-color:color-mix(in srgb,var(--accent) 22%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,var(--surface) 92%,var(--accent) 8%),var(--surface2));box-shadow:0 18px 46px color-mix(in srgb,var(--text) 7%,transparent);isolation:isolate}
+.hero:before{content:"";position:absolute;z-index:0;pointer-events:none;width:240px;height:240px;right:-90px;top:-125px;border:1px solid color-mix(in srgb,var(--accent) 26%,transparent);border-radius:50%;box-shadow:0 0 0 23px color-mix(in srgb,var(--accent) 5%,transparent),0 0 0 47px color-mix(in srgb,var(--accent) 4%,transparent)}
+.hero>*{position:relative;z-index:1}
+h1{font-size:clamp(29px,6vw,47px);line-height:1.07;letter-spacing:-1.3px;margin:12px 0 10px}
+.sub{font-size:clamp(13px,2vw,15px);margin-bottom:20px}
+.search{border-radius:18px;padding:6px;box-shadow:0 5px 18px color-mix(in srgb,var(--text) 5%,transparent)}
+.search input{font-size:15px}
+.primary{border-radius:13px;box-shadow:0 5px 13px color-mix(in srgb,var(--accent) 22%,transparent)}
+.pills{gap:7px}
+.pill{border-radius:999px;padding:7px 10px;background:color-mix(in srgb,var(--surface) 90%,var(--accent) 10%);border-color:color-mix(in srgb,var(--accent) 13%,var(--line))}
+.panelnav{gap:8px;margin:14px 0 7px}
+.navbtn{border-radius:13px;padding:10px 5px;transition:background-color .15s,border-color .15s}
+.section-head{margin-top:25px;margin-bottom:12px}
+.tile,.bookmark,.directory-item,.tool,.action,.card{transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
+.tile,.bookmark,.directory-item,.tool,.action{border-color:color-mix(in srgb,var(--line) 88%,var(--accent) 12%)}
+.tile,.tool{box-shadow:0 4px 14px color-mix(in srgb,var(--text) 3%,transparent)}
+.tile:hover,.bookmark:hover,.directory-item:hover,.tool:hover,.action:hover{transform:translateY(-1px);border-color:var(--accent);box-shadow:0 8px 20px color-mix(in srgb,var(--accent) 11%,transparent)}
+.tile:focus-visible,.btn:focus-visible,.primary:focus-visible,.navbtn:focus-visible,.category:focus-visible,.wallpaper-choice:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 60%,white);outline-offset:2px}
+.icon{border-radius:13px;background:linear-gradient(145deg,var(--surface2),color-mix(in srgb,var(--surface2) 70%,var(--accent) 30%))}
+.card{border-radius:18px;padding:16px}
+.wallpaper-choice{border-radius:13px}
+.wallpaper-preview{height:58px}
+.wallpaper-choice[aria-pressed="true"]{box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 18%,transparent)}
+.localnote{margin-top:24px;padding:13px 10px 0;border-top:1px solid var(--line);font-size:10px;line-height:1.6}
+#toolsPanel,#explorePanel,#privacyPanel{content-visibility:auto;contain-intrinsic-size:auto 620px}
+/* Preserve selected local wallpapers when the refreshed theme is active. */
+body.wallpaper-on:not(.dark){background-image:linear-gradient(135deg,rgba(246,247,255,.18),rgba(237,240,255,.24)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll}
+body.wallpaper-on.dark{background-image:linear-gradient(135deg,rgba(8,12,25,.25),rgba(18,25,45,.34)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat;background-attachment:scroll}
+body.wallpaper-on:not(.dark) .hero{background-image:linear-gradient(130deg,rgba(255,255,255,.34),rgba(237,240,255,.43)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat}
+body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,45,.43),rgba(26,37,64,.52)),var(--user-wallpaper);background-size:cover;background-position:center;background-repeat:no-repeat}
+@media(max-width:480px){
+ .shell{padding:9px 10px 16px}
+ .top{gap:7px;padding:7px;border-radius:15px;margin-bottom:10px}
+ .top .logo{width:34px;height:34px;flex-basis:34px;border-radius:11px}
+ .top .logo svg{width:23px;height:23px}
+ .top .brand{font-size:12px;letter-spacing:.8px}
+ .top .brand-sub{font-size:9px}
+ .top .language-select{max-width:none;padding:6px 7px;font-size:10px}
+ .top .mode{padding:5px 6px;font-size:8px}
+ .hero{padding:18px 13px 15px;border-radius:19px}
+ h1{font-size:clamp(26px,7.3vw,36px);letter-spacing:-.8px}
+ .search{gap:5px}
+ .search select{width:84px;max-width:84px;font-size:10px}
+ .search input{font-size:13px}
+ .panelnav{gap:5px}
+ .navbtn{padding:9px 2px;font-size:10px}
+ .wallpaper-preview{height:50px}
+ .localnote{margin-top:18px}
+}
+@media(max-width:350px){
+ .shell{padding-left:8px;padding-right:8px}
+ .top .language-select{flex:1 1 100px;max-width:125px}
+ .top .mode{max-width:105px}
+ .hero{padding:15px 10px 13px}
+ .search select{width:72px;max-width:72px}
+ .primary{padding:8px 7px}
+}
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}
+}
+
 </style>
 </head>
 <body class="__DARKCLASS__">
@@ -720,6 +794,135 @@ const I18N = {
     htmlBuilder.append("""
  ar:{brandSub:"عالمك على الويب — الخصوصية أولاً",eyebrow:"بداية أفضل",titleTop:"ابحث. تعلّم.",titleAccent:"حقق أهدافك.",sub:"صفحة رئيسية مفيدة لعالمك على الويب.",search:"بحث",home:"⌂ الرئيسية",tools:"⚒ الأدوات",explore:"✦ استكشف",privacy:"◈ الخصوصية",quick:"وصول سريع",addSite:"＋ أضف موقعاً",bookmarks:"إشاراتك المرجعية",manage:"عرض الكل",controls:"عناصر تحكم المتصفح",tap:"اضغط للفتح",shortcuts:"اختصارات شخصية",personalize:"خصص الصفحة الرئيسية",toolbox:"صندوق الأدوات",directory:"استكشف الدليل",privacyDash:"لوحة الخصوصية",promoTitle:"اكتشف المزيد من مشاريع Hari",promoText:"أدوات مفيدة ومشاريع إبداعية أنشأها Hari.",websites:"مواقع Hari",follow:"تابع @inspiring_creatives_minds",followSub:"التعليم والإبداع والحقائق والتحفيز",morning:"صباح الخير",afternoon:"طاب يومك",evening:"مساء الخير",ready:"اختصاراتك وأدواتك وإشاراتك المرجعية جاهزة",localTime:"التوقيت المحلي"}
 };
+
+const EXTRA_UI = {
+ en: {
+  https:"🔒 HTTPS-only", localTools:"🧩 Local tools", searchPlaceholder:"Search the web or enter an HTTPS site…",
+  directoryPlaceholder:"Find a website or category…", noMatches:"No matches. Try another search.",
+  addShortcut:"＋ Add a shortcut", resetShortcuts:"Reset local shortcuts", wallpaperTitle:"Offline wallpapers",
+  wallpaperSub:"Ten built-in backgrounds. No downloads or external image requests.", deviceOnly:"On-device",
+  wallpapers:["Original","Aurora","Ocean","Sunset","Forest","Midnight","Violet","Desert","Coral","Glacier","Nebula"],
+  actions:[["＋ New tab","Start a fresh tab"],["▣ Tab switcher","Switch, duplicate or close tabs"],["◷ History","History is off by default"],["⇩ Downloads","Open downloaded files"],["◉ Private session","Separate private browsing"],["⚙ Settings","Privacy, search and display"],["⌕ Find on page","Search text in a webpage"],["★ Save current page","Add the page to encrypted bookmarks"],["▦ QR code","Create a QR for the current URL"],["▤ Save as PDF","Use Android's print dialog"],["↗ Share page","Share the current title and address"],["🛡 Site security","Review HTTPS and browser safeguards"]],
+  emptyBookmarks:"No saved bookmarks yet. Open a website and tap ★ Save.", emptyShortcuts:"Add your first HTTPS shortcut.",
+  showAll:"Show all", showFewer:"Show fewer", toolsWord:"tools", curated:"curated links", sites:"sites", links:"links",
+  localNote:"Made for quick access. No external scripts, tracking pixels, remote fonts or AI shortcuts are loaded by this start page. External websites receive data when you choose to visit them."
+ },
+ ml: {
+  https:"🔒 HTTPS മാത്രം", localTools:"🧩 പ്രാദേശിക ടൂളുകൾ", searchPlaceholder:"വെബ് തിരയുക അല്ലെങ്കിൽ HTTPS സൈറ്റ് നൽകുക…",
+  directoryPlaceholder:"വെബ്സൈറ്റോ വിഭാഗമോ കണ്ടെത്തുക…", noMatches:"ഫലങ്ങളില്ല. മറ്റൊരു വാക്ക് തിരയുക.",
+  addShortcut:"＋ കുറുക്കുവഴി ചേർക്കുക", resetShortcuts:"പ്രാദേശിക കുറുക്കുവഴികൾ പുനഃസജ്ജമാക്കുക", wallpaperTitle:"ഓഫ്‌ലൈൻ വാൾപേപ്പറുകൾ",
+  wallpaperSub:"പത്ത് ഉൾപ്പെടുത്തിയ പശ്ചാത്തലങ്ങൾ. ഡൗൺലോഡുകളോ പുറം ഇമേജ് അഭ്യർത്ഥനകളോ ഇല്ല.", deviceOnly:"ഉപകരണത്തിൽ",
+  wallpapers:["ഒറിജിനൽ","ഓറോറ","സമുദ്രം","സൂര്യാസ്തമയം","വനം","അർധരാത്രി","വയലറ്റ്","മരുഭൂമി","കോറൽ","ഹിമാനി","നെബുല"],
+  actions:[["＋ പുതിയ ടാബ്","പുതിയ ടാബ് തുറക്കുക"],["▣ ടാബുകൾ","മാറ്റുക, പകർപ്പുണ്ടാക്കുക, അടയ്ക്കുക"],["◷ ചരിത്രം","ചരിത്രം ഡിഫോൾട്ടായി ഓഫ് ആണ്"],["⇩ ഡൗൺലോഡുകൾ","ഡൗൺലോഡ് ചെയ്ത ഫയലുകൾ തുറക്കുക"],["◉ സ്വകാര്യ സെഷൻ","വേറിട്ട സ്വകാര്യ ബ്രൗസിംഗ്"],["⚙ ക്രമീകരണങ്ങൾ","സ്വകാര്യത, തിരച്ചിൽ, കാഴ്ച"],["⌕ പേജിൽ കണ്ടെത്തുക","വെബ് പേജിലെ വാചകം തിരയുക"],["★ പേജ് സംരക്ഷിക്കുക","എൻക്രിപ്റ്റ് ചെയ്ത ബുക്ക്മാർക്കിൽ ചേർക്കുക"],["▦ QR കോഡ്","നിലവിലെ URL-ന് QR ഉണ്ടാക്കുക"],["▤ PDF ആയി സൂക്ഷിക്കുക","Android പ്രിന്റ് ഡയലോഗ് ഉപയോഗിക്കുക"],["↗ പേജ് പങ്കിടുക","പേജിന്റെ പേരും വിലാസവും പങ്കിടുക"],["🛡 സൈറ്റ് സുരക്ഷ","HTTPS, ബ്രൗസർ സുരക്ഷ പരിശോധിക്കുക"]],
+  emptyBookmarks:"ബുക്ക്മാർക്കുകളില്ല. ഒരു സൈറ്റ് തുറന്ന് ★ അമർത്തുക.", emptyShortcuts:"ആദ്യ HTTPS കുറുക്കുവഴി ചേർക്കുക.",
+  showAll:"എല്ലാ", showFewer:"കുറച്ച് മാത്രം", toolsWord:"ടൂളുകൾ കാണിക്കുക", curated:"തിരഞ്ഞെടുത്ത ലിങ്കുകൾ", sites:"സൈറ്റുകൾ", links:"ലിങ്കുകൾ",
+  localNote:"വേഗത്തിലുള്ള പ്രവേശനത്തിനായി. ഈ ഹോം പേജ് പുറം സ്ക്രിപ്റ്റുകളോ ട്രാക്കിംഗ് പിക്സലുകളോ റിമോട്ട് ഫോണ്ടുകളോ AI കുറുക്കുവഴികളോ ലോഡ് ചെയ്യുന്നില്ല. നിങ്ങൾ തുറക്കുന്ന വെബ്സൈറ്റുകൾക്ക് ആവശ്യമായ ഡാറ്റ ലഭിക്കും."
+ },
+ hi: {
+  https:"🔒 केवल HTTPS", localTools:"🧩 स्थानीय टूल", searchPlaceholder:"वेब खोजें या HTTPS साइट दर्ज करें…",
+  directoryPlaceholder:"वेबसाइट या श्रेणी खोजें…", noMatches:"कोई परिणाम नहीं। दूसरी खोज आज़माएँ।",
+  addShortcut:"＋ शॉर्टकट जोड़ें", resetShortcuts:"स्थानीय शॉर्टकट रीसेट करें", wallpaperTitle:"ऑफ़लाइन वॉलपेपर",
+  wallpaperSub:"दस अंतर्निहित पृष्ठभूमियाँ। कोई डाउनलोड या बाहरी छवि अनुरोध नहीं।", deviceOnly:"डिवाइस पर",
+  wallpapers:["मूल","ऑरोरा","समुद्र","सूर्यास्त","जंगल","आधी रात","बैंगनी","रेगिस्तान","कोरल","हिमनद","नीहारिका"],
+  actions:[["＋ नया टैब","नया टैब शुरू करें"],["▣ टैब स्विचर","टैब बदलें, कॉपी करें या बंद करें"],["◷ इतिहास","इतिहास डिफ़ॉल्ट रूप से बंद है"],["⇩ डाउनलोड","डाउनलोड की गई फ़ाइलें खोलें"],["◉ निजी सत्र","अलग निजी ब्राउज़िंग"],["⚙ सेटिंग","गोपनीयता, खोज और प्रदर्शन"],["⌕ पेज पर खोजें","वेबपेज में टेक्स्ट खोजें"],["★ पेज सहेजें","एन्क्रिप्टेड बुकमार्क में जोड़ें"],["▦ QR कोड","वर्तमान URL का QR बनाएँ"],["▤ PDF के रूप में सहेजें","Android प्रिंट विकल्प उपयोग करें"],["↗ पेज साझा करें","वर्तमान शीर्षक और पता साझा करें"],["🛡 साइट सुरक्षा","HTTPS और ब्राउज़र सुरक्षा देखें"]],
+  emptyBookmarks:"अभी कोई बुकमार्क नहीं। साइट खोलें और ★ दबाएँ।", emptyShortcuts:"अपना पहला HTTPS शॉर्टकट जोड़ें।",
+  showAll:"सभी दिखाएँ", showFewer:"कम दिखाएँ", toolsWord:"टूल", curated:"चुने हुए लिंक", sites:"साइटें", links:"लिंक",
+  localNote:"त्वरित पहुँच के लिए बनाया गया। यह होम पेज बाहरी स्क्रिप्ट, ट्रैकिंग पिक्सेल, रिमोट फ़ॉन्ट या AI शॉर्टकट लोड नहीं करता। चुनी गई वेबसाइटों को आवश्यक अनुरोध मिलते हैं।"
+ },
+ ta: {
+  https:"🔒 HTTPS மட்டும்", localTools:"🧩 உள்ளூர் கருவிகள்", searchPlaceholder:"இணையத்தில் தேடவும் அல்லது HTTPS தளத்தை உள்ளிடவும்…",
+  directoryPlaceholder:"இணையதளம் அல்லது வகையைத் தேடவும்…", noMatches:"முடிவுகள் இல்லை. வேறு தேடலை முயற்சிக்கவும்.",
+  addShortcut:"＋ குறுக்குவழியைச் சேர்", resetShortcuts:"உள்ளூர் குறுக்குவழிகளை மீட்டமை", wallpaperTitle:"ஆஃப்லைன் வால்பேப்பர்கள்",
+  wallpaperSub:"பத்து உள்ளமைந்த பின்னணிகள். பதிவிறக்கங்களோ வெளிப்புறப் படக் கோரிக்கைகளோ இல்லை.", deviceOnly:"சாதனத்தில்",
+  wallpapers:["அசல்","ஆரோரா","கடல்","சூரிய அஸ்தமனம்","காடு","நள்ளிரவு","ஊதா","பாலைவனம்","பவளம்","பனிப்பாறை","நெபுலா"],
+  actions:[["＋ புதிய தாவல்","புதிய தாவலைத் தொடங்கு"],["▣ தாவல் மாற்றி","தாவல்களை மாற்று, நகலெடு அல்லது மூடு"],["◷ வரலாறு","வரலாறு இயல்பாக முடக்கப்பட்டுள்ளது"],["⇩ பதிவிறக்கங்கள்","பதிவிறக்கிய கோப்புகளைத் திற"],["◉ தனிப்பட்ட அமர்வு","தனியான தனிப்பட்ட உலாவல்"],["⚙ அமைப்புகள்","தனியுரிமை, தேடல், காட்சி"],["⌕ பக்கத்தில் தேடு","இணையப்பக்க உரையைத் தேடு"],["★ பக்கத்தைச் சேமி","குறியாக்கப்பட்ட புக்மார்க்கில் சேர்"],["▦ QR குறியீடு","தற்போதைய URL-க்கு QR உருவாக்கு"],["▤ PDF ஆகச் சேமி","Android அச்சு உரையாடலைப் பயன்படுத்து"],["↗ பக்கத்தைப் பகிர்","பக்கத் தலைப்பு மற்றும் முகவரியைப் பகிர்"],["🛡 தளப் பாதுகாப்பு","HTTPS மற்றும் உலாவிப் பாதுகாப்பைச் சரிபார்"]],
+  emptyBookmarks:"புக்மார்க்குகள் இல்லை. தளத்தைத் திறந்து ★ தட்டவும்.", emptyShortcuts:"உங்கள் முதல் HTTPS குறுக்குவழியைச் சேர்க்கவும்.",
+  showAll:"அனைத்தையும் காட்டு", showFewer:"குறைவாகக் காட்டு", toolsWord:"கருவிகள்", curated:"தேர்ந்தெடுத்த இணைப்புகள்", sites:"தளங்கள்", links:"இணைப்புகள்",
+  localNote:"விரைவான அணுகலுக்காக உருவாக்கப்பட்டது. இந்த முகப்புப் பக்கம் வெளிப்புற ஸ்கிரிப்ட்கள், கண்காணிப்பு பிக்சல்கள், தொலை எழுத்துருக்கள் அல்லது AI குறுக்குவழிகளை ஏற்றாது. நீங்கள் திறக்கும் இணையதளங்களுக்கு தேவையான கோரிக்கைகள் அனுப்பப்படும்."
+ },
+ te: {
+  https:"🔒 HTTPS మాత్రమే", localTools:"🧩 స్థానిక సాధనాలు", searchPlaceholder:"వెబ్‌లో వెతకండి లేదా HTTPS సైట్ నమోదు చేయండి…",
+  directoryPlaceholder:"వెబ్‌సైట్ లేదా వర్గాన్ని వెతకండి…", noMatches:"ఫలితాలు లేవు. మరోసారి వెతకండి.",
+  addShortcut:"＋ షార్ట్‌కట్ జోడించు", resetShortcuts:"స్థానిక షార్ట్‌కట్‌లను రీసెట్ చేయి", wallpaperTitle:"ఆఫ్‌లైన్ వాల్‌పేపర్లు",
+  wallpaperSub:"పది అంతర్నిర్మిత నేపథ్యాలు. డౌన్‌లోడ్‌లు లేదా బాహ్య చిత్ర అభ్యర్థనలు లేవు.", deviceOnly:"పరికరంలో",
+  wallpapers:["అసలు","ఆరోరా","సముద్రం","సూర్యాస్తమయం","అడవి","అర్ధరాత్రి","వైలెట్","ఎడారి","కోరల్","హిమానీనదం","నెబ్యులా"],
+  actions:[["＋ కొత్త ట్యాబ్","కొత్త ట్యాబ్ ప్రారంభించు"],["▣ ట్యాబ్ స్విచ్చర్","ట్యాబ్‌లను మార్చు, నకలు చేయి లేదా మూసివేయి"],["◷ చరిత్ర","చరిత్ర డిఫాల్ట్‌గా ఆఫ్‌లో ఉంటుంది"],["⇩ డౌన్‌లోడ్‌లు","డౌన్‌లోడ్ చేసిన ఫైళ్లను తెరువు"],["◉ ప్రైవేట్ సెషన్","వేరే ప్రైవేట్ బ్రౌజింగ్"],["⚙ సెట్టింగ్‌లు","గోప్యత, శోధన, ప్రదర్శన"],["⌕ పేజీలో కనుగొను","వెబ్‌పేజీలో వచనాన్ని వెతుకు"],["★ పేజీని సేవ్ చేయి","ఎన్‌క్రిప్ట్ చేసిన బుక్‌మార్క్‌లకు జోడించు"],["▦ QR కోడ్","ప్రస్తుత URL కోసం QR సృష్టించు"],["▤ PDFగా సేవ్ చేయి","Android ప్రింట్ డైలాగ్ ఉపయోగించు"],["↗ పేజీని పంచుకో","పేజీ పేరు, చిరునామాను పంచుకో"],["🛡 సైట్ భద్రత","HTTPS, బ్రౌజర్ రక్షణలను సమీక్షించు"]],
+  emptyBookmarks:"బుక్‌మార్క్‌లు లేవు. సైట్ తెరిచి ★ నొక్కండి.", emptyShortcuts:"మీ మొదటి HTTPS షార్ట్‌కట్‌ను జోడించండి.",
+  showAll:"అన్నీ చూపించు", showFewer:"తక్కువ చూపించు", toolsWord:"సాధనాలు", curated:"ఎంపిక చేసిన లింకులు", sites:"సైట్లు", links:"లింకులు",
+  localNote:"త్వరిత ప్రాప్యత కోసం రూపొందించబడింది. ఈ హోమ్ పేజీ బాహ్య స్క్రిప్ట్‌లు, ట్రాకింగ్ పిక్సెల్‌లు, రిమోట్ ఫాంట్‌లు లేదా AI షార్ట్‌కట్‌లను లోడ్ చేయదు. మీరు తెరిచే సైట్‌లకు అవసరమైన అభ్యర్థనలు వెళ్తాయి."
+ },
+ kn: {
+  https:"🔒 HTTPS ಮಾತ್ರ", localTools:"🧩 ಸ್ಥಳೀಯ ಸಾಧನಗಳು", searchPlaceholder:"ವೆಬ್‌ನಲ್ಲಿ ಹುಡುಕಿ ಅಥವಾ HTTPS ತಾಣವನ್ನು ನಮೂದಿಸಿ…",
+  directoryPlaceholder:"ವೆಬ್‌ಸೈಟ್ ಅಥವಾ ವರ್ಗ ಹುಡುಕಿ…", noMatches:"ಫಲಿತಾಂಶಗಳಿಲ್ಲ. ಮತ್ತೊಂದು ಹುಡುಕಾಟ ಪ್ರಯತ್ನಿಸಿ.",
+  addShortcut:"＋ ಶಾರ್ಟ್‌ಕಟ್ ಸೇರಿಸಿ", resetShortcuts:"ಸ್ಥಳೀಯ ಶಾರ್ಟ್‌ಕಟ್‌ಗಳನ್ನು ಮರುಹೊಂದಿಸಿ", wallpaperTitle:"ಆಫ್‌ಲೈನ್ ವಾಲ್‌ಪೇಪರ್‌ಗಳು",
+  wallpaperSub:"ಹತ್ತು ಅಂತರ್ನಿರ್ಮಿತ ಹಿನ್ನೆಲೆಗಳು. ಡೌನ್‌ಲೋಡ್ ಅಥವಾ ಬಾಹ್ಯ ಚಿತ್ರ ವಿನಂತಿಗಳಿಲ್ಲ.", deviceOnly:"ಸಾಧನದಲ್ಲೇ",
+  wallpapers:["ಮೂಲ","ಔರೋರಾ","ಸಮುದ್ರ","ಸೂರ್ಯಾಸ್ತ","ಕಾಡು","ಮಧ್ಯರಾತ್ರಿ","ನೇರಳೆ","ಮರುಭೂಮಿ","ಕೋರಲ್","ಹಿಮನದಿ","ನೆಬ್ಯುಲಾ"],
+  actions:[["＋ ಹೊಸ ಟ್ಯಾಬ್","ಹೊಸ ಟ್ಯಾಬ್ ಪ್ರಾರಂಭಿಸಿ"],["▣ ಟ್ಯಾಬ್ ಬದಲಿಸಿ","ಟ್ಯಾಬ್ ಬದಲಿಸಿ, ನಕಲಿಸಿ ಅಥವಾ ಮುಚ್ಚಿ"],["◷ ಇತಿಹಾಸ","ಇತಿಹಾಸವು ಪೂರ್ವನಿಯೋಜಿತವಾಗಿ ಆಫ್"],["⇩ ಡೌನ್‌ಲೋಡ್‌ಗಳು","ಡೌನ್‌ಲೋಡ್ ಮಾಡಿದ ಫೈಲ್ ತೆರೆಯಿರಿ"],["◉ ಖಾಸಗಿ ಸೆಷನ್","ಪ್ರತ್ಯೇಕ ಖಾಸಗಿ ಬ್ರೌಸಿಂಗ್"],["⚙ ಸೆಟ್ಟಿಂಗ್‌ಗಳು","ಗೌಪ್ಯತೆ, ಹುಡುಕಾಟ, ಪ್ರದರ್ಶನ"],["⌕ ಪುಟದಲ್ಲಿ ಹುಡುಕಿ","ವೆಬ್‌ಪುಟದ ಪಠ್ಯ ಹುಡುಕಿ"],["★ ಪುಟ ಉಳಿಸಿ","ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿದ ಬುಕ್‌ಮಾರ್ಕ್‌ಗೆ ಸೇರಿಸಿ"],["▦ QR ಕೋಡ್","ಪ್ರಸ್ತುತ URL ಗಾಗಿ QR ರಚಿಸಿ"],["▤ PDF ಆಗಿ ಉಳಿಸಿ","Android ಮುದ್ರಣ ಸಂವಾದ ಬಳಸಿ"],["↗ ಪುಟ ಹಂಚಿಕೊಳ್ಳಿ","ಪುಟದ ಶೀರ್ಷಿಕೆ ಮತ್ತು ವಿಳಾಸ ಹಂಚಿಕೊಳ್ಳಿ"],["🛡 ತಾಣದ ಭದ್ರತೆ","HTTPS ಮತ್ತು ಬ್ರೌಸರ್ ರಕ್ಷಣೆಯನ್ನು ಪರಿಶೀಲಿಸಿ"]],
+  emptyBookmarks:"ಬುಕ್‌ಮಾರ್ಕ್‌ಗಳಿಲ್ಲ. ತಾಣ ತೆರೆಯಿರಿ ಮತ್ತು ★ ಒತ್ತಿ.", emptyShortcuts:"ನಿಮ್ಮ ಮೊದಲ HTTPS ಶಾರ್ಟ್‌ಕಟ್ ಸೇರಿಸಿ.",
+  showAll:"ಎಲ್ಲ ತೋರಿಸಿ", showFewer:"ಕಡಿಮೆ ತೋರಿಸಿ", toolsWord:"ಸಾಧನಗಳು", curated:"ಆಯ್ದ ಲಿಂಕ್‌ಗಳು", sites:"ತಾಣಗಳು", links:"ಲಿಂಕ್‌ಗಳು",
+  localNote:"ತ್ವರಿತ ಪ್ರವೇಶಕ್ಕಾಗಿ ರೂಪಿಸಲಾಗಿದೆ. ಈ ಮುಖಪುಟ ಬಾಹ್ಯ ಸ್ಕ್ರಿಪ್ಟ್‌ಗಳು, ಟ್ರ್ಯಾಕಿಂಗ್ ಪಿಕ್ಸೆಲ್‌ಗಳು, ರಿಮೋಟ್ ಫಾಂಟ್‌ಗಳು ಅಥವಾ AI ಶಾರ್ಟ್‌ಕಟ್‌ಗಳನ್ನು ಲೋಡ್ ಮಾಡುವುದಿಲ್ಲ. ನೀವು ತೆರೆಯುವ ವೆಬ್‌ಸೈಟ್‌ಗಳಿಗೆ ಅಗತ್ಯ ವಿನಂತಿಗಳು ಹೋಗುತ್ತವೆ."
+ },
+ es: {
+  https:"🔒 Solo HTTPS", localTools:"🧩 Herramientas locales", searchPlaceholder:"Busca en la web o introduce un sitio HTTPS…",
+  directoryPlaceholder:"Busca un sitio web o una categoría…", noMatches:"No hay resultados. Prueba otra búsqueda.",
+  addShortcut:"＋ Añadir acceso", resetShortcuts:"Restablecer accesos locales", wallpaperTitle:"Fondos sin conexión",
+  wallpaperSub:"Diez fondos integrados. Sin descargas ni solicitudes de imágenes externas.", deviceOnly:"En el dispositivo",
+  wallpapers:["Original","Aurora","Océano","Atardecer","Bosque","Medianoche","Violeta","Desierto","Coral","Glaciar","Nebulosa"],
+  actions:[["＋ Nueva pestaña","Abrir una pestaña nueva"],["▣ Cambiar pestaña","Cambiar, duplicar o cerrar pestañas"],["◷ Historial","El historial está desactivado por defecto"],["⇩ Descargas","Abrir archivos descargados"],["◉ Sesión privada","Navegación privada separada"],["⚙ Ajustes","Privacidad, búsqueda y visualización"],["⌕ Buscar en página","Buscar texto en una página web"],["★ Guardar página","Añadir a marcadores cifrados"],["▦ Código QR","Crear un QR para la URL actual"],["▤ Guardar como PDF","Usar el diálogo de impresión de Android"],["↗ Compartir página","Compartir título y dirección actuales"],["🛡 Seguridad del sitio","Revisar HTTPS y protecciones del navegador"]],
+  emptyBookmarks:"Aún no hay marcadores. Abre un sitio y pulsa ★ Guardar.", emptyShortcuts:"Añade tu primer acceso HTTPS.",
+  showAll:"Mostrar todo", showFewer:"Mostrar menos", toolsWord:"herramientas", curated:"enlaces seleccionados", sites:"sitios", links:"enlaces",
+  localNote:"Diseñado para acceder rápido. Esta página no carga scripts externos, píxeles de seguimiento, fuentes remotas ni accesos de IA. Los sitios externos reciben datos cuando decides visitarlos."
+ },
+ fr: {
+  https:"🔒 HTTPS uniquement", localTools:"🧩 Outils locaux", searchPlaceholder:"Recherchez sur le web ou saisissez un site HTTPS…",
+  directoryPlaceholder:"Rechercher un site ou une catégorie…", noMatches:"Aucun résultat. Essayez une autre recherche.",
+  addShortcut:"＋ Ajouter un raccourci", resetShortcuts:"Réinitialiser les raccourcis locaux", wallpaperTitle:"Fonds d’écran hors ligne",
+  wallpaperSub:"Dix arrière-plans intégrés. Aucun téléchargement ni requête d’image externe.", deviceOnly:"Sur l’appareil",
+  wallpapers:["Original","Aurore","Océan","Coucher de soleil","Forêt","Minuit","Violet","Désert","Corail","Glacier","Nébuleuse"],
+  actions:[["＋ Nouvel onglet","Ouvrir un nouvel onglet"],["▣ Changer d’onglet","Changer, dupliquer ou fermer des onglets"],["◷ Historique","L’historique est désactivé par défaut"],["⇩ Téléchargements","Ouvrir les fichiers téléchargés"],["◉ Session privée","Navigation privée séparée"],["⚙ Paramètres","Confidentialité, recherche et affichage"],["⌕ Rechercher dans la page","Chercher du texte dans une page web"],["★ Enregistrer la page","Ajouter aux favoris chiffrés"],["▦ Code QR","Créer un QR pour l’URL actuelle"],["▤ Enregistrer en PDF","Utiliser l’impression Android"],["↗ Partager la page","Partager le titre et l’adresse actuels"],["🛡 Sécurité du site","Vérifier HTTPS et les protections du navigateur"]],
+  emptyBookmarks:"Aucun favori. Ouvrez un site et touchez ★ Enregistrer.", emptyShortcuts:"Ajoutez votre premier raccourci HTTPS.",
+  showAll:"Tout afficher", showFewer:"Afficher moins", toolsWord:"outils", curated:"liens sélectionnés", sites:"sites", links:"liens",
+  localNote:"Conçu pour un accès rapide. Cette page ne charge aucun script externe, pixel de suivi, police distante ou raccourci IA. Les sites externes reçoivent les requêtes nécessaires lorsque vous les visitez."
+ },
+ ar: {
+  https:"🔒 HTTPS فقط", localTools:"🧩 أدوات محلية", searchPlaceholder:"ابحث في الويب أو أدخل موقع HTTPS…",
+  directoryPlaceholder:"ابحث عن موقع أو فئة…", noMatches:"لا توجد نتائج. جرّب بحثاً آخر.",
+  addShortcut:"＋ إضافة اختصار", resetShortcuts:"إعادة ضبط الاختصارات المحلية", wallpaperTitle:"خلفيات دون اتصال",
+  wallpaperSub:"عشر خلفيات مضمّنة. لا تنزيلات ولا طلبات صور خارجية.", deviceOnly:"على الجهاز",
+  wallpapers:["الأصلية","الشفق","المحيط","الغروب","الغابة","منتصف الليل","بنفسجي","الصحراء","مرجاني","جليدي","سديم"],
+  actions:[["＋ علامة تبويب جديدة","ابدأ علامة تبويب جديدة"],["▣ مبدّل علامات التبويب","بدّل أو انسخ أو أغلق علامات التبويب"],["◷ السجل","السجل متوقف افتراضياً"],["⇩ التنزيلات","افتح الملفات التي تم تنزيلها"],["◉ جلسة خاصة","تصفح خاص منفصل"],["⚙ الإعدادات","الخصوصية والبحث والعرض"],["⌕ البحث في الصفحة","ابحث عن نص داخل صفحة ويب"],["★ حفظ الصفحة","أضف إلى العلامات المشفرة"],["▦ رمز QR","أنشئ رمزاً للرابط الحالي"],["▤ حفظ PDF","استخدم نافذة طباعة Android"],["↗ مشاركة الصفحة","شارك العنوان والرابط الحاليين"],["🛡 أمان الموقع","راجع HTTPS وحماية المتصفح"]],
+  emptyBookmarks:"لا توجد علامات محفوظة. افتح موقعاً واضغط ★ حفظ.", emptyShortcuts:"أضف أول اختصار HTTPS.",
+  showAll:"عرض الكل", showFewer:"عرض أقل", toolsWord:"أدوات", curated:"روابط مختارة", sites:"مواقع", links:"روابط",
+  localNote:"مصمم للوصول السريع. لا تحمّل هذه الصفحة نصوصاً خارجية أو بكسلات تتبع أو خطوطاً بعيدة أو اختصارات ذكاء اصطناعي. تتلقى المواقع الخارجية الطلبات اللازمة عند زيارتها."
+ }
+};
+function extraUi(){return EXTRA_UI[currentLanguage] || EXTRA_UI.en;}
+function applyExtendedLanguage(){
+ const u=extraUi();
+ const pills=document.querySelectorAll('.pills .pill');
+ if(pills[0])pills[0].textContent=u.https;
+ if(pills[1])pills[1].textContent=u.localTools;
+ $('query').placeholder=u.searchPlaceholder;
+ $('directorySearch').placeholder=u.directoryPlaceholder;
+ $('directorySearch').setAttribute('aria-label',u.directoryPlaceholder);
+ $('directoryEmpty').textContent=u.noMatches;
+ $('addShortcut2').textContent=u.addShortcut;
+ $('resetShortcuts').textContent=u.resetShortcuts;
+ const heading=document.querySelector('.wallpaper-heading h2');
+ const sub=document.querySelector('.wallpaper-heading p');
+ const device=document.querySelector('.wallpaper-heading .mini');
+ if(heading)heading.textContent=u.wallpaperTitle;
+ if(sub)sub.textContent=u.wallpaperSub;
+ if(device)device.textContent=u.deviceOnly;
+ document.querySelectorAll('#wallpaperGrid .wallpaper-name').forEach((el,i)=>{if(u.wallpapers[i])el.textContent=u.wallpapers[i];});
+ document.querySelectorAll('#homePanel .actions .action').forEach((el,i)=>{
+  const pair=u.actions[i]; if(!pair)return;
+  for(const node of Array.from(el.childNodes)){if(node.nodeType===Node.TEXT_NODE&&node.nodeValue.trim()){node.nodeValue=pair[0];break;}}
+  const desc=el.querySelector('span');if(desc)desc.textContent=pair[1];
+ });
+ const note=document.querySelector('.localnote');if(note)note.textContent=u.localNote;
+}
+
 let currentLanguage = LANGUAGE_SETTING || 'en';
 function applyLanguage(code) {
  const t = I18N[code] || I18N.en;
@@ -749,6 +952,7 @@ function applyLanguage(code) {
  $('creatorFollow').firstElementChild.nextElementSibling.childNodes[0].nodeValue = t.follow;
  $('creatorFollow').querySelector('small').textContent = t.followSub;
  document.querySelector('.shell').dir = currentLanguage === 'ar' ? 'rtl' : 'ltr';
+ applyExtendedLanguage();
 }
 function setDateTime(){
  const d=new Date(), hour=d.getHours(), t=I18N[currentLanguage]||I18N.en;
@@ -792,13 +996,14 @@ if (!PRIVATE_MODE) {
 }
 applyWallpaper(startingWallpaper, false);
 $('engine').value=['DuckDuckGo','Startpage','Brave Search','Google','Bing'].includes(ENGINE_SETTING)?ENGINE_SETTING:'DuckDuckGo';
+$('engine').addEventListener('change',()=>{const keys={'DuckDuckGo':'duckduckgo','Startpage':'startpage','Brave Search':'brave','Google':'google','Bing':'bing'};const key=keys[$('engine').value];if(key)window.location.href=internalAction('searchengine-'+key);});
 $('searchForm').addEventListener('submit',e=>{e.preventDefault();const q=$('query').value.trim();if(!q)return;let url;if(/^https:\\/\\//i.test(q)){url=q;}else if(/^http:\\/\\//i.test(q)){alert('Insecure HTTP is blocked. Use HTTPS.');return;}else if(/^[a-z][a-z0-9+.-]*:/i.test(q)&&!/^https?:/i.test(q)){alert('Only HTTPS web addresses are allowed.');return;}else if(!q.includes(' ')&&q.includes('.')&&/^[\\w.-]+(?::\\d+)?(?:\\/.*)?$/.test(q)){url='https://'+q;}else{const engine=$('engine').value;const encoded=encodeURIComponent(q);url=engine==='Startpage'?'https://www.startpage.com/sp/search?query='+encoded:engine==='Brave Search'?'https://search.brave.com/search?q='+encoded:engine==='Google'?'https://www.google.com/search?q='+encoded:engine==='Bing'?'https://www.bing.com/search?q='+encoded:'https://duckduckgo.com/?q='+encoded;}if(validHttps(url))window.location.href=url;else alert('Please enter a valid HTTPS website address.');});
 // The native browser preference seeds the selected provider on every home load.
 function showPanel(id){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));document.querySelectorAll('.navbtn').forEach(b=>b.classList.toggle('active',b.dataset.panel===id));if(id==='explorePanel')renderDirectory();window.scrollTo(0,0);}
 document.querySelectorAll('.navbtn').forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
 function internalAction(name){return 'https://hari-browser-home.invalid/action/'+name;}
-function renderFeatured(){const box=$('shortcuts');box.innerHTML='';let custom=[];try{custom=JSON.parse(localStorage.getItem('hari.custom.shortcuts.v1')||'[]');if(!Array.isArray(custom))custom=[];}catch(e){}const all=[...FEATURED,...custom.filter(x=>x&&validHttps(x.url)&&x.name).slice(0,40)];all.forEach(site=>{const a=document.createElement('a');a.className='tile';a.href=site.url;a.rel='noreferrer noopener';const ic=document.createElement('span');ic.className='icon';ic.textContent=site.icon||iconFor(site.name);const body=document.createElement('span');body.innerHTML='<strong>'+esc(site.name)+'</strong><small>'+esc(site.desc||new URL(site.url).hostname)+'</small>';a.append(ic,body);box.appendChild(a);});if(all.length===0)box.innerHTML='<div class="empty">Add your first HTTPS shortcut.</div>';}
-function renderBookmarks(){const box=$('bookmarks');box.innerHTML='';const list=(Array.isArray(BOOKMARKS)?BOOKMARKS:[]).filter(b=>b&&validHttps(b.url)).slice(-18).reverse();if(!list.length){box.innerHTML='<div class="empty" style="grid-column:1/-1">No saved bookmarks yet. Open a website and tap ★ Save.</div>';return;}list.forEach(b=>{const a=document.createElement('a');a.className='bookmark';a.href=b.url;a.rel='noreferrer noopener';const ic=document.createElement('span');ic.className='fav';ic.textContent='★';const text=document.createElement('span');text.style.minWidth='0';text.innerHTML='<strong>'+esc(b.title||new URL(b.url).hostname)+'</strong><small>'+esc(new URL(b.url).hostname)+'</small>';a.append(ic,text);box.appendChild(a);});}
+function renderFeatured(){const box=$('shortcuts');box.innerHTML='';let custom=[];try{custom=JSON.parse(localStorage.getItem('hari.custom.shortcuts.v1')||'[]');if(!Array.isArray(custom))custom=[];}catch(e){}const all=[...FEATURED,...custom.filter(x=>x&&validHttps(x.url)&&x.name).slice(0,40)];const fragment=document.createDocumentFragment();all.forEach(site=>{const a=document.createElement('a');a.className='tile';a.href=site.url;a.rel='noreferrer noopener';const ic=document.createElement('span');ic.className='icon';ic.textContent=site.icon||iconFor(site.name);const body=document.createElement('span');body.innerHTML='<strong>'+esc(site.name)+'</strong><small>'+esc(site.desc||new URL(site.url).hostname)+'</small>';a.append(ic,body);fragment.appendChild(a);});box.replaceChildren(fragment);if(all.length===0)box.innerHTML='<div class="empty">'+esc(extraUi().emptyShortcuts)+'</div>';}
+function renderBookmarks(){const box=$('bookmarks');box.innerHTML='';const list=(Array.isArray(BOOKMARKS)?BOOKMARKS:[]).filter(b=>b&&validHttps(b.url)).slice(-18).reverse();if(!list.length){box.innerHTML='<div class="empty" style="grid-column:1/-1">'+esc(extraUi().emptyBookmarks)+'</div>';return;}list.forEach(b=>{const a=document.createElement('a');a.className='bookmark';a.href=b.url;a.rel='noreferrer noopener';const ic=document.createElement('span');ic.className='fav';ic.textContent='★';const text=document.createElement('span');text.style.minWidth='0';text.innerHTML='<strong>'+esc(b.title||new URL(b.url).hostname)+'</strong><small>'+esc(new URL(b.url).hostname)+'</small>';a.append(ic,text);box.appendChild(a);});}
 function addShortcut(){
  $('modalTitle').textContent='Add an HTTPS shortcut';
  $('modalContent').innerHTML='<p class="mini">This shortcut is stored in this browser profile on this device. Use a trusted HTTPS address.</p><label class="field">Shortcut name<input id="shortcutName" maxlength="50" placeholder="My favourite site"></label><label class="field">HTTPS address<input id="shortcutUrl" type="url" placeholder="https://example.com"></label><div class="row"><button class="primary" id="shortcutSave">Save shortcut</button><button class="btn" id="shortcutCancel">Cancel</button></div><div id="shortcutError" class="notefoot"></div>';
@@ -835,7 +1040,7 @@ function renderTools(){
     grid.appendChild(b);
   });
   const toggle=$('toggleTools');
-  toggle.textContent=allToolsShown?'Show fewer tools':'Show all '+TOOLS.length+' tools';
+  toggle.textContent=allToolsShown?extraUi().showFewer:extraUi().showAll+' '+TOOLS.length+' '+extraUi().toolsWord;
   toggle.setAttribute('aria-expanded',String(allToolsShown));
 }
 $('toggleTools').addEventListener('click',()=>{
@@ -938,10 +1143,10 @@ function wireTool(id){
 }
 function renderCategories(){const box=$('categories');box.innerHTML='';const categories=['All',...new Set(DIRECTORY.map(x=>x.category))];categories.forEach(c=>{const b=document.createElement('button');b.className='category'+(c==='All'?' active':'');b.textContent=c;b.addEventListener('click',()=>{document.querySelectorAll('.category').forEach(x=>x.classList.toggle('active',x===b));renderDirectory(c);});box.appendChild(b);});}
 let chosenCategory='All';
-function renderDirectory(cat){if(cat)chosenCategory=cat;const q=($('directorySearch')?.value||'').trim().toLowerCase();const entries=DIRECTORY.filter(x=>(chosenCategory==='All'||x.category===chosenCategory)&&(!q||(x.name+' '+x.category+' '+x.url).toLowerCase().includes(q)));const grid=$('directoryGrid');grid.innerHTML='';entries.forEach(site=>{const a=document.createElement('a');a.className='directory-item';a.href=site.url;a.rel='noreferrer noopener';a.innerHTML='<b>'+esc(site.name)+'</b><small>'+esc(site.category)+' · '+esc(new URL(site.url).hostname)+'</small>';grid.appendChild(a);});$('directoryEmpty').style.display=entries.length?'none':'block';$('directoryCount').textContent=entries.length+' shown / '+DIRECTORY.length+' links';}
-renderCategories();$('directorySearch').addEventListener('input',()=>renderDirectory());
-$('countPill').textContent=DIRECTORY.length+' curated links';
-$('directoryCount').textContent=DIRECTORY.length+' sites';
+function renderDirectory(cat){if(cat)chosenCategory=cat;const q=($('directorySearch')?.value||'').trim().toLowerCase();const entries=DIRECTORY.filter(x=>(chosenCategory==='All'||x.category===chosenCategory)&&(!q||(x.name+' '+x.category+' '+x.url).toLowerCase().includes(q)));const grid=$('directoryGrid');const fragment=document.createDocumentFragment();entries.forEach(site=>{const a=document.createElement('a');a.className='directory-item';a.href=site.url;a.rel='noreferrer noopener';a.innerHTML='<b>'+esc(site.name)+'</b><small>'+esc(site.category)+' · '+esc(new URL(site.url).hostname)+'</small>';fragment.appendChild(a);});grid.replaceChildren(fragment);$('directoryEmpty').style.display=entries.length?'none':'block';$('directoryCount').textContent=entries.length+' / '+DIRECTORY.length+' '+extraUi().links;}
+renderCategories();let directorySearchTimer=0;$('directorySearch').addEventListener('input',()=>{if(directorySearchTimer)clearTimeout(directorySearchTimer);directorySearchTimer=setTimeout(()=>renderDirectory(),110);});
+$('countPill').textContent=DIRECTORY.length+' '+extraUi().curated;
+$('directoryCount').textContent=DIRECTORY.length+' '+extraUi().sites;
 </script>
 </body>
 </html>

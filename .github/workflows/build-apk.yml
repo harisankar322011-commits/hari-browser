@@ -1,4 +1,4 @@
-name: Build Hari Browser APK
+name: Build Hari Browser Release APK
 
 on:
   push:
@@ -11,8 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  # Isolate each revision so a stalled older build cannot block the newest APK.
-  group: hari-browser-build-${{ github.ref }}-${{ github.sha }}
+  group: hari-browser-release-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: false
 
 jobs:
@@ -44,41 +43,26 @@ jobs:
         uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
         with:
           gradle-version: '9.6.0'
-          # Avoid the separately licensed enhanced cache; use the open-source MIT cache provider.
           cache-provider: basic
 
-      - name: Build debug and release APKs and run lint
-        run: gradle --no-daemon clean assembleDebug assembleRelease lint
+      - name: Build only the release variant and run lint
+        run: gradle --no-daemon clean assembleRelease lint
 
-      - name: Verify debug APK exceeds 10 MiB
-        shell: bash
-        run: |
-          apk="app/build/outputs/apk/debug/app-debug.apk"
-          test -f "$apk" || { echo "::error::Debug APK was not created."; exit 1; }
-          bytes="$(stat -c '%s' "$apk")"
-          echo "Debug APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
-          if [ "$bytes" -le 10485760 ]; then
-            echo "::error::Debug APK must be larger than 10 MiB; got $bytes bytes."
-            exit 1
-          fi
-
-      - name: Validate APK signatures, package IDs and release manifest
+      - name: Validate release APK and package manifest
         shell: bash
         run: |
           set -euo pipefail
-          debug_apk="app/build/outputs/apk/debug/app-debug.apk"
-          release_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
-          apkanalyzer "manifest" "application-id" "$debug_apk" | grep -qx 'com.haricalcx.haribrowser.debug'
-          apkanalyzer "manifest" "application-id" "$release_apk" | grep -qx 'com.haricalcx.haribrowser'
-          debuggable="$(apkanalyzer manifest debuggable "$release_apk")"
-          if [ "$debuggable" != "false" ]; then
-            echo "::error::Release APK must not be debuggable (reported: $debuggable)."
-            exit 1
-          fi
-          permissions="$(apkanalyzer manifest permissions "$release_apk" | sed '/^[[:space:]]*$/d' | sort -u)"
-          # AndroidX Activity contributes this signature-level, non-exported receiver
-          # permission during manifest merging. It does not grant an additional runtime
-          # permission; keep the allowlist exact so unexpected permissions fail CI.
+          apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -f "$apk" || { echo "::error::Release APK was not created."; exit 1; }
+          application_id="$(apkanalyzer manifest application-id "$apk")"
+          test "$application_id" = "com.haricalcx.haribrowser" || {
+            echo "::error::Unexpected application ID: $application_id"; exit 1;
+          }
+          debuggable="$(apkanalyzer manifest debuggable "$apk")"
+          test "$debuggable" = "false" || {
+            echo "::error::Release APK must not be debuggable (reported: $debuggable)."; exit 1;
+          }
+          permissions="$(apkanalyzer manifest permissions "$apk" | sed '/^[[:space:]]*$/d' | sort -u)"
           expected_permissions="$(printf '%s\n' \
             'android.permission.INTERNET' \
             'com.haricalcx.haribrowser.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION')"
@@ -87,35 +71,57 @@ jobs:
             printf '%s\n' "$permissions"
             exit 1
           fi
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$debug_apk"
-          unzip -tq "$debug_apk"
-          unzip -tq "$release_apk"
-          # Keep checksum paths relative to the extracted artifact root.
-          (
-            cd app/build/outputs/apk
-            sha256sum debug/app-debug.apk release/app-release-unsigned.apk > SHA256SUMS.txt
-            cat SHA256SUMS.txt
-          )
-
-      - name: Verify release APK was produced
-        shell: bash
-        run: |
-          apk="app/build/outputs/apk/release/app-release-unsigned.apk"
-          test -f "$apk" || { echo "::error::Release APK was not created."; exit 1; }
+          unzip -tq "$apk"
           bytes="$(stat -c '%s' "$apk")"
           echo "Release APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
-          echo "Release APK is unsigned; F-Droid builds and signs its own package."
+          if [ "$bytes" -le 10485760 ]; then
+            echo "::error::Release APK must exceed 10 MiB; got $bytes bytes."
+            exit 1
+          fi
 
-      # Only publish downloadable artifacts from the protected main branch.
-      # Pull-request builds still validate code, but cannot publish APK artifacts.
-      - name: Publish debug and unsigned release test artifacts
+      # Signing material is deliberately kept out of the repository. Configure these four
+      # protected repository Actions secrets to produce a signed, installable developer APK.
+      - name: Sign or stage the release APK
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        shell: bash
+        env:
+          HARI_RELEASE_KEYSTORE_BASE64: ${{ secrets.HARI_RELEASE_KEYSTORE_BASE64 }}
+          HARI_RELEASE_KEY_ALIAS: ${{ secrets.HARI_RELEASE_KEY_ALIAS }}
+          HARI_RELEASE_KEY_PASSWORD: ${{ secrets.HARI_RELEASE_KEY_PASSWORD }}
+          HARI_RELEASE_STORE_PASSWORD: ${{ secrets.HARI_RELEASE_STORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          unsigned="app/build/outputs/apk/release/app-release-unsigned.apk"
+          mkdir -p dist
+          if [ -n "$HARI_RELEASE_KEYSTORE_BASE64" ] && [ -n "$HARI_RELEASE_KEY_ALIAS" ] \
+             && [ -n "$HARI_RELEASE_KEY_PASSWORD" ] && [ -n "$HARI_RELEASE_STORE_PASSWORD" ]; then
+            keystore="$RUNNER_TEMP/hari-browser-release.jks"
+            printf '%s' "$HARI_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            test -s "$keystore"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
+              --ks "$keystore" \
+              --ks-key-alias "$HARI_RELEASE_KEY_ALIAS" \
+              --ks-pass env:HARI_RELEASE_STORE_PASSWORD \
+              --key-pass env:HARI_RELEASE_KEY_PASSWORD \
+              --out "dist/HariBrowser-2.1.0.apk" "$unsigned"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "dist/HariBrowser-2.1.0.apk"
+            echo "### Release signing: signed APK" >> "$GITHUB_STEP_SUMMARY"
+            publish_apk="dist/HariBrowser-2.1.0.apk"
+          else
+            cp "$unsigned" "dist/HariBrowser-2.1.0-unsigned.apk"
+            echo "### Release signing: not configured" >> "$GITHUB_STEP_SUMMARY"
+            echo "The artifact is an unsigned release build and cannot be installed until signed with a trusted release key. Set the four HARI_RELEASE_* repository Actions secrets to sign it." >> "$GITHUB_STEP_SUMMARY"
+            publish_apk="dist/HariBrowser-2.1.0-unsigned.apk"
+          fi
+          sha256sum "$publish_apk" | tee "$RUNNER_TEMP/SHA256SUMS.txt"
+          echo "\nSHA-256: $(sha256sum "$publish_apk" | cut -d ' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish only the release APK
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: hari-browser-android-apks
-          path: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/SHA256SUMS.txt
+          name: hari-browser-2.1.0-release-apk
+          path: dist/*.apk
           if-no-files-found: error
+          compression-level: 0
           retention-days: 14

@@ -115,8 +115,8 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.0 release",
-          "versionCode 4" in gradle and "versionName '2.0.0'" in gradle)
+    check("Build version advanced for 2.1 release",
+          "versionCode 5" in gradle and "versionName '2.1.0'" in gradle)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
@@ -142,6 +142,12 @@ try:
     check("APK SHA-256 manifest created in CI", "sha256sum" in build_workflow and "SHA256SUMS.txt" in build_workflow)
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
+    check("Release-only artifact contains no debug APK",
+          "assembleRelease lint" in build_workflow and "assembleDebug" not in build_workflow and
+          "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
+    check("Release signing is conditional on protected signing secrets",
+          "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
+          'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow)
     secret_scan_workflow = read(".github/workflows/secret-scan.yml")
     check("Secret scanner uses complete Git history", "fetch-depth: 0" in secret_scan_workflow)
     check("Secret scanner does not persist checkout credentials",

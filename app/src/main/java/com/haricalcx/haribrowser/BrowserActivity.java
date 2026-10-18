@@ -987,6 +987,8 @@ public class BrowserActivity extends ComponentActivity {
             default:
                 if (action != null && action.startsWith("language-")) {
                     setHomeLanguage(action.substring("language-".length()));
+                } else if (action != null && action.startsWith("searchengine-")) {
+                    setHomeSearchEngine(action.substring("searchengine-".length()));
                 } else {
                     showToast("That browser action is not available.");
                 }
@@ -1008,6 +1010,24 @@ public class BrowserActivity extends ComponentActivity {
         Tab tab = currentTab();
         if (tab != null && tab.home) loadHome(tab);
         showToast("Home page language updated.");
+    }
+
+    private void setHomeSearchEngine(String key) {
+        String engine;
+        switch (key) {
+            case "duckduckgo": engine = "DuckDuckGo"; break;
+            case "startpage": engine = "Startpage"; break;
+            case "brave": engine = "Brave Search"; break;
+            case "google": engine = "Google"; break;
+            case "bing": engine = "Bing"; break;
+            default:
+                showToast("That search engine is not available.");
+                return;
+        }
+        settings.edit().putString("search_engine", engine).apply();
+        Tab tab = currentTab();
+        if (tab != null && tab.home) loadHome(tab);
+        showToast("Default search engine saved: " + engine);
     }
 
     private void addBookmark() {
@@ -1370,7 +1390,7 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose home page language",
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.0"
+                "About Hari Browser - What's new in 2.1"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1517,14 +1537,13 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showAboutDialog() {
         String message =
-                "Version 2.0.0\n\n" +
-                "A major release focused on a cleaner everyday browsing experience and practical privacy controls.\n\n" +
-                "- HTTPS-only navigation and Android WebView Safe Browsing\n" +
-                "- Separate private browsing profile and best-effort site-data cleanup\n" +
-                "- Encrypted bookmarks and optional encrypted browsing history\n" +
-                "- Tab management, downloads, QR codes, print/PDF, reader-style view and in-page search\n" +
-                "- Dark mode, five accent colours and nine home-page languages\n" +
-                "- Offline home-screen wallpapers and built-in local tools\n\n" +
+                "Version 2.1.0\n\n" +
+                "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
+                "- Expanded home-screen translations across nine languages\n" +
+                "- Search-engine choice now persists from the home screen\n" +
+                "- Faster directory filtering and batched shortcut rendering\n" +
+                "- Cleaner visual hierarchy, improved focus states and more efficient off-screen rendering\n" +
+                "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
                 "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
         new AlertDialog.Builder(this)
                 .setTitle("Hari Browser 2.0")
