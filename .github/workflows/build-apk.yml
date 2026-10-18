@@ -23,6 +23,11 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run repository security smoke checks
+        run: python3 tools/security_smoke_test.py
 
       - name: Set up JDK 17
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -57,6 +62,31 @@ jobs:
             exit 1
           fi
 
+      - name: Validate APK signatures, package IDs and release manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          debug_apk="app/build/outputs/apk/debug/app-debug.apk"
+          release_apk="app/build/outputs/apk/release/app-release-unsigned.apk"
+          apkanalyzer "manifest" "application-id" "$debug_apk" | grep -qx 'com.haricalcx.haribrowser.debug'
+          apkanalyzer "manifest" "application-id" "$release_apk" | grep -qx 'com.haricalcx.haribrowser'
+          debuggable="$(apkanalyzer manifest debuggable "$release_apk")"
+          if [ "$debuggable" != "false" ]; then
+            echo "::error::Release APK must not be debuggable (reported: $debuggable)."
+            exit 1
+          fi
+          permissions="$(apkanalyzer manifest permissions "$release_apk" | sed '/^[[:space:]]*$/d' | sort -u)"
+          if [ "$permissions" != "android.permission.INTERNET" ]; then
+            echo "::error::Unexpected permissions in release APK:"
+            printf '%s\\n' "$permissions"
+            exit 1
+          fi
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "$debug_apk"
+          unzip -tq "$debug_apk"
+          unzip -tq "$release_apk"
+          sha256sum "$debug_apk" "$release_apk" > app/build/outputs/apk/SHA256SUMS.txt
+          cat app/build/outputs/apk/SHA256SUMS.txt
+
       - name: Verify release APK was produced
         shell: bash
         run: |
@@ -73,5 +103,6 @@ jobs:
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/outputs/apk/release/*.apk
+            app/build/outputs/apk/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
