@@ -11,6 +11,7 @@ FEATURES
 • QR-code generation and Android print-to-PDF support.
 • Light and dark themes, five accent colours and offline home-screen wallpapers.
 • Home-screen interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic.
+• Refreshed responsive home layout, improved localized quick actions, faster directory filtering and persistent home-page search-engine choice.
 • Local tools, personal shortcuts and curated website directory.
 • No account requirement, app analytics, advertising SDKs or remote blocklist downloads.
 
