@@ -5,8 +5,17 @@ local.properties
 *.iml
 .DS_Store
 
-# Never commit signing keys, passwords, or local signing configuration.
+# Never commit signing keys, certificates with private keys, or local signing configuration.
 *.jks
 *.keystore
+*.p12
+*.pfx
+*.pem
+*.key
 keystore.properties
 signing.properties
+
+# Keep local environment variables and credentials out of Git.
+.env
+.env.*
+!.env.example

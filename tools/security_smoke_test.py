@@ -122,6 +122,7 @@ try:
         ".github/workflows/build-apk.yml",
         ".github/workflows/codeql.yml",
         ".github/workflows/dependency-review.yml",
+        ".github/workflows/secret-scan.yml",
     ]:
         workflow = read(workflow_name)
         actions = re.findall(r"^\s*uses:\s*([^\s#]+)", workflow, flags=re.MULTILINE)
@@ -139,6 +140,16 @@ try:
     check("Release debuggable flag checked in CI",
           "apkanalyzer manifest debuggable" in build_workflow)
     check("APK SHA-256 manifest created in CI", "sha256sum" in build_workflow and "SHA256SUMS.txt" in build_workflow)
+    check("APK artifacts publish only from main outside pull requests",
+          "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
+    secret_scan_workflow = read(".github/workflows/secret-scan.yml")
+    check("Secret scanner uses complete Git history", "fetch-depth: 0" in secret_scan_workflow)
+    check("Secret scanner does not persist checkout credentials",
+          "persist-credentials: false" in secret_scan_workflow)
+    check("Secret scan cannot post PR comments",
+          "GITLEAKS_ENABLE_COMMENTS: false" in secret_scan_workflow)
+    check("Secret scan does not upload findings as artifacts",
+          "GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false" in secret_scan_workflow)
 
 except Exception as exc:  # Keep the failing check output useful in CI.
     print(f"ERROR: security smoke checks could not complete: {exc}", file=sys.stderr)
