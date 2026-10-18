@@ -82,6 +82,7 @@ try:
     check("Debugging is never turned on in source",
           re.search(r"setWebContentsDebuggingEnabled\s*\(\s*true\s*\)", browser) is None)
 
+    secure_store = read("app/src/main/java/com/haricalcx/haribrowser/SecureStore.java")
     private_settings = 'getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE)'
     check("Private settings do not alter standard-browser settings", private_settings in browser)
     check("Private start page receives no standard bookmarks",
@@ -105,7 +106,6 @@ try:
         body = method_body(browser, signature)
         check(name, "if (privateMode)" in body and "return;" in body)
 
-    secure_store = read("app/src/main/java/com/haricalcx/haribrowser/SecureStore.java")
     check("Encrypted store uses AES-GCM", 'Cipher.getInstance("AES/GCM/NoPadding")' in secure_store)
     check("Encryption key stored in Android Keystore", 'KeyStore.getInstance("AndroidKeyStore")' in secure_store)
     check("Fresh randomized encryption IV required", ".setRandomizedEncryptionRequired(true)" in secure_store)
