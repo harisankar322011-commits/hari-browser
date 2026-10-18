@@ -13,8 +13,8 @@ Please use GitHub's private vulnerability reporting feature for this repository 
 - Bookmarks and opt-in history are encrypted using AES-GCM with a key stored in Android Keystore.
 - Android backup and device-transfer backup are disabled/excluded.
 - No app analytics or advertising SDK is included. The content blocker is local and does not download remote blocklists.
-- GitHub Actions build jobs use read-only repository permissions, pin third-party actions to full commit SHAs, avoid persisting checkout credentials, run source-level security regression checks, run CodeQL and dependency review, and upload a debug APK for testing.
-- CI checks the debug APK signature and ZIP integrity, ensures the release variant is not debuggable, validates APK package IDs and the release permission manifest, and publishes SHA-256 checksums. These are build-integrity checks, not a malware certificate or independent security audit.
+- GitHub Actions use read-only repository permissions and pin third-party actions to full commit SHAs. Source-level security regression checks, CodeQL, dependency review, and Gitleaks secret scanning run in CI; Gitleaks scans the full Git history on pushes and pull requests and runs weekly. The secret-scan workflow disables PR comments and finding-artifact uploads.
+- CI checks the debug APK signature and ZIP integrity, ensures the release variant is not debuggable, validates APK package IDs and the release permission manifest, and publishes SHA-256 checksums only from the protected main branch (not from pull-request builds). The release APK is unsigned and intended only as a build-validation artifact; it must not be distributed as a production install package. These are build-integrity checks, not a malware certificate or independent security audit.
 - Production signing keys and passwords must never be committed to this repository or exposed to build logs.
 
 ## Known limitations
