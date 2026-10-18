@@ -55,7 +55,7 @@ jobs:
           apk="app/build/outputs/apk/debug/app-debug.apk"
           test -f "$apk"
           application_id="$(apkanalyzer manifest application-id "$apk")"
-          test "$application_id" = "com.haricalcx.haribrowser"
+          test "$application_id" = "com.haricalcx.haribrowser.debug"
           debuggable="$(apkanalyzer manifest debuggable "$apk")"
           test "$debuggable" = "true"
           unzip -tq "$apk"
