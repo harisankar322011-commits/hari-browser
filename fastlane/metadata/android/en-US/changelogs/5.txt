@@ -1,0 +1,1 @@
+Hari Browser 2.1.0: refreshed adaptive home-page design, improved mobile and tablet spacing, broader translations for home-screen actions in nine languages, persisted home-page search-engine selection, faster directory filtering and batched shortcut rendering. GitHub Actions now publishes only the release APK; release signing is supported through protected repository secrets.
