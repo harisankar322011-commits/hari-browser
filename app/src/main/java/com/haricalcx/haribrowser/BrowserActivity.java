@@ -865,8 +865,9 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private String homeHtml() {
-        String bookmarksJson = readArray(KEY_BOOKMARKS).toString();
-        return HomePage.render(darkTheme(), searchEngine(), privateMode ? "[]" : bookmarksJson, privateMode,
+        // Do not even read standard-profile bookmark data inside the private process.
+        String bookmarksJson = privateMode ? "[]" : readArray(KEY_BOOKMARKS).toString();
+        return HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode,
                 accentName(), settings.getString("home_language", "en"));
     }
 
