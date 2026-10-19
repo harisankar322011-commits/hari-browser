@@ -1,6 +1,6 @@
 # Hari AI — Gemini cloud assistant for Hari Browser
 
-Hari AI uses Google's Gemini Developer API instead of an on-device language model. It does not download a model or require LiteRT-LM. An internet connection and a Gemini API key supplied by each user are required.
+Hari AI uses Google's Gemini Interactions API instead of an on-device language model. It does not download a model or require LiteRT-LM. An internet connection and a Gemini API key supplied by each user are required. Requests use stateless mode (`store: false`): the recent chat steps remain in app memory and are resent for each reply, rather than saving Interaction objects through this API.
 
 ## First-time setup
 
@@ -14,13 +14,13 @@ Hari AI uses Google's Gemini Developer API instead of an on-device language mode
 
 - The app contains no Gemini API key. Each person must supply their own key; never share it or commit it to source control.
 - Google AI Studio/API access and free-tier quotas are controlled by Google and can change. Free usage is not unlimited, and requests may be rejected if a key, model, region, quota, or billing setup is not eligible. Review Google's current [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
-- This version uses the stable model identifier `gemini-3.8-flash`. Model availability and API terms may change.
+- This version uses the stable model identifier `gemini-3.8-flash` through the Interactions API, the recommended API for new projects. Model availability and API terms may change.
 - Prompts require internet access. The assistant cannot work offline.
 
 ## Privacy and key handling
 
 - Hari Browser encrypts the user's API key using the existing `SecureStore`, backed by an AES-GCM key in Android Keystore. The key is not embedded in the app package or repository.
-- Chats stay in memory for the current Hari AI screen only; the app does not save transcript history for later sessions.
+- Chats stay in memory for the current Hari AI screen only; the app does not save transcript history for later sessions. The Gemini request sets `store: false`, so the Interactions API does not retain the request/response as a stored Interaction object. Google's handling of the content still follows the current API terms and data-use policy.
 - The current conversation context is sent to Google when a message is submitted. Page text is sent only after the user selects **Summarize current page** and confirms the action.
 - Google's free Gemini API tier may use submitted content to improve Google products. Do not send passwords, financial information, private messages, confidential work, or sensitive personal information. Review Google's latest terms and data-use policy before use.
 - Hari AI is not opened from private browsing.
