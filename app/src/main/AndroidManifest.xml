@@ -20,7 +20,7 @@
         <activity
             android:name=".HariAIActivity"
             android:exported="false"
-            android:label="Hari AI" />
+            android:label="Hari AI (Gemini)" />
 
         <activity
             android:name=".PrivateActivity"
