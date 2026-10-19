@@ -116,6 +116,18 @@ jobs:
           sha256sum "$publish_apk" | tee "$RUNNER_TEMP/SHA256SUMS.txt"
           echo "\nSHA-256: $(sha256sum "$publish_apk" | cut -d ' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
 
+      # PR builds are intentionally unsigned because release signing secrets are not exposed
+      # to pull_request workflows. This artifact is for inspection only, not direct installation.
+      - name: Upload unsigned release APK for review
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: hari-browser-2.2.0-unsigned-pr-${{ github.event.pull_request.number }}
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
       - name: Publish only the release APK
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
