@@ -423,7 +423,7 @@ class HariAIActivity : Activity() {
                         if (part.optString("type") != "text") continue
                         val text = part.optString("text")
                         if (text.isNotBlank()) {
-                            if (answer.isNotEmpty()) answer.append('\\n')
+                            if (answer.isNotEmpty()) answer.append('\n')
                             answer.append(text)
                         }
                     }
