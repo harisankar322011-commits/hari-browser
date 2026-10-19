@@ -21,7 +21,7 @@ The model is about 584 MB on disk and inference may use around 1 GB of RAM on su
 - Prompts and generated answers are processed locally by the selected model.
 - This activity does not upload chats or store the transcript for later sessions.
 - The model download itself requires internet access and uses Hugging Face.
-- A webpage is read only when the user explicitly opens Hari AI from a page and taps **Summarize current page**. A short text excerpt is then passed to the local model.
+- When the user explicitly opens Hari AI from a normal HTTPS page, a short page-text excerpt is copied into the Hari AI screen. It is processed by the local model only when the user taps **Summarize current page**; it is not sent to an external AI service.
 - Hari AI is not opened from private browsing, to preserve the separation between the private WebView process and the regular app process.
 - The model can make mistakes. Verify important claims independently.
 
