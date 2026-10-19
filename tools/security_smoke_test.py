@@ -130,7 +130,7 @@ try:
     check("No API key is embedded in Hari AI source",
           "AIza" not in ai_source and "GEMINI_API_KEY =" not in ai_source)
     check("Cloud AI privacy disclosure is present",
-          "prompts and the recent conversation context are sent to Google" in ai_source and
+          "the prompt and the recent conversation context are sent to Google" in ai_source and
           "page title, URL and text excerpt are sent too" in ai_source)
 
     for workflow_name in [
