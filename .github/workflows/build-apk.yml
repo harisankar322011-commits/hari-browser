@@ -79,6 +79,23 @@ jobs:
             exit 1
           fi
 
+      - name: Validate installable debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$apk" || { echo "::error::Debug APK was not created."; exit 1; }
+          application_id="$(apkanalyzer manifest application-id "$apk")"
+          test "$application_id" = "com.haricalcx.haribrowser.debug" || {
+            echo "::error::Unexpected debug application ID: $application_id"; exit 1;
+          }
+          debuggable="$(apkanalyzer manifest debuggable "$apk")"
+          test "$debuggable" = "true" || {
+            echo "::error::Debug APK should be debuggable (reported: $debuggable)."; exit 1;
+          }
+          unzip -tq "$apk"
+          echo "Installable debug APK validated."
+
       # Signing material is deliberately kept out of the repository. Configure these four
       # protected repository Actions secrets to produce a signed, installable developer APK.
       - name: Sign or stage the release APK
