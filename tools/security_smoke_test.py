@@ -115,8 +115,8 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.1 release",
-          "versionCode 5" in gradle and "versionName '2.1.0'" in gradle)
+    check("Build version advanced for 2.2 release",
+          "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
