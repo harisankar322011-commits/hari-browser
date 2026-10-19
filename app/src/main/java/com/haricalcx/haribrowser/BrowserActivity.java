@@ -898,6 +898,9 @@ public class BrowserActivity extends ComponentActivity {
             case "settings":
                 showSettings();
                 break;
+            case "ai":
+                openHariAI();
+                break;
             case "find":
                 showFindDialog();
                 break;
@@ -1357,6 +1360,45 @@ public class BrowserActivity extends ComponentActivity {
         dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 
+    /**
+     * Opens the separate on-device AI screen. Private sessions are deliberately
+     * excluded so their WebView content does not cross into the regular process.
+     * A page excerpt is captured only when the user explicitly opens Hari AI.
+     */
+    private void openHariAI() {
+        if (privateMode) {
+            showToast("Hari AI is unavailable in private browsing to keep sessions isolated.");
+            return;
+        }
+        Intent aiIntent = new Intent(BrowserActivity.this, HariAIActivity.class);
+        Tab tab = currentTab();
+        if (tab == null || tab.home || tab.webView == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            startActivity(aiIntent);
+            return;
+        }
+        aiIntent.putExtra("page_url", tab.url);
+        aiIntent.putExtra("page_title", tab.title == null ? "" : tab.title);
+        if (!javascriptEnabled()) {
+            startActivity(aiIntent);
+            return;
+        }
+        try {
+            tab.webView.evaluateJavascript(
+                    "(function(){return (document.body && document.body.innerText || '').substring(0,4000);})()",
+                    value -> {
+                        try {
+                            JSONArray wrapped = new JSONArray("[" + (value == null ? "null" : value) + "]");
+                            aiIntent.putExtra("page_text", wrapped.optString(0, ""));
+                        } catch (JSONException ignored) {
+                            // Chat remains available if a page does not return serializable text.
+                        }
+                        startActivity(aiIntent);
+                    });
+        } catch (Exception ignored) {
+            startActivity(aiIntent);
+        }
+    }
+
     private void showSettings() {
         String[] options = {
                 (trackersEnabled() ? "✓ " : "○ ") + "Block ads and trackers",
@@ -1390,7 +1432,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose home page language",
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.1"
+                "About Hari Browser - What's new in 2.2",
+                "Hari AI (on-device; model download required)"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1529,6 +1572,9 @@ public class BrowserActivity extends ComponentActivity {
                         case 31:
                             showAboutDialog();
                             break;
+                        case 32:
+                            openHariAI();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -1537,16 +1583,14 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showAboutDialog() {
         String message =
-                "Version 2.1.0\n\n" +
-                "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
-                "- Expanded home-screen translations across nine languages\n" +
-                "- Search-engine choice now persists from the home screen\n" +
-                "- Faster directory filtering and batched shortcut rendering\n" +
-                "- Cleaner visual hierarchy, improved focus states and more efficient off-screen rendering\n" +
-                "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
-                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
+                "Version 2.2.0\\n\\n" +
+                "Introduces Hari AI, an optional local assistant powered by a user-downloaded LiteRT-LM model. No paid AI API is used, and the model is kept outside the APK.\\n\\n" +
+                "- On-device chat with no session transcript saved\\n" +
+                "- Optional user-triggered webpage summarization\\n" +
+                "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\\n\\n" +
+                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services. AI model downloads require internet access and model-license acceptance.";
         new AlertDialog.Builder(this)
-                .setTitle("Hari Browser 2.0")
+                .setTitle("Hari Browser 2.2")
                 .setMessage(message)
                 .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
                 .setPositiveButton("Done", null)
