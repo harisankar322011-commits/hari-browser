@@ -118,6 +118,21 @@ try:
     check("Build version advanced for 2.2 release",
           "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
 
+    ai_source = read("app/src/main/java/com/haricalcx/haribrowser/HariAIActivity.kt")
+    check("On-device LiteRT model runtime removed",
+          "litertlm-android" not in gradle.lower() and "com.google.ai.edge.litertlm" not in ai_source)
+    check("Gemini API requests use HTTPS",
+          "https://generativelanguage.googleapis.com/" in ai_source)
+    check("Gemini key sent as an HTTP header, not a URL query parameter",
+          '"x-goog-api-key"' in ai_source and "?key=" not in ai_source)
+    check("Gemini key uses encrypted Android Keystore-backed storage",
+          "SecureStore(this)" in ai_source and "secureStore.put(KEY_API_KEY" in ai_source)
+    check("No API key is embedded in Hari AI source",
+          "AIza" not in ai_source and "GEMINI_API_KEY =" not in ai_source)
+    check("Cloud AI privacy disclosure is present",
+          "prompts and the recent conversation context are sent to Google" in ai_source and
+          "selected page text are sent to Google" in ai_source)
+
     for workflow_name in [
         ".github/workflows/build-apk.yml",
         ".github/workflows/codeql.yml",
