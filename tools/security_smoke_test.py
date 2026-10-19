@@ -123,6 +123,10 @@ try:
           "litertlm-android" not in gradle.lower() and "com.google.ai.edge.litertlm" not in ai_source)
     check("Gemini API requests use HTTPS",
           "https://generativelanguage.googleapis.com/" in ai_source)
+    check("Gemini uses the Interactions API without server-side interaction storage",
+          "v1beta/interactions" in ai_source and '.put("store", false)' in ai_source)
+    check("Gemini 3.8 request avoids unsupported sampling parameters",
+          "gemini-3.8-flash" in ai_source and '.put("temperature"' not in ai_source)
     check("Gemini key sent as an HTTP header, not a URL query parameter",
           '"x-goog-api-key"' in ai_source and "?key=" not in ai_source)
     check("Gemini key uses encrypted Android Keystore-backed storage",
