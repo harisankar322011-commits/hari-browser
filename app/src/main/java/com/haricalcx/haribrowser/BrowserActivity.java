@@ -1361,13 +1361,13 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     /**
-     * Opens the separate on-device AI screen. Private sessions are deliberately
+     * Opens the Gemini cloud AI screen. Private sessions are deliberately
      * excluded so their WebView content does not cross into the regular process.
-     * A page excerpt is captured only when the user explicitly opens Hari AI.
+     * A page excerpt is captured only when the user explicitly opens Hari AI; it is sent to Google only after they confirm a summary.
      */
     private void openHariAI() {
         if (privateMode) {
-            showToast("Hari AI is unavailable in private browsing to keep sessions isolated.");
+            showToast("Hari AI is unavailable in private browsing.");
             return;
         }
         Intent aiIntent = new Intent(BrowserActivity.this, HariAIActivity.class);
@@ -1433,7 +1433,7 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
                 "About Hari Browser - What's new in 2.2",
-                "Hari AI (on-device; model download required)"
+                "Hari AI (Gemini cloud; API key required)"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1584,11 +1584,11 @@ public class BrowserActivity extends ComponentActivity {
     private void showAboutDialog() {
         String message =
                 "Version 2.2.0\\n\\n" +
-                "Introduces Hari AI, an optional local assistant powered by a user-downloaded LiteRT-LM model. No paid AI API is used, and the model is kept outside the APK.\\n\\n" +
-                "- On-device chat with no session transcript saved\\n" +
-                "- Optional user-triggered webpage summarization\\n" +
+                "Adds Hari AI, an optional Google Gemini cloud assistant. It requires your own Gemini API key and an internet connection; no shared key is built into the APK.\\n\\n" +
+                "- Chat and user-triggered webpage summaries using Gemini\\n" +
+                "- Your API key is encrypted on this device; prompts and selected page text are sent to Google\\n" +
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\\n\\n" +
-                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services. AI model downloads require internet access and model-license acceptance.";
+                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Gemini API access and free-tier limits can change. Avoid sending sensitive information to the cloud assistant.";
         new AlertDialog.Builder(this)
                 .setTitle("Hari Browser 2.2")
                 .setMessage(message)
