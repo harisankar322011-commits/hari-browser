@@ -35,7 +35,8 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Private browsing screens are hidden from screenshots and recent-app previews where Android honors secure-window flags.
 - Emergency-clear action clears current tabs, cookies, cache, site storage and saved history while retaining bookmarks and explicit downloads.
 - Translate the current page through Google Translate (the selected page URL is shared with that external service).
-- Optional Gemini-powered Hari AI cloud chat with user-triggered webpage summaries. Each user supplies their own Gemini API key, encrypted with Android Keystore-backed storage; no shared key is bundled. Prompts and selected page text are sent to Google's Gemini API, and session transcripts are not saved. Review [Hari AI setup and privacy](docs/HARI_AI.md).\n- No app analytics, advertising SDKs, remote blocklist downloads, or browser account requirement.
+- Optional Gemini-powered Hari AI cloud chat with user-triggered webpage summaries. Each user supplies their own Gemini API key, encrypted with Android Keystore-backed storage; no shared key is bundled. Prompts and selected page text are sent to Google's Gemini API, and session transcripts are not saved. Review [Hari AI setup and privacy](docs/HARI_AI.md).
+- No app analytics, advertising SDKs, remote blocklist downloads, or browser account requirement.
 - GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.2.0-unsigned.apk` and is not installable until signed.
 
 ## Build and download the release APK
