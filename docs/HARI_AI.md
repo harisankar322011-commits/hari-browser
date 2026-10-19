@@ -1,32 +1,35 @@
-# Hari AI — local chat for Hari Browser
+# Hari AI — Gemini cloud assistant for Hari Browser
 
-Hari AI is an optional on-device assistant using Google's LiteRT-LM runtime. It does not call a paid AI API. The model is deliberately not bundled in the APK, keeping the browser APK smaller and allowing users to remove the model to recover storage.
+Hari AI uses Google's Gemini Developer API instead of an on-device language model. It does not download a model or require LiteRT-LM. An internet connection and a Gemini API key supplied by each user are required.
 
 ## First-time setup
 
-1. Open Hari Browser, open **Settings**, and choose **Hari AI (on-device)**.
-2. Open **Model license & access**. Gemma model files are gated: sign in to Hugging Face and accept the Gemma model terms before downloading.
-3. Return to Hari AI and tap **Download model (~584 MB)**. Wait for the .litertlm file to finish downloading.
-4. Tap **Import model**, choose gemma3-1b-it-int4.litertlm from Downloads, and wait for the copy to finish. Importing temporarily needs room for a second copy; after success, the original Downloads copy may be deleted.
-5. Tap **Load local AI**. Model initialization happens on a background thread and can take several seconds.
+1. Open Hari Browser, open **Settings**, and choose **Hari AI (Gemini cloud; API key required)**.
+2. Tap **Get API key** to open Google AI Studio, sign in if required, and create a Gemini API key: [Google AI Studio API keys](https://aistudio.google.com/apikey).
+3. Return to Hari Browser, open **Gemini API settings**, choose **Enter API key**, and paste your key.
+4. Send a question. Hari AI sends the prompt and a limited recent conversation history to Google's Gemini API over HTTPS.
+5. To summarize an open HTTPS page, choose **Summarize current page** and explicitly confirm. Only then does the app send the page title, URL, and up to 4,000 characters of visible page text to Gemini.
 
-The model is stored in the app's private files directory, is not backed up by Android's app backup, and can be removed by clearing app data or uninstalling Hari Browser. The imported model is intentionally not loaded automatically so users can control memory use.
+## Cost and requirements
 
-## Device and memory notes
+- The app contains no Gemini API key. Each person must supply their own key; never share it or commit it to source control.
+- Google AI Studio/API access and free-tier quotas are controlled by Google and can change. Free usage is not unlimited, and requests may be rejected if a key, model, region, quota, or billing setup is not eligible. Review Google's current [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
+- This version uses the stable model identifier `gemini-3.8-flash`. Model availability and API terms may change.
+- Prompts require internet access. The assistant cannot work offline.
 
-The model is about 584 MB on disk and inference may use around 1 GB of RAM on supported devices, with actual memory and speed varying by device and other running apps. On a phone with 6 GB total RAM and about 2.4 GB free at the time of checking, close memory-heavy apps before loading the model. If the browser or phone becomes unstable, unload it by closing the Hari AI screen.
+## Privacy and key handling
 
-## Privacy behavior
+- Hari Browser encrypts the user's API key using the existing `SecureStore`, backed by an AES-GCM key in Android Keystore. The key is not embedded in the app package or repository.
+- Chats stay in memory for the current Hari AI screen only; the app does not save transcript history for later sessions.
+- The current conversation context is sent to Google when a message is submitted. Page text is sent only after the user selects **Summarize current page** and confirms the action.
+- Google's free Gemini API tier may use submitted content to improve Google products. Do not send passwords, financial information, private messages, confidential work, or sensitive personal information. Review Google's latest terms and data-use policy before use.
+- Hari AI is not opened from private browsing.
+- HTTPS protects the network connection, but this client-side design is intended for personal/family use with each person's own API key. For a public app with a developer-owned key, use a trusted backend proxy with rate limits instead of embedding a shared key in the Android app.
+- Gemini can make mistakes. Verify important claims independently.
 
-- Prompts and generated answers are processed locally by the selected model.
-- This activity does not upload chats or store the transcript for later sessions.
-- The model download itself requires internet access and uses Hugging Face.
-- When the user explicitly opens Hari AI from a normal HTTPS page, a short page-text excerpt is copied into the Hari AI screen. It is processed by the local model only when the user taps **Summarize current page**; it is not sent to an external AI service.
-- Hari AI is not opened from private browsing, to preserve the separation between the private WebView process and the regular app process.
-- The model can make mistakes. Verify important claims independently.
+## Official references
 
-## Model
-
-Default model: litert-community/Gemma3-1B-IT, file gemma3-1b-it-int4.litertlm. The model is subject to the Gemma terms and the model provider's conditions; accepting the license is separate from using Hari Browser. See the [model page](https://huggingface.co/litert-community/Gemma3-1B-IT).
-
-Runtime: [LiteRT-LM for Android](https://developers.google.com/edge/litert-lm/android).
+- [Google AI Studio API keys](https://aistudio.google.com/apikey)
+- [Gemini API models](https://ai.google.dev/gemini-api/docs/models)
+- [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing)
+- [Google's API-key security guidance](https://ai.google.dev/gemini-api/docs/api-key)
