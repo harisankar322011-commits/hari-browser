@@ -161,8 +161,10 @@ try:
     check("APK SHA-256 manifest created in CI", "sha256sum" in build_workflow and "SHA256SUMS.txt" in build_workflow)
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
-    check("Release-only artifact contains no debug APK",
-          "assembleRelease lint" in build_workflow and "assembleDebug" not in build_workflow and
+    check("Debug APK is only uploaded for PR testing; release artifact remains release-only",
+          "assembleRelease assembleDebug lint" in build_workflow and
+          "Upload installable debug APK for testing" in build_workflow and
+          "if: github.event_name == 'pull_request'" in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
     check("Release signing is conditional on protected signing secrets",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
