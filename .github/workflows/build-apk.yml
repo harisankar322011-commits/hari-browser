@@ -45,8 +45,8 @@ jobs:
           gradle-version: '9.6.0'
           cache-provider: basic
 
-      - name: Build only the release variant and run lint
-        run: gradle --no-daemon clean assembleRelease lint
+      - name: Build release and debug variants and run lint
+        run: gradle --no-daemon clean assembleRelease assembleDebug lint
 
       - name: Validate release APK and package manifest
         shell: bash
@@ -115,6 +115,17 @@ jobs:
           fi
           sha256sum "$publish_apk" | tee "$RUNNER_TEMP/SHA256SUMS.txt"
           echo "\nSHA-256: $(sha256sum "$publish_apk" | cut -d ' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
+
+      # Android Gradle Plugin automatically signs debug APKs for device testing.
+      - name: Upload installable debug APK for testing
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: hari-browser-2.2.0-debug-pr-${{ github.event.pull_request.number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
 
       # PR builds are intentionally unsigned because release signing secrets are not exposed
       # to pull_request workflows. This artifact is for inspection only, not direct installation.
