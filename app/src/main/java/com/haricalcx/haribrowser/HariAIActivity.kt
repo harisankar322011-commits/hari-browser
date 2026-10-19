@@ -71,7 +71,7 @@ class HariAIActivity : Activity() {
     private val ink = Color.rgb(232, 239, 250)
     private val muted = Color.rgb(164, 178, 199)
     private val panel = Color.rgb(24, 36, 56)
-    private val background = Color.rgb(12, 20, 34)
+    private val pageBackgroundColor = Color.rgb(12, 20, 34)
     private val accent = Color.rgb(48, 190, 171)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -90,7 +90,7 @@ class HariAIActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(10), dp(16), dp(12))
-            setBackgroundColor(background)
+            setBackgroundColor(pageBackgroundColor)
         }
 
         val top = LinearLayout(this).apply {
@@ -436,7 +436,7 @@ class HariAIActivity : Activity() {
             textSize = 14f
             setTextColor(ink)
             setPadding(dp(11), dp(9), dp(11), dp(9))
-            setBackgroundColor(if (role == "You") Color.rgb(30, 70, 92) else background)
+            setBackgroundColor(if (role == "You") Color.rgb(30, 70, 92) else pageBackgroundColor)
         }
         transcript.addView(view, LinearLayout.LayoutParams(-1, -2).apply {
             bottomMargin = dp(9)
