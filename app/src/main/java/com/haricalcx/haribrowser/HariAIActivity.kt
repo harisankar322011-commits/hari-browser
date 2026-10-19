@@ -421,7 +421,7 @@ class HariAIActivity : Activity() {
             setTextColor(ink)
             setPadding(dp(10f), dp(10f), dp(10f), dp(10f))
             setBackgroundColor(pageBackground)
-            isSelectable = true
+            isTextSelectable = true
         }
         val params = LinearLayout.LayoutParams(-1, -2)
         params.bottomMargin = dp(8f)
