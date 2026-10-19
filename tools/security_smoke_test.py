@@ -131,7 +131,7 @@ try:
           "AIza" not in ai_source and "GEMINI_API_KEY =" not in ai_source)
     check("Cloud AI privacy disclosure is present",
           "prompts and the recent conversation context are sent to Google" in ai_source and
-          "selected page text are sent to Google" in ai_source)
+          "page title, URL and text excerpt are sent too" in ai_source)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
