@@ -46,7 +46,7 @@ jobs:
           cache-provider: basic
 
       - name: Build only the release variant and run lint
-        run: gradle --no-daemon clean assembleRelease testReleaseUnitTest lint
+        run: gradle --no-daemon clean assembleRelease testDebugUnitTest lint
 
       - name: Validate release APK and package manifest
         shell: bash
