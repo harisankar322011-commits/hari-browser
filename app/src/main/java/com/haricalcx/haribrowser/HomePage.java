@@ -381,6 +381,11 @@ h1 .accent{color:var(--accent)}
 .search select{max-width:116px;min-width:86px;border:0;background:transparent;color:var(--text);padding:9px 2px;outline:none;font-size:12px}
 .search input{min-width:0;flex:1;border:0;background:transparent;color:var(--text);outline:none;padding:10px 5px;font-size:15px}
 .primary{border:0;background:var(--accent);color:var(--accentText);border-radius:12px;padding:11px 16px;font-weight:900;white-space:nowrap}
+.ai-launch{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));background:linear-gradient(115deg,var(--surface),var(--surface2));border-radius:16px;text-decoration:none;color:var(--text);box-shadow:0 6px 20px #4f46e411;transition:transform .12s,border-color .12s}
+.ai-launch:active{transform:scale(.99)}.ai-launch:hover{border-color:var(--accent)}
+.ai-launch-icon{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:13px;background:var(--accent);color:var(--accentText);font-size:22px;font-weight:900}
+.ai-launch-copy{min-width:0;flex:1}.ai-launch-copy strong{display:block;font-size:14px;line-height:1.25}.ai-launch-copy small{display:block;color:var(--muted);font-size:11px;margin-top:3px;line-height:1.35}
+.ai-launch-open{font-size:11px;color:var(--accent);font-weight:900;white-space:nowrap}
 .pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .pill{border:1px solid var(--line);background:var(--surface);padding:7px 10px;border-radius:99px;font-size:11px;color:var(--muted)}
 .section-head{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:23px 2px 12px}
@@ -621,6 +626,7 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
     <input id="query" type="search" placeholder="Search the web or enter an HTTPS site…" autocomplete="off" spellcheck="false" aria-label="Search or website address">
     <button class="primary" type="submit">Search ↗</button>
   </form>
+  <a class="ai-launch" href="https://hari-browser-home.invalid/action/ai" aria-label="Open Hari AI assistant"><span class="ai-launch-icon" aria-hidden="true">✦</span><span class="ai-launch-copy"><strong id="hariAiTitle">Hari AI</strong><small id="hariAiDesc">Ask questions, learn faster and explore new ideas</small></span><span class="ai-launch-open" id="hariAiOpen">Open →</span></a>
   <div class="pills"><span class="pill">🔒 HTTPS-only</span><span class="pill">🧩 Local tools</span><span class="pill" id="countPill">250+ destinations</span><span class="pill" id="clock">Your local time</span></div>
 </section>
 
@@ -710,7 +716,7 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
   <div class="card"><h3>What this browser does not promise</h3><p>It is not a complete anonymity system. Websites and your selected search provider still receive requests when you visit them. The local tracker blocklist is best-effort, and private mode cannot erase downloads, screenshots or network logs.</p></div>
 </section>
 
-<p class="localnote">Made for quick access. No external scripts, tracking pixels, remote fonts or AI shortcuts are loaded by this start page. External websites receive data when you choose to visit them.</p>
+<p class="localnote">Made for quick access. No external scripts, tracking pixels or remote fonts are loaded by this start page. Hari AI sends prompts online only when you choose to use it.</p>
 </div>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -805,7 +811,7 @@ const EXTRA_UI = {
   actions:[["＋ New tab","Start a fresh tab"],["▣ Tab switcher","Switch, duplicate or close tabs"],["◷ History","History is off by default"],["⇩ Downloads","Open downloaded files"],["◉ Private session","Separate private browsing"],["⚙ Settings","Privacy, search and display"],["⌕ Find on page","Search text in a webpage"],["★ Save current page","Add the page to encrypted bookmarks"],["▦ QR code","Create a QR for the current URL"],["▤ Save as PDF","Use Android's print dialog"],["↗ Share page","Share the current title and address"],["🛡 Site security","Review HTTPS and browser safeguards"]],
   emptyBookmarks:"No saved bookmarks yet. Open a website and tap ★ Save.", emptyShortcuts:"Add your first HTTPS shortcut.",
   showAll:"Show all", showFewer:"Show fewer", toolsWord:"tools", curated:"curated links", sites:"sites", links:"links",
-  localNote:"Made for quick access. No external scripts, tracking pixels, remote fonts or AI shortcuts are loaded by this start page. External websites receive data when you choose to visit them."
+  localNote:"The start page loads its own resources locally. Hari AI sends your prompts online only when you choose to use it."
  },
  ml: {
   https:"🔒 HTTPS മാത്രം", localTools:"🧩 പ്രാദേശിക ടൂളുകൾ", searchPlaceholder:"വെബ് തിരയുക അല്ലെങ്കിൽ HTTPS സൈറ്റ് നൽകുക…",
@@ -816,7 +822,7 @@ const EXTRA_UI = {
   actions:[["＋ പുതിയ ടാബ്","പുതിയ ടാബ് തുറക്കുക"],["▣ ടാബുകൾ","മാറ്റുക, പകർപ്പുണ്ടാക്കുക, അടയ്ക്കുക"],["◷ ചരിത്രം","ചരിത്രം ഡിഫോൾട്ടായി ഓഫ് ആണ്"],["⇩ ഡൗൺലോഡുകൾ","ഡൗൺലോഡ് ചെയ്ത ഫയലുകൾ തുറക്കുക"],["◉ സ്വകാര്യ സെഷൻ","വേറിട്ട സ്വകാര്യ ബ്രൗസിംഗ്"],["⚙ ക്രമീകരണങ്ങൾ","സ്വകാര്യത, തിരച്ചിൽ, കാഴ്ച"],["⌕ പേജിൽ കണ്ടെത്തുക","വെബ് പേജിലെ വാചകം തിരയുക"],["★ പേജ് സംരക്ഷിക്കുക","എൻക്രിപ്റ്റ് ചെയ്ത ബുക്ക്മാർക്കിൽ ചേർക്കുക"],["▦ QR കോഡ്","നിലവിലെ URL-ന് QR ഉണ്ടാക്കുക"],["▤ PDF ആയി സൂക്ഷിക്കുക","Android പ്രിന്റ് ഡയലോഗ് ഉപയോഗിക്കുക"],["↗ പേജ് പങ്കിടുക","പേജിന്റെ പേരും വിലാസവും പങ്കിടുക"],["🛡 സൈറ്റ് സുരക്ഷ","HTTPS, ബ്രൗസർ സുരക്ഷ പരിശോധിക്കുക"]],
   emptyBookmarks:"ബുക്ക്മാർക്കുകളില്ല. ഒരു സൈറ്റ് തുറന്ന് ★ അമർത്തുക.", emptyShortcuts:"ആദ്യ HTTPS കുറുക്കുവഴി ചേർക്കുക.",
   showAll:"എല്ലാ", showFewer:"കുറച്ച് മാത്രം", toolsWord:"ടൂളുകൾ കാണിക്കുക", curated:"തിരഞ്ഞെടുത്ത ലിങ്കുകൾ", sites:"സൈറ്റുകൾ", links:"ലിങ്കുകൾ",
-  localNote:"വേഗത്തിലുള്ള പ്രവേശനത്തിനായി. ഈ ഹോം പേജ് പുറം സ്ക്രിപ്റ്റുകളോ ട്രാക്കിംഗ് പിക്സലുകളോ റിമോട്ട് ഫോണ്ടുകളോ AI കുറുക്കുവഴികളോ ലോഡ് ചെയ്യുന്നില്ല. നിങ്ങൾ തുറക്കുന്ന വെബ്സൈറ്റുകൾക്ക് ആവശ്യമായ ഡാറ്റ ലഭിക്കും."
+  localNote:"ഹോം പേജിന്റെ വിഭവങ്ങൾ ഉപകരണത്തിൽ തന്നെ ലോഡ് ചെയ്യുന്നു. നിങ്ങൾ Hari AI ഉപയോഗിക്കുമ്പോൾ മാത്രമാണ് നിങ്ങളുടെ ചോദ്യങ്ങൾ ഓൺലൈനിൽ അയയ്ക്കുന്നത്."
  },
  hi: {
   https:"🔒 केवल HTTPS", localTools:"🧩 स्थानीय टूल", searchPlaceholder:"वेब खोजें या HTTPS साइट दर्ज करें…",
@@ -827,7 +833,7 @@ const EXTRA_UI = {
   actions:[["＋ नया टैब","नया टैब शुरू करें"],["▣ टैब स्विचर","टैब बदलें, कॉपी करें या बंद करें"],["◷ इतिहास","इतिहास डिफ़ॉल्ट रूप से बंद है"],["⇩ डाउनलोड","डाउनलोड की गई फ़ाइलें खोलें"],["◉ निजी सत्र","अलग निजी ब्राउज़िंग"],["⚙ सेटिंग","गोपनीयता, खोज और प्रदर्शन"],["⌕ पेज पर खोजें","वेबपेज में टेक्स्ट खोजें"],["★ पेज सहेजें","एन्क्रिप्टेड बुकमार्क में जोड़ें"],["▦ QR कोड","वर्तमान URL का QR बनाएँ"],["▤ PDF के रूप में सहेजें","Android प्रिंट विकल्प उपयोग करें"],["↗ पेज साझा करें","वर्तमान शीर्षक और पता साझा करें"],["🛡 साइट सुरक्षा","HTTPS और ब्राउज़र सुरक्षा देखें"]],
   emptyBookmarks:"अभी कोई बुकमार्क नहीं। साइट खोलें और ★ दबाएँ।", emptyShortcuts:"अपना पहला HTTPS शॉर्टकट जोड़ें।",
   showAll:"सभी दिखाएँ", showFewer:"कम दिखाएँ", toolsWord:"टूल", curated:"चुने हुए लिंक", sites:"साइटें", links:"लिंक",
-  localNote:"त्वरित पहुँच के लिए बनाया गया। यह होम पेज बाहरी स्क्रिप्ट, ट्रैकिंग पिक्सेल, रिमोट फ़ॉन्ट या AI शॉर्टकट लोड नहीं करता। चुनी गई वेबसाइटों को आवश्यक अनुरोध मिलते हैं।"
+  localNote:"होम पेज की सामग्री डिवाइस पर स्थानीय रूप से लोड होती है। Hari AI आपके प्रश्न केवल तभी ऑनलाइन भेजता है जब आप उसका उपयोग चुनते हैं।"
  },
  ta: {
   https:"🔒 HTTPS மட்டும்", localTools:"🧩 உள்ளூர் கருவிகள்", searchPlaceholder:"இணையத்தில் தேடவும் அல்லது HTTPS தளத்தை உள்ளிடவும்…",
@@ -838,7 +844,7 @@ const EXTRA_UI = {
   actions:[["＋ புதிய தாவல்","புதிய தாவலைத் தொடங்கு"],["▣ தாவல் மாற்றி","தாவல்களை மாற்று, நகலெடு அல்லது மூடு"],["◷ வரலாறு","வரலாறு இயல்பாக முடக்கப்பட்டுள்ளது"],["⇩ பதிவிறக்கங்கள்","பதிவிறக்கிய கோப்புகளைத் திற"],["◉ தனிப்பட்ட அமர்வு","தனியான தனிப்பட்ட உலாவல்"],["⚙ அமைப்புகள்","தனியுரிமை, தேடல், காட்சி"],["⌕ பக்கத்தில் தேடு","இணையப்பக்க உரையைத் தேடு"],["★ பக்கத்தைச் சேமி","குறியாக்கப்பட்ட புக்மார்க்கில் சேர்"],["▦ QR குறியீடு","தற்போதைய URL-க்கு QR உருவாக்கு"],["▤ PDF ஆகச் சேமி","Android அச்சு உரையாடலைப் பயன்படுத்து"],["↗ பக்கத்தைப் பகிர்","பக்கத் தலைப்பு மற்றும் முகவரியைப் பகிர்"],["🛡 தளப் பாதுகாப்பு","HTTPS மற்றும் உலாவிப் பாதுகாப்பைச் சரிபார்"]],
   emptyBookmarks:"புக்மார்க்குகள் இல்லை. தளத்தைத் திறந்து ★ தட்டவும்.", emptyShortcuts:"உங்கள் முதல் HTTPS குறுக்குவழியைச் சேர்க்கவும்.",
   showAll:"அனைத்தையும் காட்டு", showFewer:"குறைவாகக் காட்டு", toolsWord:"கருவிகள்", curated:"தேர்ந்தெடுத்த இணைப்புகள்", sites:"தளங்கள்", links:"இணைப்புகள்",
-  localNote:"விரைவான அணுகலுக்காக உருவாக்கப்பட்டது. இந்த முகப்புப் பக்கம் வெளிப்புற ஸ்கிரிப்ட்கள், கண்காணிப்பு பிக்சல்கள், தொலை எழுத்துருக்கள் அல்லது AI குறுக்குவழிகளை ஏற்றாது. நீங்கள் திறக்கும் இணையதளங்களுக்கு தேவையான கோரிக்கைகள் அனுப்பப்படும்."
+  localNote:"முகப்புப் பக்கத்தின் வளங்கள் சாதனத்திலேயே ஏற்றப்படுகின்றன. நீங்கள் Hari AI-ஐத் தேர்ந்தெடுத்து பயன்படுத்தும்போது மட்டுமே உங்கள் கேள்விகள் இணையத்தில் அனுப்பப்படும்."
  },
  te: {
   https:"🔒 HTTPS మాత్రమే", localTools:"🧩 స్థానిక సాధనాలు", searchPlaceholder:"వెబ్‌లో వెతకండి లేదా HTTPS సైట్ నమోదు చేయండి…",
@@ -849,7 +855,7 @@ const EXTRA_UI = {
   actions:[["＋ కొత్త ట్యాబ్","కొత్త ట్యాబ్ ప్రారంభించు"],["▣ ట్యాబ్ స్విచ్చర్","ట్యాబ్‌లను మార్చు, నకలు చేయి లేదా మూసివేయి"],["◷ చరిత్ర","చరిత్ర డిఫాల్ట్‌గా ఆఫ్‌లో ఉంటుంది"],["⇩ డౌన్‌లోడ్‌లు","డౌన్‌లోడ్ చేసిన ఫైళ్లను తెరువు"],["◉ ప్రైవేట్ సెషన్","వేరే ప్రైవేట్ బ్రౌజింగ్"],["⚙ సెట్టింగ్‌లు","గోప్యత, శోధన, ప్రదర్శన"],["⌕ పేజీలో కనుగొను","వెబ్‌పేజీలో వచనాన్ని వెతుకు"],["★ పేజీని సేవ్ చేయి","ఎన్‌క్రిప్ట్ చేసిన బుక్‌మార్క్‌లకు జోడించు"],["▦ QR కోడ్","ప్రస్తుత URL కోసం QR సృష్టించు"],["▤ PDFగా సేవ్ చేయి","Android ప్రింట్ డైలాగ్ ఉపయోగించు"],["↗ పేజీని పంచుకో","పేజీ పేరు, చిరునామాను పంచుకో"],["🛡 సైట్ భద్రత","HTTPS, బ్రౌజర్ రక్షణలను సమీక్షించు"]],
   emptyBookmarks:"బుక్‌మార్క్‌లు లేవు. సైట్ తెరిచి ★ నొక్కండి.", emptyShortcuts:"మీ మొదటి HTTPS షార్ట్‌కట్‌ను జోడించండి.",
   showAll:"అన్నీ చూపించు", showFewer:"తక్కువ చూపించు", toolsWord:"సాధనాలు", curated:"ఎంపిక చేసిన లింకులు", sites:"సైట్లు", links:"లింకులు",
-  localNote:"త్వరిత ప్రాప్యత కోసం రూపొందించబడింది. ఈ హోమ్ పేజీ బాహ్య స్క్రిప్ట్‌లు, ట్రాకింగ్ పిక్సెల్‌లు, రిమోట్ ఫాంట్‌లు లేదా AI షార్ట్‌కట్‌లను లోడ్ చేయదు. మీరు తెరిచే సైట్‌లకు అవసరమైన అభ్యర్థనలు వెళ్తాయి."
+  localNote:"హోమ్ పేజీ వనరులు పరికరంలోనే లోడ్ అవుతాయి. మీరు Hari AI ఉపయోగించడానికి ఎంచుకున్నప్పుడు మాత్రమే మీ ప్రశ్నలు ఆన్‌లైన్‌లో పంపబడతాయి."
  },
  kn: {
   https:"🔒 HTTPS ಮಾತ್ರ", localTools:"🧩 ಸ್ಥಳೀಯ ಸಾಧನಗಳು", searchPlaceholder:"ವೆಬ್‌ನಲ್ಲಿ ಹುಡುಕಿ ಅಥವಾ HTTPS ತಾಣವನ್ನು ನಮೂದಿಸಿ…",
@@ -860,7 +866,7 @@ const EXTRA_UI = {
   actions:[["＋ ಹೊಸ ಟ್ಯಾಬ್","ಹೊಸ ಟ್ಯಾಬ್ ಪ್ರಾರಂಭಿಸಿ"],["▣ ಟ್ಯಾಬ್ ಬದಲಿಸಿ","ಟ್ಯಾಬ್ ಬದಲಿಸಿ, ನಕಲಿಸಿ ಅಥವಾ ಮುಚ್ಚಿ"],["◷ ಇತಿಹಾಸ","ಇತಿಹಾಸವು ಪೂರ್ವನಿಯೋಜಿತವಾಗಿ ಆಫ್"],["⇩ ಡೌನ್‌ಲೋಡ್‌ಗಳು","ಡೌನ್‌ಲೋಡ್ ಮಾಡಿದ ಫೈಲ್ ತೆರೆಯಿರಿ"],["◉ ಖಾಸಗಿ ಸೆಷನ್","ಪ್ರತ್ಯೇಕ ಖಾಸಗಿ ಬ್ರೌಸಿಂಗ್"],["⚙ ಸೆಟ್ಟಿಂಗ್‌ಗಳು","ಗೌಪ್ಯತೆ, ಹುಡುಕಾಟ, ಪ್ರದರ್ಶನ"],["⌕ ಪುಟದಲ್ಲಿ ಹುಡುಕಿ","ವೆಬ್‌ಪುಟದ ಪಠ್ಯ ಹುಡುಕಿ"],["★ ಪುಟ ಉಳಿಸಿ","ಎನ್‌ಕ್ರಿಪ್ಟ್ ಮಾಡಿದ ಬುಕ್‌ಮಾರ್ಕ್‌ಗೆ ಸೇರಿಸಿ"],["▦ QR ಕೋಡ್","ಪ್ರಸ್ತುತ URL ಗಾಗಿ QR ರಚಿಸಿ"],["▤ PDF ಆಗಿ ಉಳಿಸಿ","Android ಮುದ್ರಣ ಸಂವಾದ ಬಳಸಿ"],["↗ ಪುಟ ಹಂಚಿಕೊಳ್ಳಿ","ಪುಟದ ಶೀರ್ಷಿಕೆ ಮತ್ತು ವಿಳಾಸ ಹಂಚಿಕೊಳ್ಳಿ"],["🛡 ತಾಣದ ಭದ್ರತೆ","HTTPS ಮತ್ತು ಬ್ರೌಸರ್ ರಕ್ಷಣೆಯನ್ನು ಪರಿಶೀಲಿಸಿ"]],
   emptyBookmarks:"ಬುಕ್‌ಮಾರ್ಕ್‌ಗಳಿಲ್ಲ. ತಾಣ ತೆರೆಯಿರಿ ಮತ್ತು ★ ಒತ್ತಿ.", emptyShortcuts:"ನಿಮ್ಮ ಮೊದಲ HTTPS ಶಾರ್ಟ್‌ಕಟ್ ಸೇರಿಸಿ.",
   showAll:"ಎಲ್ಲ ತೋರಿಸಿ", showFewer:"ಕಡಿಮೆ ತೋರಿಸಿ", toolsWord:"ಸಾಧನಗಳು", curated:"ಆಯ್ದ ಲಿಂಕ್‌ಗಳು", sites:"ತಾಣಗಳು", links:"ಲಿಂಕ್‌ಗಳು",
-  localNote:"ತ್ವರಿತ ಪ್ರವೇಶಕ್ಕಾಗಿ ರೂಪಿಸಲಾಗಿದೆ. ಈ ಮುಖಪುಟ ಬಾಹ್ಯ ಸ್ಕ್ರಿಪ್ಟ್‌ಗಳು, ಟ್ರ್ಯಾಕಿಂಗ್ ಪಿಕ್ಸೆಲ್‌ಗಳು, ರಿಮೋಟ್ ಫಾಂಟ್‌ಗಳು ಅಥವಾ AI ಶಾರ್ಟ್‌ಕಟ್‌ಗಳನ್ನು ಲೋಡ್ ಮಾಡುವುದಿಲ್ಲ. ನೀವು ತೆರೆಯುವ ವೆಬ್‌ಸೈಟ್‌ಗಳಿಗೆ ಅಗತ್ಯ ವಿನಂತಿಗಳು ಹೋಗುತ್ತವೆ."
+  localNote:"ಮುಖಪುಟದ ಸಂಪನ್ಮೂಲಗಳು ಸಾಧನದಲ್ಲೇ ಲೋಡ್ ಆಗುತ್ತವೆ. ನೀವು Hari AI ಬಳಸಲು ಆಯ್ಕೆ ಮಾಡಿದಾಗ ಮಾತ್ರ ನಿಮ್ಮ ಪ್ರಶ್ನೆಗಳು ಆನ್‌ಲೈನ್‌ಗೆ ಕಳುಹಿಸಲಾಗುತ್ತವೆ."
  },
  es: {
   https:"🔒 Solo HTTPS", localTools:"🧩 Herramientas locales", searchPlaceholder:"Busca en la web o introduce un sitio HTTPS…",
@@ -871,7 +877,7 @@ const EXTRA_UI = {
   actions:[["＋ Nueva pestaña","Abrir una pestaña nueva"],["▣ Cambiar pestaña","Cambiar, duplicar o cerrar pestañas"],["◷ Historial","El historial está desactivado por defecto"],["⇩ Descargas","Abrir archivos descargados"],["◉ Sesión privada","Navegación privada separada"],["⚙ Ajustes","Privacidad, búsqueda y visualización"],["⌕ Buscar en página","Buscar texto en una página web"],["★ Guardar página","Añadir a marcadores cifrados"],["▦ Código QR","Crear un QR para la URL actual"],["▤ Guardar como PDF","Usar el diálogo de impresión de Android"],["↗ Compartir página","Compartir título y dirección actuales"],["🛡 Seguridad del sitio","Revisar HTTPS y protecciones del navegador"]],
   emptyBookmarks:"Aún no hay marcadores. Abre un sitio y pulsa ★ Guardar.", emptyShortcuts:"Añade tu primer acceso HTTPS.",
   showAll:"Mostrar todo", showFewer:"Mostrar menos", toolsWord:"herramientas", curated:"enlaces seleccionados", sites:"sitios", links:"enlaces",
-  localNote:"Diseñado para acceder rápido. Esta página no carga scripts externos, píxeles de seguimiento, fuentes remotas ni accesos de IA. Los sitios externos reciben datos cuando decides visitarlos."
+  localNote:"Los recursos de inicio se cargan localmente. Hari AI solo envía tus preguntas por internet cuando eliges utilizarlo."
  },
  fr: {
   https:"🔒 HTTPS uniquement", localTools:"🧩 Outils locaux", searchPlaceholder:"Recherchez sur le web ou saisissez un site HTTPS…",
@@ -882,7 +888,7 @@ const EXTRA_UI = {
   actions:[["＋ Nouvel onglet","Ouvrir un nouvel onglet"],["▣ Changer d’onglet","Changer, dupliquer ou fermer des onglets"],["◷ Historique","L’historique est désactivé par défaut"],["⇩ Téléchargements","Ouvrir les fichiers téléchargés"],["◉ Session privée","Navigation privée séparée"],["⚙ Paramètres","Confidentialité, recherche et affichage"],["⌕ Rechercher dans la page","Chercher du texte dans une page web"],["★ Enregistrer la page","Ajouter aux favoris chiffrés"],["▦ Code QR","Créer un QR pour l’URL actuelle"],["▤ Enregistrer en PDF","Utiliser l’impression Android"],["↗ Partager la page","Partager le titre et l’adresse actuels"],["🛡 Sécurité du site","Vérifier HTTPS et les protections du navigateur"]],
   emptyBookmarks:"Aucun favori. Ouvrez un site et touchez ★ Enregistrer.", emptyShortcuts:"Ajoutez votre premier raccourci HTTPS.",
   showAll:"Tout afficher", showFewer:"Afficher moins", toolsWord:"outils", curated:"liens sélectionnés", sites:"sites", links:"liens",
-  localNote:"Conçu pour un accès rapide. Cette page ne charge aucun script externe, pixel de suivi, police distante ou raccourci IA. Les sites externes reçoivent les requêtes nécessaires lorsque vous les visitez."
+  localNote:"Les ressources de la page d’accueil se chargent localement. Hari AI n’envoie vos demandes en ligne que lorsque vous choisissez de l’utiliser."
  },
  ar: {
   https:"🔒 HTTPS فقط", localTools:"🧩 أدوات محلية", searchPlaceholder:"ابحث في الويب أو أدخل موقع HTTPS…",
@@ -893,12 +899,29 @@ const EXTRA_UI = {
   actions:[["＋ علامة تبويب جديدة","ابدأ علامة تبويب جديدة"],["▣ مبدّل علامات التبويب","بدّل أو انسخ أو أغلق علامات التبويب"],["◷ السجل","السجل متوقف افتراضياً"],["⇩ التنزيلات","افتح الملفات التي تم تنزيلها"],["◉ جلسة خاصة","تصفح خاص منفصل"],["⚙ الإعدادات","الخصوصية والبحث والعرض"],["⌕ البحث في الصفحة","ابحث عن نص داخل صفحة ويب"],["★ حفظ الصفحة","أضف إلى العلامات المشفرة"],["▦ رمز QR","أنشئ رمزاً للرابط الحالي"],["▤ حفظ PDF","استخدم نافذة طباعة Android"],["↗ مشاركة الصفحة","شارك العنوان والرابط الحاليين"],["🛡 أمان الموقع","راجع HTTPS وحماية المتصفح"]],
   emptyBookmarks:"لا توجد علامات محفوظة. افتح موقعاً واضغط ★ حفظ.", emptyShortcuts:"أضف أول اختصار HTTPS.",
   showAll:"عرض الكل", showFewer:"عرض أقل", toolsWord:"أدوات", curated:"روابط مختارة", sites:"مواقع", links:"روابط",
-  localNote:"مصمم للوصول السريع. لا تحمّل هذه الصفحة نصوصاً خارجية أو بكسلات تتبع أو خطوطاً بعيدة أو اختصارات ذكاء اصطناعي. تتلقى المواقع الخارجية الطلبات اللازمة عند زيارتها."
+  localNote:"تُحمّل موارد الصفحة الرئيسية محليًا. لا يرسل Hari AI أسئلتك عبر الإنترنت إلا عندما تختار استخدامه."
  }
 };
+
+const HARI_AI_UI = {
+ en:{description:"Ask questions, learn faster and explore new ideas",open:"Open →"},
+ ml:{description:"ചോദ്യങ്ങൾ ചോദിക്കൂ, വേഗത്തിൽ പഠിക്കൂ, പുതിയ ആശയങ്ങൾ കണ്ടെത്തൂ",open:"തുറക്കുക →"},
+ hi:{description:"प्रश्न पूछें, तेज़ी से सीखें और नए विचार जानें",open:"खोलें →"},
+ ta:{description:"கேள்விகள் கேட்டு, வேகமாகக் கற்று, புதிய யோசனைகளை அறியுங்கள்",open:"திறக்கவும் →"},
+ te:{description:"ప్రశ్నలు అడగండి, వేగంగా నేర్చుకోండి, కొత్త ఆలోచనలను అన్వేషించండి",open:"తెరవండి →"},
+ kn:{description:"ಪ್ರಶ್ನೆಗಳನ್ನು ಕೇಳಿ, ವೇಗವಾಗಿ ಕಲಿಯಿರಿ, ಹೊಸ ಆಲೋಚನೆಗಳನ್ನು ಅನ್ವೇಷಿಸಿ",open:"ತೆರೆಯಿರಿ →"},
+ es:{description:"Haz preguntas, aprende más rápido y descubre nuevas ideas",open:"Abrir →"},
+ fr:{description:"Posez des questions, apprenez plus vite et explorez de nouvelles idées",open:"Ouvrir →"},
+ ar:{description:"اطرح الأسئلة وتعلّم بسرعة واستكشف أفكارًا جديدة",open:"افتح →"}
+};
+
 function extraUi(){return EXTRA_UI[currentLanguage] || EXTRA_UI.en;}
 function applyExtendedLanguage(){
  const u=extraUi();
+ const ai=HARI_AI_UI[currentLanguage] || HARI_AI_UI.en;
+ $('hariAiTitle').textContent='Hari AI';
+ $('hariAiDesc').textContent=ai.description;
+ $('hariAiOpen').textContent=ai.open;
  const pills=document.querySelectorAll('.pills .pill');
  if(pills[0])pills[0].textContent=u.https;
  if(pills[1])pills[1].textContent=u.localTools;
