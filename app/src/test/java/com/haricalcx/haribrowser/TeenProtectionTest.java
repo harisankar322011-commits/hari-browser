@@ -89,6 +89,7 @@ public class TeenProtectionTest {
         assertTrue(TeenProtection.containsBlockedSearchTerm("real gore videos"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("beheading video"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("how to make a pipe bomb"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("h.o.w t.o m.a.k.e a p.i.p.e b.o.m.b"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("buy fentanyl online"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("suicide methods"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("how to cut myself"));
