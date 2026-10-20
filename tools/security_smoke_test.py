@@ -82,8 +82,8 @@ try:
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
     check("Teen protection menu and protected navigation are wired",
-          '"Teen protection · " in browser and "case 33:" in browser and
-          "protectSearchUrl(url)" in browser)
+          '"Teen protection · "' in browser and '"case 33:"' in browser and
+          '"protectSearchUrl(url)"' in browser)
     check("Teen protection filters main-frame search requests",
           "request.isForMainFrame()" in browser and
           "TeenProtection.extractSearchQuery(requestUri.toString())" in browser)
