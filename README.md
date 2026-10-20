@@ -24,6 +24,8 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Tabs, duplicate tabs, close-other-tabs, and restore recently closed tabs within the current session.
 - Tabs, bookmarks, optional history, page sharing, in-page find, adjustable text size, desktop mode, reader-style mode, and downloads.
 - Full-screen web video, web file-upload picker support, stop-loading control, and site security details.
+- Local pre-open URL safety review for new destinations, with warnings for URL patterns such as embedded credentials, punycode hostnames, IP-literal hosts, unusual HTTPS ports and unusually long query strings. The URL check runs on-device and does not send the URL to a third-party scanner.
+- A Security & privacy scan reports the browser protections currently enabled. It is a settings/status check, not a certification of a site's privacy measures or a device-wide antivirus scan.
 - Generate a QR code locally for the current URL, or use Android's print screen to save a page as PDF.
 - Explicit bookmark export/import, with HTTPS-only validation and encrypted on-device storage.
 - Refreshed light/dark visual themes with a coordinated indigo-blue palette and five browser accent colours: Ocean, Violet, Mint, Sunset and Rose.
