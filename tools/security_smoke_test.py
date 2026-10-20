@@ -215,10 +215,21 @@ try:
     check("APK SHA-256 manifest created in CI", "sha256sum" in build_workflow and "SHA256SUMS.txt" in build_workflow)
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
-    check("Release-only artifact contains no debug APK",
+    check("Release artifact publishes only from main and excludes debug APKs",
           "assembleRelease" in build_workflow and "testDebugUnitTest" in build_workflow and
-          "lint" in build_workflow and "assembleDebug" not in build_workflow and
+          "lint" in build_workflow and
+          "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
+    check("Installable debug APK is uploaded only for pull-request device testing",
+          "Build installable debug APK for pull-request testing" in build_workflow and
+          "Validate debug APK for pull-request testing" in build_workflow and
+          "Upload installable debug APK for pull-request testing" in build_workflow and
+          "if: github.event_name == 'pull_request'" in build_workflow and
+          "path: app/build/outputs/apk/debug/app-debug.apk" in build_workflow)
+    check("Debug test APK package ID and debuggable flag are validated",
+          'com.haricalcx.haribrowser.debug' in build_workflow and
+          'apkanalyzer manifest debuggable "$apk"' in build_workflow and
+          'test "$debuggable" = "true"' in build_workflow)
     check("Release signing is conditional on protected signing secrets",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
           'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow)
