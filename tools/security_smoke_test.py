@@ -149,6 +149,10 @@ try:
           "google.co.in/search?q=" in home_page and "google.co.in/search?q=" in browser)
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
+    check("Hari AI prompt supports Indian context and major Indian languages",
+          "Indian numbering such as lakh and crore" in ai_client and
+          "Indian Standard Time" in ai_client and "₹ (INR)" in ai_client and
+          all(lang in ai_client for lang in ("Malayalam", "Bengali", "Marathi", "Gujarati", "Punjabi", "Urdu")))
     check("Hari AI API key is sent in a request header over HTTPS",
           'https://generativelanguage.googleapis.com/v1beta/models/' in ai_client and
           'setRequestProperty("x-goog-api-key", apiKey)' in ai_client)
