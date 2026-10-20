@@ -44,7 +44,7 @@ import java.util.concurrent.Executors;
  * broad storage access or inspect other apps' private files.
  */
 public final class AntivirusActivity extends ComponentActivity {
-    private static final String KEY_REPUTATION_PREF = "hari_malwarebazaar_api_key_v1";
+    private static final String KEY_REPUTATION_PREF = "hari_rep_store_1";
     private static final int INK = 0xff182238;
     private static final int MUTED = 0xff56657a;
     private static final int ACCENT = 0xff0a7f75;
