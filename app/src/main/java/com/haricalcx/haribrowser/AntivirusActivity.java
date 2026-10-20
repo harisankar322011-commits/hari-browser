@@ -44,7 +44,7 @@ import java.util.concurrent.Executors;
  * broad storage access or inspect other apps' private files.
  */
 public final class AntivirusActivity extends ComponentActivity {
-    private static final String KEY_REPUTATION_API = "hari_malwarebazaar_api_key_v1";
+    private static final String KEY_REPUTATION_PREF = "hari_malwarebazaar_api_key_v1";
     private static final int INK = 0xff182238;
     private static final int MUTED = 0xff56657a;
     private static final int ACCENT = 0xff0a7f75;
@@ -219,7 +219,7 @@ public final class AntivirusActivity extends ComponentActivity {
                     apkReport = inspectApk(uri, size);
                 }
                 if (!privateModeLaunch) {
-                    String apiKey = secureStore.get(KEY_REPUTATION_API, "");
+                    String apiKey = secureStore.get(KEY_REPUTATION_PREF, "");
                     if (!apiKey.isEmpty() && !scan.sha256.isEmpty()) {
                         reputation = MalwareBazaarReputation.lookup(scan.sha256, apiKey);
                     }
@@ -255,7 +255,7 @@ public final class AntivirusActivity extends ComponentActivity {
                 report.append(completedScan.details);
                 if (!completedApkReport.isEmpty()) report.append("\n\nAPK PACKAGE REVIEW\n").append(completedApkReport);
                 if (completedReputation != null) report.append("\n\nONLINE HASH REPUTATION\n").append(completedReputation.details);
-                else if (!privateModeLaunch && secureStore.get(KEY_REPUTATION_API, "").isEmpty()) {
+                else if (!privateModeLaunch && secureStore.get(KEY_REPUTATION_PREF, "").isEmpty()) {
                     report.append("\n\nONLINE HASH REPUTATION\nNot configured. Local checks remain available; no file data was sent.");
                 } else if (privateModeLaunch) {
                     report.append("\n\nONLINE HASH REPUTATION\nDisabled for this private browsing session.");
@@ -458,14 +458,14 @@ public final class AntivirusActivity extends ComponentActivity {
         input.setSingleLine(true);
         input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         input.setHint("MalwareBazaar Auth-Key");
-        input.setText(secureStore.get(KEY_REPUTATION_API, ""));
+        input.setText(secureStore.get(KEY_REPUTATION_PREF, ""));
         new AlertDialog.Builder(this)
                 .setTitle("Optional hash reputation")
                 .setMessage("Enter an Auth-Key from abuse.ch MalwareBazaar (create one at https://auth.abuse.ch/). When configured, Hari Antivirus sends only a file's SHA-256 hash to the service for a known-malware lookup; it does not upload the file or its filename. The provider still receives the network request and may log normal connection metadata. A no-match response does not mean safe. Leave blank and choose Disable to turn this off.")
                 .setView(input)
                 .setNegativeButton("Cancel", null)
                 .setNeutralButton("Disable", (dialog, which) -> {
-                    secureStore.remove(KEY_REPUTATION_API);
+                    secureStore.remove(KEY_REPUTATION_PREF);
                     refreshReputationStatus();
                     showMessage("Online hash reputation disabled.");
                 })
@@ -475,7 +475,7 @@ public final class AntivirusActivity extends ComponentActivity {
                         showMessage("The key was not saved. Paste the complete Auth-Key supplied by abuse.ch.");
                         return;
                     }
-                    secureStore.put(KEY_REPUTATION_API, key);
+                    secureStore.put(KEY_REPUTATION_PREF, key);
                     refreshReputationStatus();
                     showMessage("Hash-only reputation lookup enabled. No key is included in the APK.");
                 })
@@ -484,7 +484,7 @@ public final class AntivirusActivity extends ComponentActivity {
 
     private void refreshReputationStatus() {
         if (reputationStatus == null) return;
-        boolean configured = !privateModeLaunch && !secureStore.get(KEY_REPUTATION_API, "").isEmpty();
+        boolean configured = !privateModeLaunch && !secureStore.get(KEY_REPUTATION_PREF, "").isEmpty();
         if (privateModeLaunch) {
             reputationStatus.setText("Online hash reputation: disabled in private browsing.");
             reputationButton.setVisibility(View.GONE);
