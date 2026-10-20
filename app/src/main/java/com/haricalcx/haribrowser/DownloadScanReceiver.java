@@ -81,7 +81,9 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
         }
         saveResult(prefs, id, filename, scan.status, scan.details, scan.sha256);
         if (scan.isSuspicious()) {
-            prefs.edit().putLong("last_suspicious_download_id", id).apply();
+            prefs.edit().putLong("last_suspicious_download_id", id)
+                    .putString("last_suspicious_download_filename", filename == null ? "Downloaded file" : filename)
+                    .apply();
         }
     }
 
