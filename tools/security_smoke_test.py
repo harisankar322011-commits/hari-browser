@@ -82,12 +82,22 @@ try:
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
     teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
+    teen_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionTest.java")
     check("Teen protection menu and protected navigation are wired",
           '"Teen protection · "' in browser and "case 33:" in browser and
           "protectSearchUrl(url)" in browser)
-    check("Teen protection filters main-frame search requests",
+    check("Teen protection filters restricted URLs in main-frame requests",
           "request.isForMainFrame()" in browser and
-          "TeenProtection.extractSearchQuery(requestUri.toString())" in browser)
+          "TeenProtection.isBlockedUrl(requestUri.toString())" in browser)
+    check("Teen protection blocks restricted direct domains and obfuscated query terms",
+          "BLOCKED_DOMAINS" in teen_protection and "static boolean isBlockedDomain" in teen_protection and
+          "foldLeetspeak" in teen_protection and "porn.com" in teen_protection and "bet365.com" in teen_protection)
+    check("Teen protection preserves common help-seeking and health queries",
+          "SAFE_SUPPORT_PHRASES" in teen_protection and "porn addiction" in teen_protection and
+          "gambling support" in teen_protection)
+    check("Teen protection JUnit tests cover direct URLs and obfuscated search terms",
+          "blocksRestrictedAdultAndGamblingDomainsButNotLookalikeHosts" in teen_tests and
+          "p.o.r.n videos" in teen_tests and "porn addiction help" in teen_tests)
     check("Teen protection uses a parent PIN stored as salted PBKDF2 hash",
           "PBKDF2WithHmacSHA256" in teen_protection and
           "protectionStore.put(TeenProtection.PIN_HASH_KEY, hash)" in browser and
