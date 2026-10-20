@@ -137,6 +137,14 @@ try:
     check("Indian home languages use India date formatting and Urdu is right-to-left",
           "en-IN" in home_page and "currentLanguage+'-IN'" in home_page and
           "['ar','ur'].includes(currentLanguage)" in home_page)
+    check("Indian language actions remain translated instead of falling back to English",
+          "EXTRA_UI[code].actions = words.actions || EXTRA_UI.en.actions" in home_page and
+          "＋ নতুন ট্যাব" in home_page and "＋ नवीन टॅब" in home_page and
+          "＋ નવી ટૅબ" in home_page and "＋ ਨਵੀਂ ਟੈਬ" in home_page and "＋ نیا ٹیب" in home_page)
+    check("India services category is translated on both category buttons and site cards",
+          "function displayDirectoryCategory(category)" in home_page and
+          "b.textContent=displayDirectoryCategory(c)" in home_page and
+          "esc(displayDirectoryCategory(site.category))" in home_page)
     check("Google selection prefers the India search endpoint",
           "google.co.in/search?q=" in home_page and "google.co.in/search?q=" in browser)
     check("Hari AI home button has a native internal route",
