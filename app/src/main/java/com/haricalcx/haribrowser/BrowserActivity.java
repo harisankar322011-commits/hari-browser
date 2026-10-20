@@ -2578,12 +2578,12 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showSitePermissionControls() {
-        String message = "HARI BROWSER SITE PERMISSION POLICY\\n\\n" +
-                "Camera and microphone: website permission requests are denied by default.\\n" +
-                "Location: WebView geolocation is disabled.\\n" +
-                "Local files and content providers: access is disabled for webpages.\\n" +
-                "Pop-up windows: automatic JavaScript windows and multiple WebView windows are disabled.\\n" +
-                "File uploads: a website can open only Android's system picker after you choose an upload control; Hari Browser does not grant general file-system access.\\n\\n" +
+        String message = "HARI BROWSER SITE PERMISSION POLICY\n\n" +
+                "Camera and microphone: website permission requests are denied by default.\n" +
+                "Location: WebView geolocation is disabled.\n" +
+                "Local files and content providers: access is disabled for webpages.\n" +
+                "Pop-up windows: automatic JavaScript windows and multiple WebView windows are disabled.\n" +
+                "File uploads: a website can open only Android's system picker after you choose an upload control; Hari Browser does not grant general file-system access.\n\n" +
                 "This is a deny-by-default policy, not a per-site allow-list. If a site needs a capability, use a trusted site and an external app instead. No permission prompt means a site has not been granted that capability by this browser.";
         new AlertDialog.Builder(this).setTitle("Site permission controls").setMessage(message)
                 .setPositiveButton("Done", null).show();
@@ -2599,7 +2599,7 @@ public class BrowserActivity extends ComponentActivity {
         String suspiciousName = downloadPrefs.getString("last_suspicious_download_filename", "flagged download");
         AlertDialog.Builder dialog = new AlertDialog.Builder(this)
                 .setTitle("Latest download scan")
-                .setMessage(report + (suspiciousId >= 0 ? "\\n\\nLast flagged download: " + suspiciousName : ""))
+                .setMessage(report + (suspiciousId >= 0 ? "\n\nLast flagged download: " + suspiciousName : ""))
                 .setPositiveButton("Done", null);
         if (suspiciousId >= 0) {
             dialog.setNeutralButton("Delete flagged download", (d, w) ->
