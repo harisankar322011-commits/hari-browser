@@ -237,6 +237,7 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
+        if (privateMode) settings.edit().putBoolean("private_session_active", true).apply();
         // Shared by normal and private sessions so private browsing cannot bypass protection.
         protectionSettings = getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE);
         protectionStore = new SecureStore(this, false);
@@ -2551,7 +2552,7 @@ public class BrowserActivity extends ComponentActivity {
         else report.append(historyEnabled() ? "ON (encrypted on this device)" : "OFF by default/disabled").append("\n");
         report.append("Site permissions: camera/microphone requests denied; geolocation disabled; local file/content access disabled\n");
         report.append("Clear browsing data on exit: ").append(settings.getBoolean("clear_data_on_exit", false) ? "ON (best effort when the activity exits)" : "OFF").append("\n");
-        SharedPreferences downloadPrefs = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
+        SharedPreferences downloadPrefs = settings;
         String latestDownloadStatus = downloadPrefs.getString("last_download_scan_status", null);
         if (latestDownloadStatus == null) {
             report.append("Browser download scan: no completed tracked download has been checked yet\n");
@@ -2590,7 +2591,7 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showLastDownloadScan() {
-        SharedPreferences downloadPrefs = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
+        SharedPreferences downloadPrefs = settings;
         String report = downloadPrefs.getString("last_download_scan", null);
         if (report == null || report.trim().isEmpty()) {
             report = "No completed download tracked by Hari Browser has been scanned yet. Future completed downloads receive limited on-device checks. This is not a full antivirus engine.";
@@ -2616,7 +2617,7 @@ public class BrowserActivity extends ComponentActivity {
                 .setPositiveButton("Delete", (d, w) -> {
                     DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
                     int removed = manager == null ? 0 : manager.remove(downloadId);
-                    SharedPreferences downloadPrefs = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
+                    SharedPreferences downloadPrefs = settings;
                     SharedPreferences.Editor edit = downloadPrefs.edit()
                             .remove("hari_browser_download_" + downloadId)
                             .remove("hari_browser_download_name_" + downloadId);
@@ -2793,10 +2794,15 @@ public class BrowserActivity extends ComponentActivity {
             if (manager == null) throw new IllegalStateException("Download service unavailable");
             long downloadId = manager.enqueue(request);
             // Track only files explicitly enqueued by Hari Browser. The receiver ignores every other download.
-            SharedPreferences downloadPrefs = getSharedPreferences("hari_browser_settings", MODE_PRIVATE);
+            String downloadPrefsName = privateMode ? "hari_browser_private_settings" : "hari_browser_settings";
+            SharedPreferences downloadPrefs = getSharedPreferences(downloadPrefsName, MODE_PRIVATE);
             downloadPrefs.edit()
                     .putBoolean("hari_browser_download_" + downloadId, true)
                     .putString("hari_browser_download_name_" + downloadId, filename)
+                    .apply();
+            // The shared registry holds only the preference-file name, never the downloaded filename.
+            getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE).edit()
+                    .putString("download_prefs_" + downloadId, downloadPrefsName)
                     .apply();
             showToast("Download started. Hari Browser will run limited local checks when it completes; this is not full antivirus.");
         } catch (Exception e) {
@@ -2924,6 +2930,23 @@ public class BrowserActivity extends ComponentActivity {
             if (secureStore != null) secureStore.put(KEY_HISTORY, "[]");
         }
         if (privateMode) {
+            // Keep private download names and scan reports out of the standard profile.
+            if (settings != null) {
+                settings.edit().putBoolean("private_session_active", false)
+                        .remove("last_download_scan").remove("last_download_scan_status")
+                        .remove("last_download_scan_filename").remove("last_download_scan_sha256")
+                        .remove("last_download_scan_id").remove("last_suspicious_download_id")
+                        .remove("last_suspicious_download_filename").apply();
+            }
+            SharedPreferences registry = getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE);
+            SharedPreferences.Editor registryEdit = registry.edit();
+            for (String key : registry.getAll().keySet()) {
+                if (key.startsWith("download_prefs_") &&
+                        "hari_browser_private_settings".equals(registry.getString(key, ""))) {
+                    registryEdit.remove(key);
+                }
+            }
+            registryEdit.apply();
             // Best-effort cleanup in the isolated WebView profile when private browsing closes.
             try {
                 CookieManager cookies = CookieManager.getInstance();
