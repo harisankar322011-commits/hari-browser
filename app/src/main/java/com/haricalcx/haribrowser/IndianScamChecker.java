@@ -56,7 +56,16 @@ public final class IndianScamChecker {
     }
 
     private static void checkBrand(String host, List<String> warnings, String brand, String... officialDomains) {
-        if (!host.contains(brand)) return;
+        // Avoid treating an arbitrary substring such as "largest" as a GST brand mention.
+        if ("gst".equals(brand)) {
+            boolean tokenFound = false;
+            for (String label : host.split("[.-]")) {
+                if ("gst".equals(label)) { tokenFound = true; break; }
+            }
+            if (!tokenFound) return;
+        } else if (!host.contains(brand)) {
+            return;
+        }
         for (String official : officialDomains) {
             if (host.equals(official) || host.endsWith("." + official)) return;
         }
