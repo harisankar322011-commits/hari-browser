@@ -82,8 +82,8 @@ try:
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
     check("Teen protection menu and protected navigation are wired",
-          '"Teen protection · "' in browser and '"case 33:"' in browser and
-          '"protectSearchUrl(url)"' in browser)
+          '"Teen protection · "' in browser and "case 33:" in browser and
+          "protectSearchUrl(url)" in browser)
     check("Teen protection filters main-frame search requests",
           "request.isForMainFrame()" in browser and
           "TeenProtection.extractSearchQuery(requestUri.toString())" in browser)
@@ -98,7 +98,7 @@ try:
           "TeenProtection.isBraveSearchHostUrl(url)" in browser and
           'setCookie("https://search.brave.com/", "safesearch=strict;' in browser)
     check("Teen protection documents provider and device-level limitations",
-          "Startpage's filtering is controlled by Startpage itself" in browser and
+          "Startpage's filtering is controlled by Startpage itself" in read("README.md") and
           "not a complete content filter" in teen_protection)
     check("Teen protection is shared with private browsing",
           'getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE)' in browser and
@@ -184,7 +184,8 @@ try:
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
     check("Release-only artifact contains no debug APK",
-          "assembleRelease lint" in build_workflow and "assembleDebug" not in build_workflow and
+          "assembleRelease" in build_workflow and "testReleaseUnitTest" in build_workflow and
+          "lint" in build_workflow and "assembleDebug" not in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
     check("Release signing is conditional on protected signing secrets",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
