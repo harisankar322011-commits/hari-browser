@@ -107,7 +107,7 @@ final class TeenProtection {
             String candidate = normalize(phrase);
             if (!candidate.isEmpty() &&
                     (padded.contains(" " + candidate + " ") ||
-                     compact.contains(candidate.replace(" ", ""))) {
+                     compact.contains(candidate.replace(" ", "")))) {
                 supportIntent = true;
                 break;
             }
