@@ -2040,11 +2040,12 @@ public class BrowserActivity extends ComponentActivity {
                 "- Expanded home-screen translations across nine languages\n" +
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
+                "- Parent-PIN-protected Teen Protection blocks common adult/gambling searches and selected domains\n" +
                 "- Optional Hari AI chat with API setup in Settings\n" +
                 "- API key encrypted locally; prompts are sent online only when you use Hari AI\n" +
                 "- Cleaner visual hierarchy, improved focus states and more efficient off-screen rendering\n" +
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
-                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
+                "Privacy note: tracker blocking and Teen Protection are best-effort. Some search providers control their own filtering, and websites or your selected search provider still receive the requests needed to load services.";
         new AlertDialog.Builder(this)
                 .setTitle("Hari Browser 2.3")
                 .setMessage(message)
