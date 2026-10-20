@@ -157,7 +157,7 @@ try:
     check("Teen protection JUnit dependency configured",
           "testImplementation 'junit:junit:4.13.2'" in gradle)
     check("CI runs release unit tests",
-          "testReleaseUnitTest" in read(".github/workflows/build-apk.yml"))
+          "testDebugUnitTest" in read(".github/workflows/build-apk.yml"))
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
