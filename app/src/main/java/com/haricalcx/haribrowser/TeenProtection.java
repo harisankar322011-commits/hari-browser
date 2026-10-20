@@ -109,6 +109,10 @@ public final class TeenProtection {
             if (containsPhrase(normalized, phrase)) return false;
         }
 
+        // Compact matching catches punctuation/spacing evasions such as "p.o.r.n".
+        for (String marker : new String[]{"porn", "pornography", "hentai", "nsfw", "nudes"}) {
+            if (compact.contains(marker)) return true;
+        }
         for (String token : BLOCKED_TOKENS) {
             if (containsToken(normalized, token)) return true;
         }
