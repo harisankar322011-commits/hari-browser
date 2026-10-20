@@ -34,6 +34,11 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
+import android.webkit.MimeTypeMap;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.security.MessageDigest;
 import android.webkit.PermissionRequest;
 import android.webkit.SafeBrowsingResponse;
 import android.webkit.SslErrorHandler;
@@ -2661,15 +2666,27 @@ public class BrowserActivity extends ComponentActivity {
         }
         String filename = URLUtil.guessFileName(url, contentDisposition, mimeType);
         filename = filename.replaceAll("[^a-zA-Z0-9._() -]", "_");
-        if (filename.trim().isEmpty() || filename.equals(".") || filename.equals("..")) {
-            filename = "download";
-        }
+        if (filename.trim().isEmpty() || filename.equals(".") || filename.equals("..")) filename = "download";
         final String safeFilename = filename;
-        String message = "Save " + safeFilename + " to Downloads? The download will remain on your device even after private browsing closes.";
+        String type = mimeType == null ? "" : mimeType.toLowerCase(Locale.ROOT);
+        boolean potentiallyExecutable = type.contains("apk") || type.contains("x-msdownload")
+                || type.contains("x-executable") || type.contains("x-dosexec")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".apk")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".exe")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".msi")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".bat")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".cmd")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".sh")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".jar");
+        String warning = potentiallyExecutable
+                ? "\\n\\nWarning: this file may install or run software. Hari Browser will not automatically execute it. Only keep it if you trust the source."
+                : "";
         new AlertDialog.Builder(this)
                 .setTitle("Download file")
-                .setMessage(privateMode ? message : "Save " + safeFilename + " to your Downloads folder?")
+                .setMessage("Save " + safeFilename + " to Downloads?" + warning
+                        + "\\n\\nAfter download, Hari Browser can check the file type and calculate a checksum. This is not a malware verdict.")
                 .setNegativeButton("Cancel", null)
+                .setNeutralButton("File safety info", (d, w) -> showToast("File checks detect some risky types only; they cannot prove a file is malware-free."))
                 .setPositiveButton("Download", (d, w) -> startDownload(url, safeFilename, mimeType))
                 .show();
     }
@@ -2688,7 +2705,7 @@ public class BrowserActivity extends ComponentActivity {
             DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
             if (manager == null) throw new IllegalStateException("Download service unavailable");
             manager.enqueue(request);
-            showToast("Download started. Check system notifications.");
+            showToast("Download started. Hari Browser will not run downloaded files.");
         } catch (Exception e) {
             showToast("Download could not be started.");
         }
