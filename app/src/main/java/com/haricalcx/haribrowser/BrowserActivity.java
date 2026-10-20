@@ -2940,13 +2940,21 @@ public class BrowserActivity extends ComponentActivity {
             }
             SharedPreferences registry = getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE);
             SharedPreferences.Editor registryEdit = registry.edit();
+            SharedPreferences.Editor privateDownloadEdit = settings == null ? null : settings.edit();
             for (String key : registry.getAll().keySet()) {
                 if (key.startsWith("download_prefs_") &&
                         "hari_browser_private_settings".equals(registry.getString(key, ""))) {
+                    String downloadId = key.substring("download_prefs_".length());
                     registryEdit.remove(key);
+                    if (privateDownloadEdit != null) {
+                        privateDownloadEdit.remove("hari_browser_download_" + downloadId)
+                                .remove("hari_browser_download_name_" + downloadId)
+                                .remove("hari_browser_download_scanning_" + downloadId);
+                    }
                 }
             }
             registryEdit.apply();
+            if (privateDownloadEdit != null) privateDownloadEdit.apply();
             // Best-effort cleanup in the isolated WebView profile when private browsing closes.
             try {
                 CookieManager cookies = CookieManager.getInstance();
