@@ -672,8 +672,10 @@ public class BrowserActivity extends ComponentActivity {
                     view.getSettings().setJavaScriptEnabled(javascriptEnabled());
                     return false;
                 }
+                SiteSafetyChecker.Report urlReport = SiteSafetyChecker.inspect(protectedUrl);
                 if (tab.url != null && !safeHost(tab.url).isEmpty()
-                        && safeHost(tab.url).equalsIgnoreCase(safeHost(protectedUrl))) {
+                        && safeHost(tab.url).equalsIgnoreCase(safeHost(protectedUrl))
+                        && !urlReport.hasWarnings()) {
                     view.getSettings().setJavaScriptEnabled(javascriptEnabled());
                     return false;
                 }
