@@ -664,13 +664,18 @@ public class BrowserActivity extends ComponentActivity {
                 }
                 String protectedUrl = protectSearchUrl(url);
                 if (protectedUrl == null) return true;
-                if (!protectedUrl.equals(url)) {
-                    view.loadUrl(protectedUrl);
-                    return true;
+                // Keep same-site in-page navigation smooth; scan before opening a new destination.
+                if (!request.isForMainFrame()) {
+                    view.getSettings().setJavaScriptEnabled(javascriptEnabled());
+                    return false;
                 }
-                // Reset JavaScript to the user's website preference before a real HTTPS page loads.
-                view.getSettings().setJavaScriptEnabled(javascriptEnabled());
-                return false;
+                if (tab.url != null && !safeHost(tab.url).isEmpty()
+                        && safeHost(tab.url).equalsIgnoreCase(safeHost(protectedUrl))) {
+                    view.getSettings().setJavaScriptEnabled(javascriptEnabled());
+                    return false;
+                }
+                runOnUiThread(() -> showSiteSafetyCheck(tab, protectedUrl));
+                return true;
             }
 
             @Override
@@ -888,15 +893,48 @@ public class BrowserActivity extends ComponentActivity {
         }
         String protectedUrl = protectSearchUrl(url);
         if (protectedUrl == null) return;
-        url = protectedUrl;
+        // Every address-bar, bookmark, history and app-link navigation gets a local preflight.
+        showSiteSafetyCheck(tab, protectedUrl);
+    }
+
+    private void loadAfterSiteSafetyCheck(Tab tab, String url) {
+        if (tab == null || tab.webView == null || !PrivacyGuard.isHttpsUrl(url)) return;
         tab.home = false;
         tab.readerMode = false;
-        // Local dashboard scripts stay available, but website JavaScript follows the user's setting.
         tab.webView.getSettings().setJavaScriptEnabled(javascriptEnabled());
         tab.webView.getSettings().setBlockNetworkImage(!imagesEnabled());
         tab.url = url;
         tab.webView.loadUrl(url);
         updateTabControls();
+    }
+
+    private void showSiteSafetyCheck(Tab tab, String url) {
+        if (tab == null || tab.webView == null || !PrivacyGuard.isHttpsUrl(url)) return;
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url);
+        StringBuilder message = new StringBuilder();
+        message.append("Destination: ").append(report.getHost()).append("\\n\\n");
+        message.append("LOCAL URL CHECK\\n");
+        for (String check : report.getPassedChecks()) {
+            message.append("✓ ").append(check).append("\\n");
+        }
+        if (!report.getWarnings().isEmpty()) {
+            message.append("\\nREVIEW THESE SIGNALS\\n");
+            for (String warning : report.getWarnings()) {
+                message.append("⚠ ").append(warning).append("\\n");
+            }
+        }
+        message.append("\\nThis check runs on your device and does not send the URL to a third-party scanner. ");
+        message.append("It checks URL patterns only; it does not certify the website, inspect its page content, ");
+        message.append("verify its privacy policy/security headers, or determine whether it contains malware. ");
+        message.append("Android WebView certificate validation and Safe Browsing remain active during connection.");
+
+        new AlertDialog.Builder(this)
+                .setTitle(report.hasWarnings() ? "Review site before opening" : "Site safety check")
+                .setMessage(message.toString())
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton(report.hasWarnings() ? "Open anyway" : "Open site",
+                        (dialog, which) -> loadAfterSiteSafetyCheck(tab, url))
+                .show();
     }
 
     private void loadHome(Tab tab) {
@@ -1772,7 +1810,8 @@ public class BrowserActivity extends ComponentActivity {
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
                 "About Hari Browser - What's new in 2.3",
                 "Hari AI · API settings",
-                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF")
+                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF"),
+                "Security & privacy scan"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1916,6 +1955,9 @@ public class BrowserActivity extends ComponentActivity {
                             break;
                         case 33:
                             handleTeenProtectionMenu();
+                            break;
+                        case 34:
+                            showSecurityPrivacyScan();
                             break;
                     }
                 })
@@ -2448,6 +2490,44 @@ public class BrowserActivity extends ComponentActivity {
         new AlertDialog.Builder(this).setTitle("Site security").setMessage(message)
                 .setPositiveButton("Copy address", (d, w) -> copyCurrentUrl())
                 .setNegativeButton("Close", null).show();
+    }
+
+    private void showSecurityPrivacyScan() {
+        Tab tab = currentTab();
+        StringBuilder report = new StringBuilder();
+        report.append("HARI BROWSER PROTECTION STATUS\\n\\n");
+        report.append("✓ HTTPS-only navigation: ON (HTTP pages are rejected)\\n");
+        report.append("✓ TLS certificate errors: CANCELLED (invalid certificates are not bypassed)\\n");
+        report.append("✓ Android WebView Safe Browsing: enabled where supported by the installed WebView\\n");
+        report.append("✓ Mixed content: blocked by browser policy\\n");
+        report.append("✓ Third-party cookies: BLOCKED\\n");
+        report.append("Local tracker blocking: ").append(trackersEnabled() ? "ON (local list; incomplete)" : "OFF").append("\\n");
+        if (tab != null && !tab.home && fingerprintProtectionActive(tab)) {
+            report.append("Anti-fingerprinting: ACTIVE for supported signals\\n");
+        } else if (!fingerprintProtectionEnabled()) {
+            report.append("Anti-fingerprinting: OFF in Settings\\n");
+        } else {
+            report.append("Anti-fingerprinting: enabled in Settings; some protections may be unsupported by this WebView\\n");
+        }
+        report.append("JavaScript: ").append(javascriptEnabled() ? "ON (needed by many sites; adds script execution risk)" : "OFF").append("\\n");
+        report.append("First-party cookies: ").append(cookiesEnabled() ? "ON" : "OFF").append("\\n");
+        report.append("Website images: ").append(imagesEnabled() ? "ON" : "BLOCKED").append("\\n");
+        report.append("Teen Protection: ").append(teenProtectionEnabled() ? "ON" : "OFF").append("\\n");
+        report.append("Browsing history: ");
+        if (privateMode) report.append("not saved in private mode\\n");
+        else report.append(historyEnabled() ? "ON (encrypted on this device)" : "OFF by default/disabled").append("\\n");
+
+        report.append("\\nWHAT THIS SCAN CANNOT DO\\n");
+        report.append("• It checks Hari Browser's settings and URL patterns, not every privacy or security measure of a website.\\n");
+        report.append("• Certificate validation and Safe Browsing perform additional checks during connection. Site content and server security headers are not fully audited by this local scan.\\n");
+        report.append("• Device-wide virus/malware scanning or cleaning is NOT available to Hari Browser. Android's app sandbox prevents an ordinary browser from safely scanning and deleting infections in other apps or private files. Use Google Play Protect for a device scan; don't open suspicious downloads.");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Security & privacy scan")
+                .setMessage(report.toString())
+                .setPositiveButton("Done", null)
+                .setNeutralButton("Site security details", (dialog, which) -> showSiteSecurity())
+                .show();
     }
 
     private void confirmEmergencyClear() {
