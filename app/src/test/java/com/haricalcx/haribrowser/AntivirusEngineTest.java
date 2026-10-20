@@ -32,7 +32,7 @@ public class AntivirusEngineTest {
         byte[] archive = zip("notes.txt", "hello".getBytes(StandardCharsets.UTF_8));
         AntivirusEngine.Result result = scan(archive, "notes.zip");
         assertEquals("BASIC_CHECKS_ONLY", result.status);
-        assertTrue(result.details.contains("no complete malware-signature engine is bundled"));
+        assertTrue(result.details.contains("small offline multi-indicator rule set"));
         assertEquals(1, result.archiveEntriesScanned);
     }
 
@@ -51,6 +51,17 @@ public class AntivirusEngineTest {
         AntivirusEngine.Result result = scan(archive, "bundle.zip");
         assertEquals("SUSPICIOUS", result.status);
         assertTrue(result.details.contains("path-traversal-style entry name"));
+    }
+
+    @Test
+    public void multiIndicatorSignatureIsDetectedInsideZipEntries() throws Exception {
+        byte[] webShell = ("<?php if (isset($_REQUEST['cmd'])) { " +
+                "echo base64_decode($x); system($x); eval($y); } ?>")
+                .getBytes(StandardCharsets.UTF_8);
+        AntivirusEngine.Result result = scan(zip("payload.txt", webShell), "bundle.zip");
+        assertEquals("REVIEW_REQUIRED", result.status);
+        assertTrue(result.details.contains("PHP_WEBSHELL_INDICATORS"));
+        assertTrue(result.details.contains("payload.txt"));
     }
 
     @Test
