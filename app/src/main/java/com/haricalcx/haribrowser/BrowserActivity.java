@@ -34,6 +34,11 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.webkit.CookieManager;
 import android.webkit.DownloadListener;
+import android.webkit.MimeTypeMap;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.security.MessageDigest;
 import android.webkit.PermissionRequest;
 import android.webkit.SafeBrowsingResponse;
 import android.webkit.SslErrorHandler;
@@ -81,6 +86,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -121,6 +130,14 @@ public class BrowserActivity extends ComponentActivity {
     private static ArrayList<String> pendingThemeRestoreUrls;
     private static int pendingThemeRestoreIndex;
     private static boolean pendingThemeRestorePrivateMode;
+    // Session-only approvals avoid repeated prompts for a URL the user already reviewed.
+    private static final java.util.Set<String> APPROVED_SITE_URLS =
+            java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
+    // Opt-in online URL reputation results remain in memory only and never enter browser history.
+    private final Set<String> pendingUrlhausChecks = Collections.synchronizedSet(new HashSet<>());
+    private final Map<String, UrlhausReputation.Result> urlhausSessionResults =
+            Collections.synchronizedMap(new HashMap<>());
 
     private boolean darkTheme() { return settings.getBoolean("dark_theme", false); }
     private boolean trackersEnabled() { return settings.getBoolean("block_trackers", true); }
@@ -192,6 +209,7 @@ public class BrowserActivity extends ComponentActivity {
         String url = HOME_URL;
         boolean home = true;
         boolean readerMode = false;
+        long navigationAttempt = 0L;
         ScriptHandler fingerprintScriptHandler;
     }
 
@@ -229,6 +247,7 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
+        if (privateMode) settings.edit().putBoolean("private_session_active", true).apply();
         // Shared by normal and private sessions so private browsing cannot bypass protection.
         protectionSettings = getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE);
         protectionStore = new SecureStore(this, false);
@@ -606,7 +625,7 @@ public class BrowserActivity extends ComponentActivity {
                     String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
                             + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
                             + "<title>Browsing blocked</title><h2>Teen Protection</h2>"
-                            + "<p>This search or website matches a restricted adult-content or gambling rule.</p>"
+                            + "<p>This search or website matches a restricted age-safety rule covering selected explicit, gambling, graphic-violence, self-harm-instruction, weapon/explosive-instruction, or illegal-drug queries.</p>"
                             + "<p>Try a learning-focused or age-appropriate destination.</p>";
                     return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
                             Collections.singletonMap("Cache-Control", "no-store"),
@@ -664,13 +683,20 @@ public class BrowserActivity extends ComponentActivity {
                 }
                 String protectedUrl = protectSearchUrl(url);
                 if (protectedUrl == null) return true;
-                if (!protectedUrl.equals(url)) {
-                    view.loadUrl(protectedUrl);
-                    return true;
+                // Keep same-site in-page navigation smooth; scan before opening a new destination.
+                if (!request.isForMainFrame()) {
+                    view.getSettings().setJavaScriptEnabled(javascriptEnabled());
+                    return false;
                 }
-                // Reset JavaScript to the user's website preference before a real HTTPS page loads.
-                view.getSettings().setJavaScriptEnabled(javascriptEnabled());
-                return false;
+                SiteSafetyChecker.Report urlReport = SiteSafetyChecker.inspect(protectedUrl);
+                if (tab.url != null && !safeHost(tab.url).isEmpty()
+                        && safeHost(tab.url).equalsIgnoreCase(safeHost(protectedUrl))
+                        && !urlReport.hasWarnings()) {
+                    view.getSettings().setJavaScriptEnabled(javascriptEnabled());
+                    return false;
+                }
+                runOnUiThread(() -> showSiteSafetyCheck(tab, protectedUrl));
+                return true;
             }
 
             @Override
@@ -888,15 +914,131 @@ public class BrowserActivity extends ComponentActivity {
         }
         String protectedUrl = protectSearchUrl(url);
         if (protectedUrl == null) return;
-        url = protectedUrl;
+        // Every address-bar, bookmark, history and app-link navigation gets a local preflight.
+        showSiteSafetyCheck(tab, protectedUrl);
+    }
+
+    private void loadAfterSiteSafetyCheck(Tab tab, String url) {
+        if (tab == null || tab.webView == null || !PrivacyGuard.isHttpsUrl(url)) return;
         tab.home = false;
         tab.readerMode = false;
-        // Local dashboard scripts stay available, but website JavaScript follows the user's setting.
         tab.webView.getSettings().setJavaScriptEnabled(javascriptEnabled());
         tab.webView.getSettings().setBlockNetworkImage(!imagesEnabled());
         tab.url = url;
         tab.webView.loadUrl(url);
         updateTabControls();
+    }
+
+    private void showSiteSafetyCheck(Tab tab, String url) {
+        if (tab == null || tab.webView == null || !PrivacyGuard.isHttpsUrl(url)) return;
+        final long attempt = ++tab.navigationAttempt;
+        boolean onlineChecksEnabled = !privateMode &&
+                getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                        .getBoolean("auto_urlhaus_enabled", false);
+        if (onlineChecksEnabled) {
+            UrlhausReputation.Result cached = urlhausSessionResults.get(url);
+            if (cached != null) {
+                showSiteSafetyCheckDialog(tab, url, cached, attempt);
+                return;
+            }
+            String authKey = protectionStore.get("hari_rep_store_1", "");
+            if (!authKey.isEmpty()) {
+                if (!pendingUrlhausChecks.add(url)) {
+                    showToast("URL reputation check is already running. Please wait.");
+                    return;
+                }
+                showToast("Checking this destination with URLhaus…");
+                new Thread(() -> {
+                    UrlhausReputation.Result reputation;
+                    try {
+                        reputation = UrlhausReputation.lookup(url, authKey);
+                    } catch (Exception error) {
+                        reputation = new UrlhausReputation.Result(false, "SERVICE_UNAVAILABLE",
+                                "Online URL reputation was unavailable. Local URL checks remain active.");
+                    } finally {
+                        pendingUrlhausChecks.remove(url);
+                    }
+                    if ("KNOWN_MALWARE_URL".equals(reputation.status) || "NO_MATCH".equals(reputation.status)) {
+                        urlhausSessionResults.put(url, reputation);
+                    }
+                    UrlhausReputation.Result finalReputation = reputation;
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed() || tab.navigationAttempt != attempt ||
+                                !tabs.contains(tab)) return;
+                        showSiteSafetyCheckDialog(tab, url, finalReputation, attempt);
+                    });
+                }, "HariUrlReputation").start();
+                return;
+            }
+        }
+        if (APPROVED_SITE_URLS.contains(url)) {
+            loadAfterSiteSafetyCheck(tab, url);
+            return;
+        }
+        showSiteSafetyCheckDialog(tab, url, null, attempt);
+    }
+
+    private void showSiteSafetyCheckDialog(Tab tab, String url,
+                                           UrlhausReputation.Result reputation, long attempt) {
+        if (tab == null || tab.webView == null || tab.navigationAttempt != attempt ||
+                !PrivacyGuard.isHttpsUrl(url)) return;
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url);
+        StringBuilder message = new StringBuilder();
+        message.append("Destination: ").append(report.getHost()).append("\n\n");
+        message.append("LOCAL URL CHECK\n");
+        for (String check : report.getPassedChecks()) {
+            message.append("✓ ").append(check).append("\n");
+        }
+        if (!report.getWarnings().isEmpty()) {
+            message.append("\nREVIEW THESE SIGNALS\n");
+            for (String warning : report.getWarnings()) {
+                message.append("⚠ ").append(warning).append("\n");
+            }
+        }
+        boolean knownMalware = reputation != null && reputation.listed;
+        if (reputation != null) {
+            message.append("\n\nONLINE URL REPUTATION (URLhaus)\n");
+            message.append(reputation.details).append("\n");
+            if (knownMalware) {
+                message.append("\nWARNING: avoid this URL. It has a URLhaus malware-distribution record.");
+            } else if ("NO_MATCH".equals(reputation.status)) {
+                message.append("\nNo record does not mean safe. URLhaus does not identify every phishing or scam site.");
+            } else {
+                message.append("\nThe online check did not complete. The URL has not received a clean verdict.");
+            }
+        } else if (!privateMode &&
+                getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                        .getBoolean("auto_urlhaus_enabled", false)) {
+            message.append("\n\nOnline URL reputation could not be run because no Auth-Key is configured. ");
+            message.append("Only the local URL checks below were performed.");
+        }
+        message.append("\n\nLocal checks run on this device and review URL patterns only; they do not certify the website or inspect all page content. ");
+        message.append("India-focused scam checks look for selected impersonation and OTP/KYC/payment wording in the URL only; false positives and missed scams are possible. ");
+        message.append("Android WebView certificate validation and Safe Browsing remain active during connection.");
+        if (reputation != null) {
+            message.append("\n\nThis URL was sent to URLhaus because online URL reputation is enabled in normal browsing.");
+        } else {
+            message.append("\n\nThis check did not send the URL to a third-party scanner.");
+        }
+
+        String title = knownMalware ? "⚠ Known malware-distribution URL" :
+                report.hasWarnings() ? "Review site before opening" : "Site safety check";
+        String positiveLabel = knownMalware ? "I understand — open anyway" :
+                report.hasWarnings() ? "Open anyway" : "Open site";
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message.toString())
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton(positiveLabel, (dialog, which) -> {
+                    if (isFinishing() || isDestroyed() || tab.navigationAttempt != attempt ||
+                            !tabs.contains(tab)) {
+                        showToast("The navigation changed. Please retry the address if you still want to open it.");
+                        return;
+                    }
+                    APPROVED_SITE_URLS.add(url);
+                    loadAfterSiteSafetyCheck(tab, url);
+                })
+                .show();
     }
 
     private void loadHome(Tab tab) {
@@ -1772,7 +1914,12 @@ public class BrowserActivity extends ComponentActivity {
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
                 "About Hari Browser - What's new in 2.3",
                 "Hari AI · API settings",
-                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF")
+                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF"),
+                "Security & privacy scan",
+                "Site permission controls",
+                (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
+                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
+                "Hari Antivirus · scan a file and manage quarantine"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1917,6 +2064,28 @@ public class BrowserActivity extends ComponentActivity {
                         case 33:
                             handleTeenProtectionMenu();
                             break;
+                        case 34:
+                            showSecurityPrivacyScan();
+                            break;
+                        case 35:
+                            showSitePermissionControls();
+                            break;
+                        case 36:
+                            if (privateMode) {
+                                showToast("Private mode already clears its cookies and site storage when it closes.");
+                            } else {
+                                boolean clearOnExit = !settings.getBoolean("clear_data_on_exit", false);
+                                settings.edit().putBoolean("clear_data_on_exit", clearOnExit).apply();
+                                showToast(clearOnExit
+                                        ? "Browsing data will be cleared when you exit Hari Browser; Android may still terminate the app without a final callback."
+                                        : "Automatic browsing-data clearing on exit disabled.");
+                            }
+                            break;
+                        case 37:
+                            Intent antivirusIntent = new Intent(BrowserActivity.this, AntivirusActivity.class);
+                            antivirusIntent.putExtra("private_mode", privateMode);
+                            startActivity(antivirusIntent);
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -1988,11 +2157,15 @@ public class BrowserActivity extends ComponentActivity {
 
         TextView description = new TextView(this);
         description.setText(
-                "Blocks a starter list of explicit adult search terms and forces strict SafeSearch " +
-                "for Google, Bing, Brave Search and DuckDuckGo. Startpage's filtering is controlled " +
+                "Checks search queries on this device for a starter list of explicit adult-content, gambling, " +
+                "graphic real-world violence, self-harm instructions, dangerous weapon/explosive instructions, " +
+                "and illegal-drug procurement/manufacture. It blocks selected adult/gambling domains and requests " +
+                "strict SafeSearch for Google, Bing, Brave Search and DuckDuckGo. Startpage filtering is controlled " +
                 "by Startpage itself. A parent PIN is required to turn this feature off from Hari Browser.\n\n" +
-                "This is a browser-level safeguard, not a complete content filter or Android parental control. " +
-                "It cannot guarantee that every inappropriate page or image will be blocked.");
+                "Filtering is phrase-based and can miss altered wording or content inside a webpage; legitimate " +
+                "queries can occasionally be blocked. Prevention, educational and help-seeking searches are allowed " +
+                "where possible. This is a browser-level safeguard, not a complete content filter or Android " +
+                "parental-control service, and it cannot guarantee that every inappropriate page or image is blocked.");
         description.setTextColor(MUTED);
         description.setTextSize(13);
         description.setPadding(0, 0, 0, dp(10));
@@ -2095,7 +2268,7 @@ public class BrowserActivity extends ComponentActivity {
                 "- Home page available in ten Indian languages plus English, Spanish, French and Arabic\n" +
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
-                "- Parent-PIN-protected Teen Protection blocks common adult/gambling searches and selected domains\n" +
+                "- Parent-PIN-protected Teen Protection blocks selected explicit, gambling, graphic-violence, dangerous-instruction and self-harm-instruction searches\n" +
                 "- Hari AI Settings can test the API key and explain common key, model and quota errors\n" +
                 "- Optional Hari AI chat with API setup in Settings\n" +
                 "- API key encrypted locally; prompts are sent online only when you use Hari AI\n" +
@@ -2437,6 +2610,9 @@ public class BrowserActivity extends ComponentActivity {
                 "Safe Browsing: enabled where provided by Android WebView\n" +
                 "Mixed content: blocked\n" +
                 "Third-party cookies: blocked\n" +
+                "Camera/microphone requests: denied by default\n" +
+                "Geolocation: disabled\n" +
+                "Local file/content access: disabled for webpages\n" +
                 "Tracker blocking: " + (trackersEnabled() ? "enabled (local list)" : "disabled") + "\n" +
                 "JavaScript: " + (javascriptEnabled() ? "enabled" : "disabled") + "\n" +
                 "Anti-fingerprinting: " + (fingerprintProtectionActive(tab) ? "active" :
@@ -2448,6 +2624,115 @@ public class BrowserActivity extends ComponentActivity {
         new AlertDialog.Builder(this).setTitle("Site security").setMessage(message)
                 .setPositiveButton("Copy address", (d, w) -> copyCurrentUrl())
                 .setNegativeButton("Close", null).show();
+    }
+
+    private void showSecurityPrivacyScan() {
+        Tab tab = currentTab();
+        StringBuilder report = new StringBuilder();
+        report.append("HARI BROWSER PROTECTION STATUS\n\n");
+        report.append("✓ HTTPS-only navigation: ON (HTTP pages are rejected)\n");
+        report.append("✓ TLS certificate errors: CANCELLED (invalid certificates are not bypassed)\n");
+        report.append("✓ Android WebView Safe Browsing: enabled where supported by the installed WebView\n");
+        report.append("✓ Mixed content: blocked by browser policy\n");
+        report.append("✓ Third-party cookies: BLOCKED\n");
+        report.append("Local tracker blocking: ").append(trackersEnabled() ? "ON (local list; incomplete)" : "OFF").append("\n");
+        if (tab != null && !tab.home && fingerprintProtectionActive(tab)) {
+            report.append("Anti-fingerprinting: ACTIVE for supported signals\n");
+        } else if (!fingerprintProtectionEnabled()) {
+            report.append("Anti-fingerprinting: OFF in Settings\n");
+        } else {
+            report.append("Anti-fingerprinting: enabled in Settings; some protections may be unsupported by this WebView\n");
+        }
+        report.append("JavaScript: ").append(javascriptEnabled() ? "ON (needed by many sites; adds script execution risk)" : "OFF").append("\n");
+        report.append("First-party cookies: ").append(cookiesEnabled() ? "ON" : "OFF").append("\n");
+        report.append("Website images: ").append(imagesEnabled() ? "ON" : "BLOCKED").append("\n");
+        report.append("Teen Protection: ").append(teenProtectionEnabled() ? "ON" : "OFF").append("\n");
+        report.append("Browsing history: ");
+        if (privateMode) report.append("not saved in private mode\n");
+        else report.append(historyEnabled() ? "ON (encrypted on this device)" : "OFF by default/disabled").append("\n");
+        report.append("Site permissions: camera/microphone requests denied; geolocation disabled; local file/content access disabled\n");
+        report.append("Clear browsing data on exit: ").append(settings.getBoolean("clear_data_on_exit", false) ? "ON (best effort when the activity exits)" : "OFF").append("\n");
+        SharedPreferences downloadPrefs = settings;
+        String latestDownloadStatus = downloadPrefs.getString("last_download_scan_status", null);
+        if (latestDownloadStatus == null) {
+            report.append("Browser download scan: no completed tracked download has been checked yet\n");
+        } else {
+            report.append("Latest browser download check: ").append(latestDownloadStatus).append(" (")
+                    .append(downloadPrefs.getString("last_download_scan_filename", "download")).append(")\n");
+        }
+
+        report.append("\nWHAT THIS SCAN CANNOT DO\n");
+        report.append("• It checks Hari Browser's settings and URL patterns, not every privacy or security measure of a website.\n");
+        report.append("• Certificate validation and Safe Browsing perform additional checks during connection. Site content and server security headers are not fully audited by this local scan.\n");
+        report.append("• Tracked downloads and user-selected files receive bounded local SHA-256, format-mismatch, EICAR test-signature and ZIP-based archive checks. APKs also receive a limited package-permission review. Optional MalwareBazaar reputation sends only a SHA-256 hash when configured, and is disabled for private-mode downloads. No complete ClamAV/YARA-class malware-signature engine is included, so these checks are not a full antivirus verdict.\n");
+        report.append("• A BASIC_CHECKS_ONLY result is not a guarantee that a file is safe. Large files can be marked SCAN_INCOMPLETE. File contents are never uploaded; SHA-256 hashes are sent to MalwareBazaar only when the user configures optional hash reputation. Private-mode downloads stay local-only.\n");
+        report.append("• This scan does not inspect all page content or prove a site's privacy claims. India-focused scam checks are URL heuristics and can miss scams or flag legitimate URLs. The Hari Antivirus screen lets you scan a user-selected file, review APK metadata, and manage an app-private quarantine; it does not scan every file or another app's private storage.\n");
+        report.append("• Device-wide virus/malware scanning or cleaning is NOT available to Hari Browser. Android's app sandbox prevents an ordinary browser from safely scanning infections in other apps or private files. Use Google Play Protect for a device scan.");
+
+        new AlertDialog.Builder(this)
+                .setTitle("Security & privacy scan")
+                .setMessage(report.toString())
+                .setPositiveButton("Done", null)
+                .setNegativeButton("Latest download scan", (dialog, which) -> showLastDownloadScan())
+                .setNeutralButton("Site security details", (dialog, which) -> showSiteSecurity())
+                .show();
+    }
+
+    private void showSitePermissionControls() {
+        String message = "HARI BROWSER SITE PERMISSION POLICY\n\n" +
+                "Camera and microphone: website permission requests are denied by default.\n" +
+                "Location: WebView geolocation is disabled.\n" +
+                "Local files and content providers: access is disabled for webpages.\n" +
+                "Pop-up windows: automatic JavaScript windows and multiple WebView windows are disabled.\n" +
+                "File uploads: a website can open only Android's system picker after you choose an upload control; Hari Browser does not grant general file-system access.\n\n" +
+                "This is a deny-by-default policy, not a per-site allow-list. If a site needs a capability, use a trusted site and an external app instead. No permission prompt means a site has not been granted that capability by this browser.";
+        new AlertDialog.Builder(this).setTitle("Site permission controls").setMessage(message)
+                .setPositiveButton("Done", null).show();
+    }
+
+    private void showLastDownloadScan() {
+        SharedPreferences downloadPrefs = settings;
+        String report = downloadPrefs.getString("last_download_scan", null);
+        if (report == null || report.trim().isEmpty()) {
+            report = "No completed download tracked by Hari Browser has been scanned yet. Future completed downloads receive limited on-device checks. This is not a full antivirus engine.";
+        }
+        long suspiciousId = downloadPrefs.getLong("last_suspicious_download_id", -1L);
+        String suspiciousName = downloadPrefs.getString("last_suspicious_download_filename", "flagged download");
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this)
+                .setTitle("Latest download scan")
+                .setMessage(report + (suspiciousId >= 0 ? "\n\nLast flagged download: " + suspiciousName : ""))
+                .setPositiveButton("Done", null);
+        if (suspiciousId >= 0) {
+            dialog.setNeutralButton("Delete flagged download", (d, w) ->
+                    confirmDeleteFlaggedDownload(suspiciousId, suspiciousName));
+        }
+        dialog.show();
+    }
+
+    private void confirmDeleteFlaggedDownload(long downloadId, String filename) {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete flagged download?")
+                .setMessage("Delete '" + filename + "' from Android Download Manager? This cannot be undone.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Delete", (d, w) -> {
+                    DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                    int removed = manager == null ? 0 : manager.remove(downloadId);
+                    SharedPreferences downloadPrefs = settings;
+                    SharedPreferences.Editor edit = downloadPrefs.edit()
+                            .remove("hari_browser_download_" + downloadId)
+                            .remove("hari_browser_download_name_" + downloadId);
+                    if (downloadPrefs.getLong("last_suspicious_download_id", -1L) == downloadId) {
+                        edit.remove("last_suspicious_download_id").remove("last_suspicious_download_filename");
+                    }
+                    if (downloadPrefs.getLong("last_download_scan_id", -1L) == downloadId) {
+                        edit.remove("last_download_scan").remove("last_download_scan_status")
+                                .remove("last_download_scan_filename").remove("last_download_scan_sha256")
+                                .remove("last_download_scan_id");
+                    }
+                    edit.apply();
+                    showToast(removed > 0 ? "Flagged download deleted." : "Download entry was already unavailable.");
+                })
+                .show();
     }
 
     private void confirmEmergencyClear() {
@@ -2569,15 +2854,27 @@ public class BrowserActivity extends ComponentActivity {
         }
         String filename = URLUtil.guessFileName(url, contentDisposition, mimeType);
         filename = filename.replaceAll("[^a-zA-Z0-9._() -]", "_");
-        if (filename.trim().isEmpty() || filename.equals(".") || filename.equals("..")) {
-            filename = "download";
-        }
+        if (filename.trim().isEmpty() || filename.equals(".") || filename.equals("..")) filename = "download";
         final String safeFilename = filename;
-        String message = "Save " + safeFilename + " to Downloads? The download will remain on your device even after private browsing closes.";
+        String type = mimeType == null ? "" : mimeType.toLowerCase(Locale.ROOT);
+        boolean potentiallyExecutable = type.contains("apk") || type.contains("x-msdownload")
+                || type.contains("x-executable") || type.contains("x-dosexec")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".apk")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".exe")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".msi")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".bat")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".cmd")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".sh")
+                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".jar");
+        String warning = potentiallyExecutable
+                ? "\\n\\nWarning: this file may install or run software. Hari Browser will not automatically execute it. Only keep it if you trust the source."
+                : "";
         new AlertDialog.Builder(this)
                 .setTitle("Download file")
-                .setMessage(privateMode ? message : "Save " + safeFilename + " to your Downloads folder?")
+                .setMessage("Save " + safeFilename + " to Downloads?" + warning
+                        + "\\n\\nAfter download, Hari Browser can check the file type and calculate a checksum. This is not a malware verdict.")
                 .setNegativeButton("Cancel", null)
+                .setNeutralButton("File safety info", (d, w) -> showToast("File checks detect some risky types only; they cannot prove a file is malware-free."))
                 .setPositiveButton("Download", (d, w) -> startDownload(url, safeFilename, mimeType))
                 .show();
     }
@@ -2595,8 +2892,19 @@ public class BrowserActivity extends ComponentActivity {
             // Do not copy cookies or authorization headers into a separate download process.
             DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
             if (manager == null) throw new IllegalStateException("Download service unavailable");
-            manager.enqueue(request);
-            showToast("Download started. Check system notifications.");
+            long downloadId = manager.enqueue(request);
+            // Track only files explicitly enqueued by Hari Browser. The receiver ignores every other download.
+            String downloadPrefsName = privateMode ? "hari_browser_private_settings" : "hari_browser_settings";
+            SharedPreferences downloadPrefs = getSharedPreferences(downloadPrefsName, MODE_PRIVATE);
+            downloadPrefs.edit()
+                    .putBoolean("hari_browser_download_" + downloadId, true)
+                    .putString("hari_browser_download_name_" + downloadId, filename)
+                    .apply();
+            // The shared registry holds only the preference-file name, never the downloaded filename.
+            getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE).edit()
+                    .putString("download_prefs_" + downloadId, downloadPrefsName)
+                    .apply();
+            showToast("Download started. Hari Browser will run limited local checks when it completes; this is not full antivirus.");
         } catch (Exception e) {
             showToast("Download could not be started.");
         }
@@ -2634,7 +2942,7 @@ public class BrowserActivity extends ComponentActivity {
                         "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\\n" +
                         "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\\n" +
                         "• History is off by default; private mode never saves history.\\n" +
-                        "• No app analytics, ad SDKs, account, or remote blocklist.\\n\\n" +
+                        "• No app analytics, ad SDKs, or browser account. No remote reputation request is made unless you explicitly configure MalwareBazaar hash lookup; only SHA-256 hashes are submitted, never file contents or URLs.\\n\\n" +
                         "Limitations: the device's WebView provides the rendering engine; websites and the selected search engine receive normal requests. This app does not hide traffic from your network or internet provider. The blocker is incomplete, and private mode cannot erase downloads, screenshots, DNS/network logs, or every possible site artifact.")
                 .setPositiveButton("OK", null)
                 .show();
@@ -2700,7 +3008,53 @@ public class BrowserActivity extends ComponentActivity {
 
     @Override
     protected void onDestroy() {
+        if (!privateMode && isFinishing() && settings != null &&
+                settings.getBoolean("clear_data_on_exit", false)) {
+            // Best-effort cleanup when the user explicitly exits the browser.
+            try {
+                CookieManager cookies = CookieManager.getInstance();
+                cookies.removeAllCookies(value -> cookies.flush());
+                cookies.flush();
+                WebStorage.getInstance().deleteAllData();
+            } catch (Exception ignored) {}
+            for (Tab tab : tabs) {
+                if (tab.webView != null) {
+                    try {
+                        tab.webView.clearCache(true);
+                        tab.webView.clearHistory();
+                        tab.webView.clearFormData();
+                        tab.webView.clearSslPreferences();
+                    } catch (Exception ignored) {}
+                }
+            }
+            if (secureStore != null) secureStore.put(KEY_HISTORY, "[]");
+        }
         if (privateMode) {
+            // Keep private download names and scan reports out of the standard profile.
+            if (settings != null) {
+                settings.edit().putBoolean("private_session_active", false)
+                        .remove("last_download_scan").remove("last_download_scan_status")
+                        .remove("last_download_scan_filename").remove("last_download_scan_sha256")
+                        .remove("last_download_scan_id").remove("last_suspicious_download_id")
+                        .remove("last_suspicious_download_filename").apply();
+            }
+            SharedPreferences registry = getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE);
+            SharedPreferences.Editor registryEdit = registry.edit();
+            SharedPreferences.Editor privateDownloadEdit = settings == null ? null : settings.edit();
+            for (String key : registry.getAll().keySet()) {
+                if (key.startsWith("download_prefs_") &&
+                        "hari_browser_private_settings".equals(registry.getString(key, ""))) {
+                    String downloadId = key.substring("download_prefs_".length());
+                    registryEdit.remove(key);
+                    if (privateDownloadEdit != null) {
+                        privateDownloadEdit.remove("hari_browser_download_" + downloadId)
+                                .remove("hari_browser_download_name_" + downloadId)
+                                .remove("hari_browser_download_scanning_" + downloadId);
+                    }
+                }
+            }
+            registryEdit.apply();
+            if (privateDownloadEdit != null) privateDownloadEdit.apply();
             // Best-effort cleanup in the isolated WebView profile when private browsing closes.
             try {
                 CookieManager cookies = CookieManager.getInstance();

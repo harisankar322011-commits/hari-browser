@@ -45,6 +45,26 @@ final class TeenProtection {
         "betting sites", "betting apps", "best betting apps", "poker for money",
         "real money poker", "slot machines online", "online slots", "slots for money",
         "bet now", "sportsbook", "sportsbooks", "bookmaker sites",
+        // Graphic real-world violence; neutral news/history terms are intentionally not blocked.
+        "graphic gore videos", "real gore videos", "gore videos", "beheading video",
+        "beheading videos", "execution video", "execution videos", "real murder videos",
+        "torture videos", "snuff film", "snuff films", "school shooting video",
+        "mass shooting video", "violent death videos",
+        // Dangerous instructions and illegal drug procurement/manufacture.
+        "how to build a bomb", "how to make a bomb", "make a bomb at home",
+        "homemade bomb instructions", "how to make a pipe bomb", "how to make explosives",
+        "how to build an explosive", "how to build a gun", "how to make a ghost gun",
+        "how to poison someone", "how to make meth", "cook meth at home",
+        "buy fentanyl online", "buy heroin online", "buy cocaine online",
+        "buy illegal drugs online", "how to synthesize fentanyl",
+        // Self-harm instructions are blocked, while prevention and support searches remain allowed.
+        "how to kill myself", "ways to kill myself", "suicide methods",
+        "ways to commit suicide", "suicide instructions", "painless suicide",
+        "best way to die", "how to self harm", "self harm methods",
+        "how to hurt myself", "how to cut myself", "how to overdose on",
+        "lethal dose of", "how to hang myself",
+        "आत्महत्या के तरीके", "बम कैसे बनाएं", "ആത്മഹത്യ മാർഗങ്ങൾ",
+        "ബോംബ് ഉണ്ടാക്കുന്നത് എങ്ങനെ",
         "पोर्न", "पोर्नोग्राफी", "अश्लील वीडियो", "अश्लील तस्वीरें",
         "ஆபாச வீடியோ", "అశ్లీల వీడియో", "ಅಶ್ಲೀಲ ವೀಡಿಯೊ",
         "അശ്ലീലം", "നീലച്ചിത്രം", "pornografía", "pornographie", "إباحي"
@@ -68,7 +88,12 @@ final class TeenProtection {
         "recover from pornography", "someone leaked my nudes", "report leaked nudes",
         "what to do if someone shared my nudes", "sextortion help",
         "gambling addiction", "problem gambling help", "help with gambling",
-        "stop gambling", "gambling support", "online gambling addiction"
+        "stop gambling", "gambling support", "online gambling addiction",
+        "suicide prevention", "suicide hotline", "suicide crisis help",
+        "self harm recovery", "self harm support", "help a suicidal friend",
+        "help someone suicidal", "drug addiction treatment", "drug addiction help",
+        "overdose emergency", "report a bomb threat", "explosives safety",
+        "firearm safety laws"
     };
 
     private static final String[] SUPPORT_SENSITIVE_TERMS = {
@@ -122,7 +147,13 @@ final class TeenProtection {
         // generic terms like "porn" or "gambling", but never overrides explicit-media phrases.
         for (String phrase : BLOCKED_PHRASES) {
             String candidate = normalize(phrase);
-            if (candidate.isEmpty() || !padded.contains(" " + candidate + " ")) continue;
+            if (candidate.isEmpty()) continue;
+            // Also compare compact forms so punctuation-separated phrases cannot trivially bypass
+            // multiword rules (for example, "h.o.w to m.a.k.e a b.o.m.b").
+            String candidateCompact = foldLeetspeak(candidate.replace(" ", ""));
+            boolean phraseMatch = padded.contains(" " + candidate + " ")
+                    || compact.contains(candidateCompact);
+            if (!phraseMatch) continue;
             boolean supportSensitive = false;
             for (String sensitive : SUPPORT_SENSITIVE_TERMS) {
                 if (candidate.equals(normalize(sensitive))) {

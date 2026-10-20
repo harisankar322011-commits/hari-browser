@@ -1,0 +1,13 @@
+title = "Hari Browser secret scanning"
+
+[allowlist]
+description = "Exact false positive: legacy local preference-name literal is a storage key, not an API credential. Scope is limited to this literal and the two files where it appeared."
+regexTarget = "match"
+regexes = [
+  '''^hari_malwarebazaar_api_key_v1$'''
+]
+paths = [
+  '''app/src/main/java/com/haricalcx/haribrowser/AntivirusActivity\.java''',
+  '''app/src/main/java/com/haricalcx/haribrowser/BrowserActivity\.java''',
+  '''\.gitleaks\.toml'''
+]

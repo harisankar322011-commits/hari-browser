@@ -1,0 +1,154 @@
+package com.haricalcx.haribrowser;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Performs a local, URL-structure preflight before the browser navigates.
+ *
+ * This is deliberately network-free. It does not claim to verify the site's
+ * certificate, response headers, page contents, reputation, or malware status.
+ * Android WebView TLS validation and Safe Browsing remain separate checks.
+ */
+public final class SiteSafetyChecker {
+    private SiteSafetyChecker() {}
+
+    public static final class Report {
+        private final String host;
+        private final List<String> passedChecks;
+        private final List<String> warnings;
+
+        private Report(String host, List<String> passedChecks, List<String> warnings) {
+            this.host = host;
+            this.passedChecks = Collections.unmodifiableList(new ArrayList<>(passedChecks));
+            this.warnings = Collections.unmodifiableList(new ArrayList<>(warnings));
+        }
+
+        public String getHost() {
+            return host;
+        }
+
+        public List<String> getPassedChecks() {
+            return passedChecks;
+        }
+
+        public List<String> getWarnings() {
+            return warnings;
+        }
+
+        public boolean hasWarnings() {
+            return !warnings.isEmpty();
+        }
+    }
+
+    /** Inspect only the supplied URL. Does not perform a network request. */
+    public static Report inspect(String value) {
+        List<String> passed = new ArrayList<>();
+        List<String> warnings = new ArrayList<>();
+        String hostLabel = "unknown host";
+
+        if (value == null || value.trim().isEmpty()) {
+            warnings.add("No website address was provided.");
+            return new Report(hostLabel, passed, warnings);
+        }
+
+        final URI uri;
+        try {
+            uri = new URI(value.trim());
+        } catch (Exception invalidUri) {
+            warnings.add("The address has an unusual or invalid URL format.");
+            return new Report(hostLabel, passed, warnings);
+        }
+
+        String scheme = uri.getScheme();
+        if ("https".equalsIgnoreCase(scheme)) {
+            passed.add("HTTPS address requested");
+        } else {
+            warnings.add("The address is not HTTPS. Hari Browser only opens HTTPS websites.");
+        }
+
+        String host = uri.getHost();
+        if (host == null || host.trim().isEmpty()) {
+            warnings.add("The browser could not reliably identify the destination hostname.");
+            host = null;
+        } else {
+            hostLabel = host;
+            String normalizedHost = host.toLowerCase(Locale.ROOT);
+
+            if (uri.getUserInfo() != null) {
+                warnings.add("The URL contains text before the hostname that can disguise the real destination.");
+            } else {
+                passed.add("No embedded username or password in the URL");
+            }
+
+            if (normalizedHost.startsWith("xn--") || normalizedHost.contains(".xn--")) {
+                warnings.add("The hostname contains punycode. Confirm the spelling carefully; internationalized names can be legitimate.");
+            } else {
+                passed.add("Hostname is not visibly punycode-encoded");
+            }
+
+            if (isIpLiteral(normalizedHost)) {
+                warnings.add("The destination uses an IP address instead of a familiar domain name.");
+            } else {
+                passed.add("Destination is a named hostname, not an IP literal");
+            }
+
+            if (normalizedHost.length() > 100) {
+                warnings.add("The hostname is unusually long.");
+            }
+
+            if (countLabels(normalizedHost) > 5) {
+                warnings.add("The hostname has many subdomains. Check the registered domain carefully.");
+            }
+
+            int port = uri.getPort();
+            if (port == -1 || port == 443) {
+                passed.add("No unusual HTTPS port");
+            } else {
+                warnings.add("The URL uses a non-standard HTTPS port (" + port + ").");
+            }
+        }
+
+        String query = uri.getRawQuery();
+        if (query != null && query.length() > 500) {
+            warnings.add("The URL has a very long query string that may contain tracking or login tokens. Avoid sharing it.");
+        }
+
+        // Conservative India-focused scam checks inspect only the URL, not page text or reputation.
+        warnings.addAll(IndianScamChecker.inspect(value));
+
+        if (warnings.isEmpty()) {
+            passed.add("No obvious URL-structure warning found (this is not a trust or malware verdict)");
+        }
+        return new Report(hostLabel, passed, warnings);
+    }
+
+    private static boolean isIpLiteral(String host) {
+        if (host.indexOf(':') >= 0) return true; // IPv6 literal
+        String[] parts = host.split("\\.", -1);
+        if (parts.length != 4) return false;
+        for (String part : parts) {
+            if (part.isEmpty() || part.length() > 3) return false;
+            for (int i = 0; i < part.length(); i++) {
+                if (!Character.isDigit(part.charAt(i))) return false;
+            }
+            try {
+                if (Integer.parseInt(part) > 255) return false;
+            } catch (NumberFormatException error) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static int countLabels(String host) {
+        int labels = 1;
+        for (int i = 0; i < host.length(); i++) {
+            if (host.charAt(i) == '.') labels++;
+        }
+        return labels;
+    }
+}

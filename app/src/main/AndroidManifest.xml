@@ -17,10 +17,24 @@
             android:name="android.webkit.WebView.EnableSafeBrowsing"
             android:value="true" />
 
+        <receiver
+            android:name=".DownloadScanReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name=".TeenProtectionProvider"
             android:authorities="com.haricalcx.haribrowser.teenprotection"
             android:exported="false" />
+
+        <activity
+            android:name=".AntivirusActivity"
+            android:exported="false"
+            android:label="Hari Antivirus" />
 
         <activity
             android:name=".PrivateActivity"

@@ -85,6 +85,43 @@ public class TeenProtectionTest {
     }
 
     @Test
+    public void blocksGraphicViolenceDangerousInstructionsAndSelfHarmQueries() {
+        assertTrue(TeenProtection.containsBlockedSearchTerm("real gore videos"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("beheading video"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("how to make a pipe bomb"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("h.o.w t.o m.a.k.e a p.i.p.e b.o.m.b"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("buy fentanyl online"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("suicide methods"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("how to cut myself"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("बम कैसे बनाएं"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("ആത്മഹത്യ മാർഗങ്ങൾ"));
+    }
+
+    @Test
+    public void allowsSafetyEducationPreventionAndHelpSeekingQueries() {
+        assertFalse(TeenProtection.containsBlockedSearchTerm("suicide prevention hotline"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("self harm recovery resources"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("how to help a suicidal friend"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("firearm safety laws"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("history of World War II battles"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("drug addiction treatment"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("report a bomb threat"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("overdose emergency help"));
+    }
+
+    @Test
+    public void appliesDangerousSearchRulesToRecognizedSearchProviderUrls() {
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://www.google.com/search?q=suicide+methods"));
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://www.bing.com/search?q=buy+fentanyl+online"));
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://duckduckgo.com/?q=how+to+make+a+pipe+bomb"));
+        assertFalse(TeenProtection.isBlockedSearchUrl(
+                "https://www.google.com/search?q=suicide+prevention+hotline"));
+    }
+
+    @Test
     public void parentPinUsesSaltedHashAndVerifiesCorrectly() throws Exception {
         String pin = "482613";
         String salt = TeenProtection.createPinSalt();
