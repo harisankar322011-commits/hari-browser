@@ -8,13 +8,15 @@ Please use GitHub's private vulnerability reporting feature for this repository 
 
 - Network requests from web content are HTTPS-only; cleartext traffic is disabled in the Android manifest and network security configuration.
 - New top-level destinations receive a local URL-structure preflight before loading. This is a heuristic warning, not a reputation verdict: it does not fetch or certify the site, inspect response headers/content, or detect all malicious URLs. Android WebView Safe Browsing and TLS certificate validation remain separate connection-time protections.
-- Hari Browser does not provide device-wide antivirus scanning or malware removal. Android's application sandbox does not let a normal browser inspect and clean other apps' private files; do not advertise this feature as available.
+- Hari Antivirus offers user-selected and browser-download file checks: SHA-256, selected format mismatches, the EICAR test pattern, bounded ZIP-based archive inspection and limited APK package metadata review. It is not a full ClamAV/YARA-class malware engine and has no comprehensive offline malware-signature database or automatic signature updates.
+- Optional MalwareBazaar reputation is off until the user configures an abuse.ch Auth-Key. The app sends only a SHA-256 hash for a user-initiated or tracked non-private download lookup, never file contents or filenames. Private-mode downloads do not make reputation requests. An unknown hash is not a clean verdict.
+- Quarantine copies remain in no-backup app-private storage and are integrity-checked. Removing the original is a best-effort SAF operation; if Android denies deletion, the UI warns that the original may remain. Android's app sandbox does not let a normal browser inspect or clean other apps' private files; device-wide scanning is not provided.
 - WebView Safe Browsing is enabled. TLS certificate errors are always cancelled.
 - Mixed content, local file access, content-provider access, geolocation, popup windows, and web camera/microphone permission requests are blocked or disabled.
 - Third-party cookies are disabled by the browser.
 - Bookmarks and opt-in history are encrypted using AES-GCM with a key stored in Android Keystore.
 - Android backup and device-transfer backup are disabled/excluded.
-- No app analytics or advertising SDK is included. The content blocker is local and does not download remote blocklists.
+- No app analytics or advertising SDK is included. The content blocker is local and does not download remote blocklists. Hash reputation is disabled by default.
 - GitHub Actions use read-only repository permissions and pin third-party actions to full commit SHAs. Source-level security regression checks, CodeQL, dependency review, and Gitleaks secret scanning run in CI; Gitleaks scans the full Git history on pushes and pull requests and runs weekly. The secret-scan workflow disables PR comments and finding-artifact uploads.
 - CI checks the debug APK signature and ZIP integrity, ensures the release variant is not debuggable, validates APK package IDs and the release permission manifest, and publishes SHA-256 checksums only from the protected main branch (not from pull-request builds). The release APK is unsigned and intended only as a build-validation artifact; it must not be distributed as a production install package. These are build-integrity checks, not a malware certificate or independent security audit.
 - Production signing keys and passwords must never be committed to this repository or exposed to build logs.
