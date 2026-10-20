@@ -126,23 +126,25 @@ public final class QuarantineStore {
             throw new IOException("The selected quarantine entry is invalid.");
         }
         String expected = expectedHash(file);
-        MessageDigest digest = newDigest();
+        if (file.length() > MAX_BYTES) throw new IOException("The quarantined file exceeds the restore safety limit.");
+        if (!expected.isEmpty()) {
+            MessageDigest verifier = newDigest();
+            try (InputStream check = new FileInputStream(file)) {
+                byte[] buffer = new byte[64 * 1024];
+                int count;
+                while ((count = check.read(buffer)) != -1) verifier.update(buffer, 0, count);
+            }
+            if (!expected.equalsIgnoreCase(toHex(verifier.digest()))) {
+                throw new IOException("Quarantine integrity check failed. Do not restore this copy.");
+            }
+        }
         try (InputStream input = new FileInputStream(file);
              OutputStream output = context.getContentResolver().openOutputStream(destination, "w")) {
             if (output == null) throw new IOException("Android could not open the restore destination.");
             byte[] buffer = new byte[64 * 1024];
-            long total = 0;
             int count;
-            while ((count = input.read(buffer)) != -1) {
-                total += count;
-                if (total > MAX_BYTES) throw new IOException("The quarantined file exceeds the restore safety limit.");
-                digest.update(buffer, 0, count);
-                output.write(buffer, 0, count);
-            }
+            while ((count = input.read(buffer)) != -1) output.write(buffer, 0, count);
             output.flush();
-        }
-        if (!expected.isEmpty() && !expected.equalsIgnoreCase(toHex(digest.digest()))) {
-            throw new IOException("Quarantine integrity check failed. Do not open the restored copy.");
         }
     }
 
