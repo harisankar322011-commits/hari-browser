@@ -39,6 +39,16 @@ public class DownloadedFileScannerTest {
     }
 
     @Test
+    public void executableFileTypeRequiresReviewButIsNotLabeledMalwareByTypeAlone() throws Exception {
+        byte[] sample = new byte[] {0x50, 0x4b, 0x03, 0x04};
+        DownloadedFileScanner.Result result = DownloadedFileScanner.scan(
+                new ByteArrayInputStream(sample), "installer.apk", "application/vnd.android.package-archive", sample.length);
+        assertEquals("REVIEW_REQUIRED", result.status);
+        assertFalse(result.isSuspicious());
+        assertTrue(result.requiresReview());
+    }
+
+    @Test
     public void excessiveFilesAreNotReportedAsClean() throws Exception {
         DownloadedFileScanner.Result result = DownloadedFileScanner.scan(
                 new ByteArrayInputStream(new byte[0]), "large.bin", "application/octet-stream",
