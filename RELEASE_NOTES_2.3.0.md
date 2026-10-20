@@ -5,7 +5,7 @@
 - Force strict SafeSearch URL parameters on Google, Bing, Brave Search and DuckDuckGo when enabled.
 - Apply protection to both standard and private browser sessions.
 - Add unit tests for blocked phrases, query extraction, SafeSearch rewriting and parent-PIN verification.
-- Add a manual Hari AI connection test in Settings, automatic fallback when a model is unavailable, and clearer API-key/quota error messages.
+- Add a manual Hari AI connection test in Settings, automatic fallback when a model is unavailable, clearer API-key/quota error messages, and India-aware answers using INR, lakh/crore and IST conventions while respecting regional languages.
 - Correct release-signing documentation and remove duplicate Hari AI documentation.
 - Expand the home-page language picker with Bengali, Marathi, Gujarati, Punjabi and Urdu, bringing the total to 14 choices including ten Indian languages.
 - Add a curated India services directory with official digital-government, education, scholarship, tax, transport, UPI information and Kerala service links.
