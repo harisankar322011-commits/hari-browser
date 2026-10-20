@@ -99,6 +99,8 @@ public class BrowserActivity extends ComponentActivity {
 
     private SharedPreferences settings;
     private SecureStore secureStore;
+    private SharedPreferences protectionSettings;
+    private SecureStore protectionStore;
     private boolean privateMode;
     private LinearLayout root;
     private EditText addressBar;
@@ -127,6 +129,21 @@ public class BrowserActivity extends ComponentActivity {
     private boolean cookiesEnabled() { return settings.getBoolean("cookies_enabled", true); }
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
     private boolean fingerprintProtectionEnabled() { return settings.getBoolean("fingerprint_protection", true); }
+    private boolean teenProtectionEnabled() {
+        if (!privateMode) return TeenProtection.isEnabled(protectionSettings);
+        try {
+            // Private browsing runs in a separate process with a separate WebView profile.
+            // Ask the main-process provider for the authoritative setting instead of trusting
+            // a potentially stale SharedPreferences cache in the private process.
+            Bundle state = getContentResolver().call(TeenProtectionProvider.CONTENT_URI,
+                    TeenProtectionProvider.METHOD_IS_ENABLED, null, null);
+            if (state != null && state.containsKey(TeenProtectionProvider.RESULT_ENABLED)) {
+                return state.getBoolean(TeenProtectionProvider.RESULT_ENABLED);
+            }
+        } catch (Exception ignored) {}
+        // If state sharing fails, private browsing fails closed rather than bypassing protection.
+        return true;
+    }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
@@ -212,6 +229,9 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
+        // Shared by normal and private sessions so private browsing cannot bypass protection.
+        protectionSettings = getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE);
+        protectionStore = new SecureStore(this, false);
         applyThemePalette();
         fileChooserLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
@@ -580,6 +600,18 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri requestUri = request.getUrl();
+                if (request.isForMainFrame() && teenProtectionEnabled()
+                        && TeenProtection.isBlockedUrl(requestUri.toString())) {
+                    runOnUiThread(() -> showToast("Teen Protection blocked this search or website."));
+                    String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
+                            + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                            + "<title>Browsing blocked</title><h2>Teen Protection</h2>"
+                            + "<p>This search or website matches a restricted adult-content or gambling rule.</p>"
+                            + "<p>Try a learning-focused or age-appropriate destination.</p>";
+                    return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
+                            Collections.singletonMap("Cache-Control", "no-store"),
+                            new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
+                }
                 String requestPath = requestUri.getPath();
                 if ("https".equalsIgnoreCase(requestUri.getScheme())
                         && "hari-browser-home.invalid".equalsIgnoreCase(requestUri.getHost())
@@ -628,6 +660,12 @@ public class BrowserActivity extends ComponentActivity {
                 }
                 if (!"https".equalsIgnoreCase(scheme) || uri.getHost() == null) {
                     runOnUiThread(() -> showToast("This link type is blocked for your safety."));
+                    return true;
+                }
+                String protectedUrl = protectSearchUrl(url);
+                if (protectedUrl == null) return true;
+                if (!protectedUrl.equals(url)) {
+                    view.loadUrl(protectedUrl);
                     return true;
                 }
                 // Reset JavaScript to the user's website preference before a real HTTPS page loads.
@@ -832,7 +870,7 @@ public class BrowserActivity extends ComponentActivity {
                 String engine = searchEngine();
                 if ("Startpage".equals(engine)) return "https://www.startpage.com/sp/search?query=" + encoded;
                 if ("Brave Search".equals(engine)) return "https://search.brave.com/search?q=" + encoded;
-                if ("Google".equals(engine)) return "https://www.google.com/search?q=" + encoded;
+                if ("Google".equals(engine)) return "https://www.google.co.in/search?q=" + encoded;
                 if ("Bing".equals(engine)) return "https://www.bing.com/search?q=" + encoded;
                 return "https://duckduckgo.com/?q=" + encoded;
             } catch (Exception e) {
@@ -848,6 +886,9 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Blocked: only HTTPS pages can be opened.");
             return;
         }
+        String protectedUrl = protectSearchUrl(url);
+        if (protectedUrl == null) return;
+        url = protectedUrl;
         tab.home = false;
         tab.readerMode = false;
         // Local dashboard scripts stay available, but website JavaScript follows the user's setting.
@@ -1009,7 +1050,7 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void setHomeLanguage(String languageCode) {
-        String[] validCodes = {"en", "ml", "hi", "ta", "te", "kn", "es", "fr", "ar"};
+        String[] validCodes = {"en", "ml", "hi", "ta", "te", "kn", "bn", "mr", "gu", "pa", "ur", "es", "fr", "ar"};
         boolean valid = false;
         for (String code : validCodes) {
             if (code.equals(languageCode)) { valid = true; break; }
@@ -1384,15 +1425,35 @@ public class BrowserActivity extends ComponentActivity {
         keyInput.setPadding(dp(12), dp(10), dp(12), dp(10));
         keyInput.setBackground(round(CARD, OUTLINE, 12));
 
+        LinearLayout keyPanel = new LinearLayout(this);
+        keyPanel.setOrientation(LinearLayout.VERTICAL);
+        keyPanel.setPadding(dp(8), dp(4), dp(8), dp(4));
+        keyPanel.addView(keyInput, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(50)));
+
+        TextView testButton = pillButton("Test connection", false, () -> {});
+        LinearLayout.LayoutParams testButtonParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
+        testButtonParams.setMargins(0, dp(8), 0, dp(4));
+        keyPanel.addView(testButton, testButtonParams);
+
+        TextView testStatus = new TextView(this);
+        testStatus.setText("Testing sends one short prompt and may use API quota.");
+        testStatus.setTextColor(MUTED);
+        testStatus.setTextSize(12);
+        testStatus.setPadding(dp(2), dp(4), dp(2), dp(4));
+        keyPanel.addView(testStatus);
+
         String message =
                 "Your key is encrypted on this device using Android Keystore. Prompts are sent online when you use Hari AI; the service may process them under its own terms. " +
                 "A key stored in a mobile app cannot be protected like a server-side secret, so use a restricted key and set usage limits.\n\n" +
-                (hasKey ? "A key is already saved. Enter a new key to replace it." : "No API key is saved yet.");
+                "Use Test connection to verify the key before saving; this sends a short request to the AI service.\n\n" +
+                (hasKey ? "A key is already saved. Enter a new key to replace it, or leave the field empty to test the saved key." : "No API key is saved yet.");
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Hari AI settings")
                 .setMessage(message)
-                .setView(keyInput)
+                .setView(keyPanel)
                 .setPositiveButton("Save key", null)
                 .setNeutralButton("Clear key", null)
                 .setNegativeButton("Cancel", null)
@@ -1401,6 +1462,41 @@ public class BrowserActivity extends ComponentActivity {
             Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             Button clearButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
             clearButton.setEnabled(hasKey);
+            testButton.setOnClickListener(v -> {
+                String candidate = keyInput.getText().toString().trim();
+                if (candidate.isEmpty()) candidate = existingKey.trim();
+                if (candidate.isEmpty()) {
+                    keyInput.setError("Enter an API key to test.");
+                    return;
+                }
+                final String keyToTest = candidate;
+                testButton.setEnabled(false);
+                testStatus.setText("Testing Hari AI connection…");
+                Thread testThread = new Thread(() -> {
+                    String problem = null;
+                    try {
+                        HariAiClient.testConnection(keyToTest);
+                    } catch (Exception error) {
+                        problem = error.getMessage();
+                        if (TextUtils.isEmpty(problem)) {
+                            problem = "Could not test the connection. Check your internet and key settings.";
+                        }
+                    }
+                    final String result = problem;
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
+                        testButton.setEnabled(true);
+                        if (result == null) {
+                            testStatus.setText("Connection successful. Hari AI received and answered a test prompt.");
+                            testStatus.setTextColor(Color.rgb(23, 128, 73));
+                        } else {
+                            testStatus.setText(result);
+                            testStatus.setTextColor(Color.rgb(190, 48, 48));
+                        }
+                    });
+                }, "HariAI-key-test");
+                testThread.start();
+            });
             saveButton.setOnClickListener(v -> {
                 String value = keyInput.getText().toString().trim();
                 if (value.isEmpty()) {
@@ -1674,8 +1770,9 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose home page language",
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.2",
-                "Hari AI · API settings"
+                "About Hari Browser - What's new in 2.3",
+                "Hari AI · API settings",
+                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF")
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1817,26 +1914,196 @@ public class BrowserActivity extends ComponentActivity {
                         case 32:
                             showHariAiSettingsDialog();
                             break;
+                        case 33:
+                            handleTeenProtectionMenu();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
                 .show();
     }
 
+
+    private String protectSearchUrl(String url) {
+        if (!teenProtectionEnabled()) return url;
+        if (TeenProtection.isBlockedUrl(url)) {
+            showToast("Teen Protection blocked this search or website.");
+            return null;
+        }
+        if (TeenProtection.isBraveSearchHostUrl(url)) {
+            // Brave documents its strict preference as a cookie; the query parameter below is only a fallback.
+            CookieManager cookies = CookieManager.getInstance();
+            cookies.setCookie("https://search.brave.com/", "safesearch=strict; Path=/; Secure; SameSite=Lax");
+            cookies.flush();
+        }
+        return TeenProtection.withStrictSafeSearch(url);
+    }
+
+    private boolean verifyTeenProtectionPin(String candidate, EditText input) {
+        long now = System.currentTimeMillis();
+        long lockUntil = protectionSettings.getLong(TeenProtection.PIN_LOCK_UNTIL_KEY, 0L);
+        if (lockUntil > now) {
+            input.setError("Try again in " + Math.max(1, (lockUntil - now + 999) / 1000) + " seconds.");
+            return false;
+        }
+        String salt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
+        String hash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
+        if (!TeenProtection.verifyPin(candidate, salt, hash)) {
+            int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
+            if (failures >= 5) {
+                protectionSettings.edit()
+                        .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
+                        .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY, now + 60_000L)
+                        .apply();
+                input.setError("Too many attempts. Try again in 60 seconds.");
+            } else {
+                protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
+                input.setError("Incorrect PIN. Attempts left: " + (5 - failures) + ".");
+            }
+            return false;
+        }
+        protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
+                .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+        return true;
+    }
+
+    private void handleTeenProtectionMenu() {
+        if (privateMode) {
+            String status = teenProtectionEnabled() ? "ON" : "OFF";
+            new AlertDialog.Builder(this)
+                    .setTitle("Teen Protection · " + status)
+                    .setMessage("Teen Protection is managed from standard browsing settings so private mode cannot change its parent PIN or switch it off. Its current protection state is " + status + ".")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+        if (teenProtectionEnabled()) showTeenProtectionDisableDialog();
+        else showTeenProtectionSetupDialog();
+    }
+
+    private void showTeenProtectionSetupDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(4), dp(4), dp(4), dp(2));
+
+        TextView description = new TextView(this);
+        description.setText(
+                "Blocks a starter list of explicit adult search terms and forces strict SafeSearch " +
+                "for Google, Bing, Brave Search and DuckDuckGo. Startpage's filtering is controlled " +
+                "by Startpage itself. A parent PIN is required to turn this feature off from Hari Browser.\n\n" +
+                "This is a browser-level safeguard, not a complete content filter or Android parental control. " +
+                "It cannot guarantee that every inappropriate page or image will be blocked.");
+        description.setTextColor(MUTED);
+        description.setTextSize(13);
+        description.setPadding(0, 0, 0, dp(10));
+        panel.addView(description);
+
+        EditText pinInput = new EditText(this);
+        pinInput.setSingleLine(true);
+        pinInput.setHint("Create parent PIN (6–8 digits)");
+        pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setTextColor(INK);
+        pinInput.setHintTextColor(MUTED);
+        pinInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+        panel.addView(pinInput);
+
+        EditText confirmInput = new EditText(this);
+        confirmInput.setSingleLine(true);
+        confirmInput.setHint("Confirm parent PIN");
+        confirmInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        confirmInput.setTextColor(INK);
+        confirmInput.setHintTextColor(MUTED);
+        confirmInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+        panel.addView(confirmInput);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Enable Teen Protection")
+                .setView(panel)
+                .setPositiveButton("Enable", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String pin = pinInput.getText().toString();
+            String confirm = confirmInput.getText().toString();
+            if (!pin.matches("[0-9]{6,8}")) {
+                pinInput.setError("Use 6 to 8 digits.");
+                return;
+            }
+            if (!pin.equals(confirm)) {
+                confirmInput.setError("The PINs do not match.");
+                return;
+            }
+            try {
+                String salt = TeenProtection.createPinSalt();
+                String hash = TeenProtection.hashPin(pin, salt);
+                protectionStore.put(TeenProtection.PIN_SALT_KEY, salt);
+                protectionStore.put(TeenProtection.PIN_HASH_KEY, hash);
+                String savedSalt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
+                String savedHash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
+                if (!TeenProtection.verifyPin(pin, savedSalt, savedHash)) {
+                    showToast("Could not securely save the parent PIN. Protection was not enabled.");
+                    return;
+                }
+                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
+                        .remove(TeenProtection.PIN_FAILURES_KEY)
+                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                dialog.dismiss();
+                showToast("Teen Protection enabled.");
+            } catch (Exception ignoredError) {
+                showToast("Could not configure Teen Protection. Try again.");
+            }
+        }));
+        dialog.show();
+    }
+
+    private void showTeenProtectionDisableDialog() {
+        EditText pinInput = new EditText(this);
+        pinInput.setSingleLine(true);
+        pinInput.setHint("Parent PIN");
+        pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setTextColor(INK);
+        pinInput.setHintTextColor(MUTED);
+        pinInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Teen Protection is ON")
+                .setMessage("Enter the parent PIN to disable this browser's teen search protection.")
+                .setView(pinInput)
+                .setPositiveButton("Continue", null)
+                .setNegativeButton("Keep enabled", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (!verifyTeenProtectionPin(pinInput.getText().toString(), pinInput)) return;
+            new AlertDialog.Builder(this)
+                    .setTitle("Disable Teen Protection?")
+                    .setMessage("Restricted search terms will no longer be blocked and strict SafeSearch will no longer be added by Hari Browser.")
+                    .setNegativeButton("Keep enabled", null)
+                    .setPositiveButton("Disable", (confirmation, which) -> {
+                        protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, false).apply();
+                        showToast("Teen Protection disabled.");
+                    })
+                    .show();
+            dialog.dismiss();
+        }));
+        dialog.show();
+    }
+
     private void showAboutDialog() {
         String message =
-                "Version 2.2.0\n\n" +
+                "Version 2.3.0\n\n" +
                 "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
-                "- Expanded home-screen translations across nine languages\n" +
+                "- Home page available in ten Indian languages plus English, Spanish, French and Arabic\n" +
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
+                "- Parent-PIN-protected Teen Protection blocks common adult/gambling searches and selected domains\n" +
+                "- Hari AI Settings can test the API key and explain common key, model and quota errors\n" +
                 "- Optional Hari AI chat with API setup in Settings\n" +
                 "- API key encrypted locally; prompts are sent online only when you use Hari AI\n" +
                 "- Cleaner visual hierarchy, improved focus states and more efficient off-screen rendering\n" +
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
-                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
+                "Privacy note: tracker blocking and Teen Protection are best-effort. Some search providers control their own filtering, and websites or your selected search provider still receive the requests needed to load services.";
         new AlertDialog.Builder(this)
-                .setTitle("Hari Browser 2.2")
+                .setTitle("Hari Browser 2.3")
                 .setMessage(message)
                 .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
                 .setPositiveButton("Done", null)
@@ -1844,9 +2111,11 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showHomeLanguagePicker() {
-        String[] labels = {"English", "Malayalam (മലയാളം)", "Hindi (हिन्दी)", "Tamil (தமிழ்)",
-                "Telugu (తెలుగు)", "Kannada (ಕನ್ನಡ)", "Spanish (Español)", "French (Français)", "Arabic (العربية)"};
-        String[] codes = {"en", "ml", "hi", "ta", "te", "kn", "es", "fr", "ar"};
+        String[] labels = {"English (India)", "Malayalam (മലയാളം)", "Hindi (हिन्दी)", "Tamil (தமிழ்)",
+                "Telugu (తెలుగు)", "Kannada (ಕನ್ನಡ)", "Bengali (বাংলা)", "Marathi (मराठी)",
+                "Gujarati (ગુજરાતી)", "Punjabi (ਪੰਜਾਬੀ)", "Urdu (اردو)",
+                "Spanish (Español)", "French (Français)", "Arabic (العربية)"};
+        String[] codes = {"en", "ml", "hi", "ta", "te", "kn", "bn", "mr", "gu", "pa", "ur", "es", "fr", "ar"};
         String current = settings.getString("home_language", "en");
         int selected = 0;
         for (int i = 0; i < codes.length; i++) {

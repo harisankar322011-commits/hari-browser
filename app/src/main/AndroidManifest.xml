@@ -17,6 +17,11 @@
             android:name="android.webkit.WebView.EnableSafeBrowsing"
             android:value="true" />
 
+        <provider
+            android:name=".TeenProtectionProvider"
+            android:authorities="com.haricalcx.haribrowser.teenprotection"
+            android:exported="false" />
+
         <activity
             android:name=".PrivateActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"

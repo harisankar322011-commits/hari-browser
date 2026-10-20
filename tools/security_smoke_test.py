@@ -80,11 +80,96 @@ try:
         check(label, fragment in browser)
     home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
+    teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
+    teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
+    teen_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionTest.java")
+    check("Teen protection menu and protected navigation are wired",
+          '"Teen protection · "' in browser and "case 33:" in browser and
+          "protectSearchUrl(url)" in browser)
+    check("Teen protection filters restricted URLs in main-frame requests",
+          "request.isForMainFrame()" in browser and
+          "TeenProtection.isBlockedUrl(requestUri.toString())" in browser)
+    check("Teen protection blocks restricted direct domains and obfuscated query terms",
+          "BLOCKED_DOMAINS" in teen_protection and "static boolean isBlockedDomain" in teen_protection and
+          "foldLeetspeak" in teen_protection and "porn.com" in teen_protection and "bet365.com" in teen_protection)
+    check("Teen protection preserves common help-seeking and health queries",
+          "SAFE_SUPPORT_PHRASES" in teen_protection and "porn addiction" in teen_protection and
+          "gambling support" in teen_protection)
+    check("Teen protection JUnit tests cover direct URLs and obfuscated search terms",
+          "blocksRestrictedAdultAndGamblingDomainsButNotLookalikeHosts" in teen_tests and
+          "p.o.r.n videos" in teen_tests and "porn addiction help" in teen_tests)
+    check("Teen protection uses a parent PIN stored as salted PBKDF2 hash",
+          "PBKDF2WithHmacSHA256" in teen_protection and
+          "protectionStore.put(TeenProtection.PIN_HASH_KEY, hash)" in browser and
+          "TeenProtection.verifyPin" in browser)
+    check("Teen protection applies strict SafeSearch parameters",
+          'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
+          'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)
+    check("Brave strict preference cookie is set during protected navigation",
+          "TeenProtection.isBraveSearchHostUrl(url)" in browser and
+          'setCookie("https://search.brave.com/", "safesearch=strict;' in browser)
+    check("Teen protection documents provider and device-level limitations",
+          "Startpage's filtering is controlled by Startpage itself" in read("README.md") and
+          "not a complete content filter" in teen_protection)
+    manifest_source = read("app/src/main/AndroidManifest.xml")
+    check("Private-process protection reads authoritative state through a non-exported provider",
+          'android:name=".TeenProtectionProvider"' in manifest_source and
+          'android:exported="false"' in manifest_source and
+          "getContentResolver().call(TeenProtectionProvider.CONTENT_URI" in browser and
+          "fails closed rather than bypassing protection" in browser and
+          "RESULT_ENABLED" in teen_provider)
+    check("Private mode cannot modify Teen Protection or its parent PIN",
+          "if (privateMode)" in browser[browser.find("private void handleTeenProtectionMenu()"):
+                                          browser.find("private void showTeenProtectionSetupDialog()")])
+    check("India public services directory includes verified official portals",
+          "India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/" in home_page and
+          "India services|UIDAI — Aadhaar|https://uidai.gov.in/" in home_page and
+          "India services|UMANG — Government Services|https://web.umang.gov.in/" in home_page and
+          "India services|DIKSHA — School Learning|https://diksha.gov.in/" in home_page and
+          "India services|Kerala Government|https://kerala.gov.in/" in home_page)
+    check("Five additional Indian-script home languages are available in the page UI",
+          all(code + ":" in home_page for code in ("bn", "mr", "gu", "pa", "ur")) and
+          all(('value="' + code + '"') in home_page for code in ("bn", "mr", "gu", "pa", "ur")))
+    check("Native language settings persist all five new Indian languages",
+          all(('"' + code + '"') in browser[browser.find("private void setHomeLanguage"):browser.find("private void setHomeSearchEngine")]
+              for code in ("bn", "mr", "gu", "pa", "ur")) and
+          all(name in browser for name in ("Bengali (বাংলা)", "Marathi (मराठी)", "Gujarati (ગુજરાતી)", "Punjabi (ਪੰਜਾਬੀ)", "Urdu (اردو)")))
+    check("Indian home languages use India date formatting and Urdu is right-to-left",
+          "en-IN" in home_page and "currentLanguage+'-IN'" in home_page and
+          "['ar','ur'].includes(currentLanguage)" in home_page)
+    check("Indian language actions remain translated instead of falling back to English",
+          "EXTRA_UI[code].actions = words.actions || EXTRA_UI.en.actions" in home_page and
+          "＋ নতুন ট্যাব" in home_page and "＋ नवीन टॅब" in home_page and
+          "＋ નવી ટૅબ" in home_page and "＋ ਨਵੀਂ ਟੈਬ" in home_page and "＋ نیا ٹیب" in home_page)
+    check("India services category is translated on both category buttons and site cards",
+          "function displayDirectoryCategory(category)" in home_page and
+          "b.textContent=displayDirectoryCategory(c)" in home_page and
+          "esc(displayDirectoryCategory(site.category))" in home_page)
+    check("Google selection prefers the India search endpoint",
+          "google.co.in/search?q=" in home_page and "google.co.in/search?q=" in browser)
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
+    check("Hari AI prompt supports Indian context and major Indian languages",
+          "Indian numbering such as lakh and crore" in ai_client and
+          "Indian Standard Time" in ai_client and "₹ (INR)" in ai_client and
+          all(lang in ai_client for lang in ("Malayalam", "Bengali", "Marathi", "Gujarati", "Punjabi", "Urdu")))
     check("Hari AI API key is sent in a request header over HTTPS",
           'https://generativelanguage.googleapis.com/v1beta/models/' in ai_client and
           'setRequestProperty("x-goog-api-key", apiKey)' in ai_client)
+    ai_tests = read("app/src/test/java/com/haricalcx/haribrowser/HariAiClientTest.java")
+    check("Hari AI tests a key with an explicit non-blocking connection check",
+          "HariAiClient.testConnection(keyToTest)" in browser and
+          '"HariAI-key-test"' in browser and "Testing sends one short prompt" in browser)
+    check("Hari AI falls back across stable supported model identifiers only on HTTP 404",
+          '"gemini-3.5-flash-lite"' in ai_client and '"gemini-3.1-flash-lite"' in ai_client and
+          '"gemini-3.6-flash"' in ai_client and "catch (ModelUnavailableException unavailable)" in ai_client)
+    check("Hari AI presents actionable API-key and quota errors",
+          "httpStatusMessage(int status)" in ai_client and
+          "API key is invalid or expired" in ai_client and
+          "usage limit was reached" in ai_client)
+    check("Hari AI regression tests cover endpoints and error explanations",
+          "usesDocumentedGenerateContentEndpointShape" in ai_tests and
+          "explainsCommonApiKeyAndQuotaErrors" in ai_tests)
     check("AI provider name is absent from app-facing UI",
           "Gemini" not in browser and "Gemini" not in home_page)
     check("No API key is hard-coded in source",
@@ -129,8 +214,12 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.2 release",
-          "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
+    check("Build version advanced for 2.3 release",
+          "versionCode 7" in gradle and "versionName '2.3.0'" in gradle)
+    check("Teen protection JUnit dependency configured",
+          "testImplementation 'junit:junit:4.13.2'" in gradle)
+    check("CI runs release unit tests",
+          "testDebugUnitTest" in read(".github/workflows/build-apk.yml"))
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
@@ -156,9 +245,21 @@ try:
     check("APK SHA-256 manifest created in CI", "sha256sum" in build_workflow and "SHA256SUMS.txt" in build_workflow)
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
-    check("Release-only artifact contains no debug APK",
-          "assembleRelease lint" in build_workflow and "assembleDebug" not in build_workflow and
+    check("Release artifact publishes only from main and excludes debug APKs",
+          "assembleRelease" in build_workflow and "testDebugUnitTest" in build_workflow and
+          "lint" in build_workflow and
+          "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
+    check("Installable debug APK is uploaded only for pull-request device testing",
+          "Build installable debug APK for pull-request testing" in build_workflow and
+          "Validate debug APK for pull-request testing" in build_workflow and
+          "Upload installable debug APK for pull-request testing" in build_workflow and
+          "if: github.event_name == 'pull_request'" in build_workflow and
+          "path: app/build/outputs/apk/debug/app-debug.apk" in build_workflow)
+    check("Debug test APK package ID and debuggable flag are validated",
+          'com.haricalcx.haribrowser.debug' in build_workflow and
+          'apkanalyzer manifest debuggable "$apk"' in build_workflow and
+          'test "$debuggable" = "true"' in build_workflow)
     check("Release signing is conditional on protected signing secrets",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
           'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow)
