@@ -129,7 +129,21 @@ public class BrowserActivity extends ComponentActivity {
     private boolean cookiesEnabled() { return settings.getBoolean("cookies_enabled", true); }
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
     private boolean fingerprintProtectionEnabled() { return settings.getBoolean("fingerprint_protection", true); }
-    private boolean teenProtectionEnabled() { return TeenProtection.isEnabled(protectionSettings); }
+    private boolean teenProtectionEnabled() {
+        if (!privateMode) return TeenProtection.isEnabled(protectionSettings);
+        try {
+            // Private browsing runs in a separate process with a separate WebView profile.
+            // Ask the main-process provider for the authoritative setting instead of trusting
+            // a potentially stale SharedPreferences cache in the private process.
+            Bundle state = getContentResolver().call(TeenProtectionProvider.CONTENT_URI,
+                    TeenProtectionProvider.METHOD_IS_ENABLED, null, null);
+            if (state != null && state.containsKey(TeenProtectionProvider.RESULT_ENABLED)) {
+                return state.getBoolean(TeenProtectionProvider.RESULT_ENABLED);
+            }
+        } catch (Exception ignored) {}
+        // If state sharing fails, private browsing fails closed rather than bypassing protection.
+        return true;
+    }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
@@ -586,10 +600,10 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri requestUri = request.getUrl();
-                String interceptedSearch = teenProtectionEnabled()
-                        ? TeenProtection.extractSearchQuery(requestUri.toString()) : null;
-                if (request.isForMainFrame() && interceptedSearch != null
-                        && TeenProtection.containsBlockedSearchTerm(interceptedSearch)) {
+                if (request.isForMainFrame() && teenProtectionEnabled()) {
+                    String interceptedSearch = TeenProtection.extractSearchQuery(requestUri.toString());
+                    if (interceptedSearch != null
+                            && TeenProtection.containsBlockedSearchTerm(interceptedSearch)) {
                     runOnUiThread(() -> showToast("Teen Protection blocked this search."));
                     String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
                             + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
@@ -599,6 +613,7 @@ public class BrowserActivity extends ComponentActivity {
                     return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
                             Collections.singletonMap("Cache-Control", "no-store"),
                             new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
+                    }
                 }
                 String requestPath = requestUri.getPath();
                 if ("https".equalsIgnoreCase(requestUri.getScheme())
@@ -1902,6 +1917,15 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void handleTeenProtectionMenu() {
+        if (privateMode) {
+            String status = teenProtectionEnabled() ? "ON" : "OFF";
+            new AlertDialog.Builder(this)
+                    .setTitle("Teen Protection · " + status)
+                    .setMessage("Teen Protection is managed from standard browsing settings so private mode cannot change its parent PIN or switch it off. Its current protection state is " + status + ".")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
         if (teenProtectionEnabled()) showTeenProtectionDisableDialog();
         else showTeenProtectionSetupDialog();
     }
