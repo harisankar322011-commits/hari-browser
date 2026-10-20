@@ -938,8 +938,8 @@ const INDIAN_EXTRA_UI = {
 };
 for (const [code,words] of Object.entries(INDIAN_EXTRA_UI)) {
  EXTRA_UI[code] = Object.assign({}, EXTRA_UI.en, words);
- EXTRA_UI[code].wallpapers = EXTRA_UI.en.wallpapers;
- EXTRA_UI[code].actions = EXTRA_UI.en.actions;
+ EXTRA_UI[code].wallpapers = words.wallpapers || EXTRA_UI.en.wallpapers;
+ EXTRA_UI[code].actions = words.actions || EXTRA_UI.en.actions;
  EXTRA_UI[code].toolsWord = EXTRA_UI.en.toolsWord;
  EXTRA_UI[code].curated = EXTRA_UI.en.curated;
  EXTRA_UI[code].sites = EXTRA_UI.en.sites;
