@@ -61,6 +61,28 @@ try:
     check("Only system trust anchors configured",
           anchors is not None and [x.get("src") for x in anchors.findall("certificates")] == ["system"])
 
+    signature_engine = read("app/src/main/java/com/haricalcx/haribrowser/MalwareSignatureEngine.java")
+    signature_tests = read("app/src/test/java/com/haricalcx/haribrowser/MalwareSignatureEngineTest.java")
+    download_scanner = read("app/src/main/java/com/haricalcx/haribrowser/DownloadedFileScanner.java")
+    antivirus_engine = read("app/src/main/java/com/haricalcx/haribrowser/AntivirusEngine.java")
+    check("Offline multi-indicator malware signature engine is wired into stream scanning",
+          "Aho-Corasick" in signature_engine and
+          "MalwareSignatureEngine.newScanner()" in download_scanner and
+          "signatureMatcher.update(buffer, count)" in download_scanner and
+          "PHP_WEBSHELL_INDICATORS" in signature_engine and
+          "POWERSHELL_DOWNLOAD_EXECUTE" in signature_engine)
+    check("ZIP entries also receive bounded streaming signature inspection",
+          "MalwareSignatureEngine.StreamMatcher signatureMatcher" in antivirus_engine and
+          "signatureMatcher.finish()" in antivirus_engine and
+          "MAX_EXPANDED_ARCHIVE_BYTES" in antivirus_engine)
+    check("Malware signature rules have automated combination and chunk-boundary tests",
+          "multiIndicatorSignatureRequiresReviewWithoutDeclaringMalware" in
+          read("app/src/test/java/com/haricalcx/haribrowser/DownloadedFileScannerTest.java") and
+          "matcherFindsPatternsSplitAcrossChunks" in signature_tests and
+          "benignSingleIndicatorsDoNotTriggerACombinationRule" in signature_tests and
+          "multiIndicatorSignatureIsDetectedInsideZipEntries" in
+          read("app/src/test/java/com/haricalcx/haribrowser/AntivirusEngineTest.java"))
+
     browser = read("app/src/main/java/com/haricalcx/haribrowser/BrowserActivity.java")
     for label, fragment in [
         ("WebView file access disabled", "web.setAllowFileAccess(false)"),
