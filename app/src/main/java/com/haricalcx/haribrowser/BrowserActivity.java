@@ -2096,6 +2096,7 @@ public class BrowserActivity extends ComponentActivity {
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
                 "- Parent-PIN-protected Teen Protection blocks common adult/gambling searches and selected domains\n" +
+                "- Hari AI Settings can test the API key and explain common key, model and quota errors\n" +
                 "- Optional Hari AI chat with API setup in Settings\n" +
                 "- API key encrypted locally; prompts are sent online only when you use Hari AI\n" +
                 "- Cleaner visual hierarchy, improved focus states and more efficient off-screen rendering\n" +
