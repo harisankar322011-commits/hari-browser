@@ -1871,11 +1871,6 @@ public class BrowserActivity extends ComponentActivity {
     }
 
 
-    private boolean hasAnyTeenProtectionPinData() {
-        return !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_SALT, "")) ||
-                !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_HASH, ""));
-    }
-
     private boolean hasCompleteTeenProtectionPin() {
         return !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_SALT, "")) &&
                 !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_HASH, ""));
@@ -1923,7 +1918,7 @@ public class BrowserActivity extends ComponentActivity {
         EditText pinInput = new EditText(this);
         pinInput.setSingleLine(true);
         pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
-        pinInput.setHint("Create a 4–8 digit parent PIN");
+        pinInput.setHint("Create a 6–8 digit parent PIN");
         form.addView(pinInput, new LinearLayout.LayoutParams(-1, dp(50)));
 
         EditText confirmInput = new EditText(this);
@@ -1943,8 +1938,8 @@ public class BrowserActivity extends ComponentActivity {
         dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
             String pin = pinInput.getText().toString();
             String confirmation = confirmInput.getText().toString();
-            if (!pin.matches("[0-9]{4,8}")) {
-                pinInput.setError("Use 4 to 8 digits.");
+            if (!pin.matches("[0-9]{6,8}")) {
+                pinInput.setError("Use 6 to 8 digits.");
                 return;
             }
             if (!pin.equals(confirmation)) {
@@ -2015,18 +2010,19 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showAboutDialog() {
         String message =
-                "Version 2.2.0\n\n" +
+                "Version 2.3.0\n\n" +
                 "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
                 "- Expanded home-screen translations across nine languages\n" +
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
+                "- Parent-PIN-protected Teen Protection blocks common explicit and real-money gambling searches\n" +
                 "- Optional Hari AI chat with API setup in Settings\n" +
                 "- API key encrypted locally; prompts are sent online only when you use Hari AI\n" +
                 "- Cleaner visual hierarchy, improved focus states and more efficient off-screen rendering\n" +
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
                 "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
         new AlertDialog.Builder(this)
-                .setTitle("Hari Browser 2.2")
+                .setTitle("Hari Browser 2.3")
                 .setMessage(message)
                 .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
                 .setPositiveButton("Done", null)
