@@ -50,10 +50,16 @@ final class HariAiClient {
      * This sends a short prompt and uses API quota, so it is never run automatically.
      */
     static void testConnection(String apiKey) throws IOException {
-        JSONArray contents = new JSONArray().put(new JSONObject()
-                .put("role", "user")
-                .put("parts", new JSONArray().put(new JSONObject().put("text",
-                        "Reply with only the word OK."))));
+        final JSONArray contents;
+        try {
+            JSONObject part = new JSONObject().put("text", "Reply with only the word OK.");
+            JSONObject message = new JSONObject()
+                    .put("role", "user")
+                    .put("parts", new JSONArray().put(part));
+            contents = new JSONArray().put(message);
+        } catch (JSONException error) {
+            throw new ClientException("Could not prepare the AI connection test.", error);
+        }
         generateReply(apiKey, contents);
     }
 
