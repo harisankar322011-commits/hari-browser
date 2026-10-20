@@ -1832,7 +1832,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF"),
                 "Security & privacy scan",
                 "Site permission controls",
-                (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"
+                (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
+                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit")
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1984,11 +1985,15 @@ public class BrowserActivity extends ComponentActivity {
                             showSitePermissionControls();
                             break;
                         case 36:
-                            boolean clearOnExit = !settings.getBoolean("clear_data_on_exit", false);
-                            settings.edit().putBoolean("clear_data_on_exit", clearOnExit).apply();
-                            showToast(clearOnExit
-                                    ? "Browsing data will be cleared when you exit Hari Browser; Android may still terminate the app without a final callback."
-                                    : "Automatic browsing-data clearing on exit disabled.");
+                            if (privateMode) {
+                                showToast("Private mode already clears its cookies and site storage when it closes.");
+                            } else {
+                                boolean clearOnExit = !settings.getBoolean("clear_data_on_exit", false);
+                                settings.edit().putBoolean("clear_data_on_exit", clearOnExit).apply();
+                                showToast(clearOnExit
+                                        ? "Browsing data will be cleared when you exit Hari Browser; Android may still terminate the app without a final callback."
+                                        : "Automatic browsing-data clearing on exit disabled.");
+                            }
                             break;
                     }
                 })
