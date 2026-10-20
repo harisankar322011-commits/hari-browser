@@ -35,6 +35,10 @@ public final class DownloadedFileScanner {
         public boolean isSuspicious() {
             return "SUSPICIOUS".equals(status) || "MALICIOUS_TEST_SIGNATURE".equals(status);
         }
+
+        public boolean requiresReview() {
+            return isSuspicious() || "REVIEW_REQUIRED".equals(status) || "SCAN_INCOMPLETE".equals(status);
+        }
     }
 
     public static Result scan(InputStream input, String filename, String mimeType, long expectedSize)
@@ -78,6 +82,7 @@ public final class DownloadedFileScanner {
         String name = filename == null ? "" : filename.toLowerCase(Locale.ROOT);
         String mime = mimeType == null ? "" : mimeType.toLowerCase(Locale.ROOT);
         StringBuilder findings = new StringBuilder();
+        StringBuilder reviewFindings = new StringBuilder();
 
         if (eicarMatch) {
             add(findings, "Matched the EICAR antivirus test signature (a test pattern, not proof of a real infection)");
@@ -112,11 +117,14 @@ public final class DownloadedFileScanner {
         boolean activeType = endsWithAny(name, ".apk", ".exe", ".msi", ".bat", ".cmd", ".com",
                 ".scr", ".ps1", ".vbs", ".js", ".jar", ".sh", ".dex", ".so", ".html", ".htm", ".svg");
         if (activeType) {
-            add(findings, "Potentially executable, installable, scriptable, or active-content file type; only open it if you trust the source");
+            add(reviewFindings, "Potentially executable, installable, scriptable, or active-content file type; review the source before opening. File type alone is not proof of malware.");
         }
 
         if (findings.length() > 0) {
             return new Result("SUSPICIOUS", findings.toString(), hash, total);
+        }
+        if (reviewFindings.length() > 0) {
+            return new Result("REVIEW_REQUIRED", reviewFindings.toString(), hash, total);
         }
         return new Result("BASIC_CHECKS_ONLY",
                 "No built-in test signature or obvious checked-format mismatch was detected. No general malware signature database is included; this does not mean the file is virus-free.",
