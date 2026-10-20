@@ -48,6 +48,7 @@ import android.webkit.WebStorage;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.net.http.SslError;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -93,6 +94,8 @@ public class BrowserActivity extends ComponentActivity {
     private static final String HOME_URL = "https://hari-browser-home.invalid/";
     private static final String KEY_BOOKMARKS = "bookmarks_v1";
     private static final String KEY_HISTORY = "history_v1";
+    private static final String KEY_HARI_AI_API_KEY = "hari_ai_api_key_v1";
+    private static final int MAX_HARI_AI_PROMPT_CHARS = 6000;
 
     private SharedPreferences settings;
     private SecureStore secureStore;
@@ -158,6 +161,12 @@ public class BrowserActivity extends ComponentActivity {
             ACCENT = accentColor();
             OUTLINE = Color.rgb(220, 224, 239);
         }
+    }
+
+    private static final class HariAiMessage {
+        final String role;
+        final String text;
+        HariAiMessage(String role, String text) { this.role = role; this.text = text; }
     }
 
     private static final class Tab {
@@ -898,6 +907,9 @@ public class BrowserActivity extends ComponentActivity {
             case "settings":
                 showSettings();
                 break;
+            case "ai":
+                showHariAiDialog();
+                break;
             case "find":
                 showFindDialog();
                 break;
@@ -1357,6 +1369,276 @@ public class BrowserActivity extends ComponentActivity {
         dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN);
     }
 
+
+    private void showHariAiSettingsDialog() {
+        String existingKey = secureStore.get(KEY_HARI_AI_API_KEY, "");
+        boolean hasKey = !TextUtils.isEmpty(existingKey);
+
+        EditText keyInput = new EditText(this);
+        keyInput.setSingleLine(true);
+        keyInput.setTextColor(INK);
+        keyInput.setHintTextColor(MUTED);
+        keyInput.setHint("Paste API key here");
+        keyInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+        keyInput.setImeOptions(EditorInfo.IME_ACTION_DONE);
+        keyInput.setPadding(dp(12), dp(10), dp(12), dp(10));
+        keyInput.setBackground(round(CARD, OUTLINE, 12));
+
+        String message =
+                "Your key is encrypted on this device using Android Keystore. Prompts are sent online when you use Hari AI; the service may process them under its own terms. " +
+                "A key stored in a mobile app cannot be protected like a server-side secret, so use a restricted key and set usage limits.\n\n" +
+                (hasKey ? "A key is already saved. Enter a new key to replace it." : "No API key is saved yet.");
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Hari AI settings")
+                .setMessage(message)
+                .setView(keyInput)
+                .setPositiveButton("Save key", null)
+                .setNeutralButton("Clear key", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(ignored -> {
+            Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            Button clearButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
+            clearButton.setEnabled(hasKey);
+            saveButton.setOnClickListener(v -> {
+                String value = keyInput.getText().toString().trim();
+                if (value.isEmpty()) {
+                    keyInput.setError("Paste an API key first.");
+                    return;
+                }
+                if (value.length() > 512 || value.contains("\n") || value.contains("\r")) {
+                    keyInput.setError("That key format is not valid.");
+                    return;
+                }
+                secureStore.put(KEY_HARI_AI_API_KEY, value);
+                String saved = secureStore.get(KEY_HARI_AI_API_KEY, "");
+                if (!value.equals(saved)) {
+                    showToast("Could not securely save the key. Try again.");
+                    return;
+                }
+                dialog.dismiss();
+                showToast("Hari AI is ready.");
+            });
+            clearButton.setOnClickListener(v -> new AlertDialog.Builder(BrowserActivity.this)
+                    .setTitle("Clear Hari AI key?")
+                    .setMessage("Hari AI will stop working until a new key is saved.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Clear key", (d, which) -> {
+                        secureStore.put(KEY_HARI_AI_API_KEY, "");
+                        dialog.dismiss();
+                        showToast("Hari AI key cleared.");
+                    })
+                    .show());
+        });
+        dialog.show();
+    }
+
+    private void showHariAiDialog() {
+        String apiKey = secureStore.get(KEY_HARI_AI_API_KEY, "");
+        if (TextUtils.isEmpty(apiKey.trim())) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Hari AI")
+                    .setMessage("Set up Hari AI first by adding your API key in Hari AI settings.")
+                    .setPositiveButton("Set up", (d, which) -> showHariAiSettingsDialog())
+                    .setNegativeButton("Close", null)
+                    .show();
+            return;
+        }
+
+        ArrayList<HariAiMessage> messages = new ArrayList<>();
+        boolean[] requestInFlight = {false};
+
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(12), dp(4), dp(12), dp(4));
+
+        TextView privacyNote = new TextView(this);
+        privacyNote.setText("Ask questions, learn and create. Prompts are sent online. Chat history stays in this open screen and is not saved by Hari Browser. Avoid passwords or secrets.");
+        privacyNote.setTextColor(MUTED);
+        privacyNote.setTextSize(11);
+        privacyNote.setPadding(dp(2), dp(4), dp(2), dp(9));
+        content.addView(privacyNote);
+
+        ScrollView transcriptScroll = new ScrollView(this);
+        transcriptScroll.setFillViewport(true);
+        TextView transcript = new TextView(this);
+        transcript.setTextColor(INK);
+        transcript.setTextSize(13);
+        transcript.setTextIsSelectable(true);
+        transcript.setPadding(dp(12), dp(10), dp(12), dp(10));
+        transcript.setBackground(round(CARD, OUTLINE, 12));
+        transcript.setText("Hari AI is ready. What can I help you with today?");
+        transcriptScroll.addView(transcript, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        content.addView(transcriptScroll, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(235)));
+
+        TextView status = new TextView(this);
+        status.setTextColor(MUTED);
+        status.setTextSize(11);
+        status.setPadding(dp(2), dp(5), dp(2), dp(5));
+        status.setText("Ready");
+        content.addView(status);
+
+        EditText questionInput = new EditText(this);
+        questionInput.setSingleLine(false);
+        questionInput.setMinLines(2);
+        questionInput.setMaxLines(4);
+        questionInput.setTextColor(INK);
+        questionInput.setHintTextColor(MUTED);
+        questionInput.setHint("Ask Hari AI anything…");
+        questionInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE |
+                InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);
+        questionInput.setImeOptions(EditorInfo.IME_ACTION_SEND);
+        questionInput.setGravity(Gravity.TOP | Gravity.START);
+        questionInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+        questionInput.setBackground(round(CARD, OUTLINE, 12));
+
+        LinearLayout composeRow = new LinearLayout(this);
+        composeRow.setOrientation(LinearLayout.HORIZONTAL);
+        composeRow.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams inputParams = new LinearLayout.LayoutParams(0, dp(48), 1f);
+        inputParams.setMargins(0, dp(4), dp(7), dp(4));
+        composeRow.addView(questionInput, inputParams);
+        TextView sendButton = pillButton("Send", true, () -> {});
+        composeRow.addView(sendButton, new LinearLayout.LayoutParams(dp(72), dp(42)));
+        content.addView(composeRow);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Hari AI")
+                .setView(content)
+                .setNeutralButton("Settings", null)
+                .setNegativeButton("Close", null)
+                .create();
+
+        sendButton.setOnClickListener(v -> {
+            if (requestInFlight[0]) return;
+            String question = questionInput.getText().toString().trim();
+            if (question.isEmpty()) {
+                questionInput.setError("Enter a question first.");
+                return;
+            }
+            if (question.length() > MAX_HARI_AI_PROMPT_CHARS) {
+                questionInput.setError("Keep each message under 6,000 characters.");
+                return;
+            }
+            String currentKey = secureStore.get(KEY_HARI_AI_API_KEY, "");
+            if (TextUtils.isEmpty(currentKey.trim())) {
+                dialog.dismiss();
+                showHariAiSettingsDialog();
+                return;
+            }
+
+            messages.add(new HariAiMessage("user", question));
+            questionInput.setText("");
+            transcript.setText(formatHariAiMessages(messages));
+            status.setText("Hari AI is thinking…");
+            requestInFlight[0] = true;
+            sendButton.setEnabled(false);
+            questionInput.setEnabled(false);
+
+            final JSONArray contents;
+            try {
+                contents = buildHariAiContents(messages);
+            } catch (JSONException error) {
+                requestInFlight[0] = false;
+                sendButton.setEnabled(true);
+                questionInput.setEnabled(true);
+                messages.remove(messages.size() - 1);
+                transcript.setText(formatHariAiMessages(messages));
+                status.setText("Could not prepare the message. Try again.");
+                return;
+            }
+
+            Thread requestThread = new Thread(() -> {
+                String answer = null;
+                String problem = null;
+                try {
+                    answer = HariAiClient.generateReply(currentKey, contents);
+                } catch (Exception ignored) {
+                    problem = ignored.getMessage();
+                    if (TextUtils.isEmpty(problem)) {
+                        problem = "Could not get a reply. Check your connection and try again.";
+                    }
+                }
+                final String finalAnswer = answer;
+                final String finalProblem = problem;
+                runOnUiThread(() -> {
+                    requestInFlight[0] = false;
+                    if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
+                    sendButton.setEnabled(true);
+                    questionInput.setEnabled(true);
+                    if (finalAnswer != null && !finalAnswer.trim().isEmpty()) {
+                        messages.add(new HariAiMessage("model", finalAnswer.trim()));
+                        while (messages.size() > 40) {
+                            messages.remove(0);
+                            if (!messages.isEmpty()) messages.remove(0);
+                        }
+                        status.setText("Ready");
+                    } else {
+                        if (!messages.isEmpty()) {
+                            HariAiMessage last = messages.get(messages.size() - 1);
+                            if ("user".equals(last.role) && question.equals(last.text)) {
+                                messages.remove(messages.size() - 1);
+                            }
+                        }
+                        status.setText(finalProblem == null ? "Could not get a reply. Try again." : finalProblem);
+                    }
+                    transcript.setText(formatHariAiMessages(messages));
+                    transcriptScroll.post(() -> transcriptScroll.fullScroll(View.FOCUS_DOWN));
+                });
+            }, "HariAI-request");
+            requestThread.start();
+        });
+
+        questionInput.setOnEditorActionListener((view, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendButton.performClick();
+                return true;
+            }
+            return false;
+        });
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_NEUTRAL)
+                .setOnClickListener(v -> {
+                    dialog.dismiss();
+                    showHariAiSettingsDialog();
+                }));
+        dialog.show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+        }
+    }
+
+    private JSONArray buildHariAiContents(ArrayList<HariAiMessage> messages) throws JSONException {
+        JSONArray contents = new JSONArray();
+        int start = Math.max(0, messages.size() - 12);
+        for (int i = start; i < messages.size(); i++) {
+            HariAiMessage message = messages.get(i);
+            JSONObject part = new JSONObject();
+            part.put("text", message.text);
+            JSONArray parts = new JSONArray();
+            parts.put(part);
+            JSONObject item = new JSONObject();
+            item.put("role", message.role);
+            item.put("parts", parts);
+            contents.put(item);
+        }
+        return contents;
+    }
+
+    private String formatHariAiMessages(ArrayList<HariAiMessage> messages) {
+        if (messages.isEmpty()) return "Hari AI is ready. What can I help you with today?";
+        StringBuilder output = new StringBuilder();
+        for (HariAiMessage message : messages) {
+            output.append("user".equals(message.role) ? "You\n" : "Hari AI\n")
+                    .append(message.text)
+                    .append("\n\n────────────────────\n\n");
+        }
+        return output.toString().trim();
+    }
+
     private void showSettings() {
         String[] options = {
                 (trackersEnabled() ? "✓ " : "○ ") + "Block ads and trackers",
@@ -1390,7 +1672,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose home page language",
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.1"
+                "About Hari Browser - What's new in 2.1",
+                "Hari AI · API settings"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1528,6 +1811,9 @@ public class BrowserActivity extends ComponentActivity {
                             break;
                         case 31:
                             showAboutDialog();
+                            break;
+                        case 32:
+                            showHariAiSettingsDialog();
                             break;
                     }
                 })
