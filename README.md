@@ -2,11 +2,15 @@
 
 A privacy-first Android browser built with the Android System WebView.
 
-## Version 2.2.0
+## Version 2.3.0
 
-Hari Browser 2.2 adds an optional native **Hari AI** assistant launched from the home screen. Set up its API key through **Settings → Hari AI · API settings**. The key is encrypted on-device, chat transcripts are kept in memory only, and prompts are sent online only when you choose to chat. The release also carries forward the refreshed responsive home screen, nine home languages, quick tools, browser privacy controls, tabs, downloads, QR/PDF and encrypted bookmarks.
+Hari Browser 2.3 adds optional **Teen Protection**. After enabling it in Settings, a parent sets a 6–8 digit PIN; turning protection off from the browser requires that PIN. The feature blocks a local starter list of explicit search phrases and adds strict SafeSearch URL settings for Google, Bing, Brave Search and DuckDuckGo. Startpage's filtering is controlled by Startpage itself, so this feature does not enforce strict Startpage filtering.
 
-Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe Browsing and local tracker blocking provide useful safeguards, but do not guarantee anonymity or block every tracker. The unsigned release APK is for build validation only; it is not ready for installation or publication.
+The release also includes optional native **Hari AI**. Set up its API key through **Settings → Hari AI · API settings**. The key is encrypted on-device, chat transcripts are kept in memory only, and prompts are sent online only when you choose to chat. The responsive home screen, nine home languages, quick tools, browser privacy controls, tabs, downloads, QR/PDF and encrypted bookmarks remain available.
+
+**Teen Protection is a browser-level safeguard, not a complete content filter or Android parental-control service.** It cannot block every spelling variation, adult webpage, image, video, external app or alternate browser. A user with device access can bypass the app-level PIN by clearing app data or uninstalling the app. Use Android/Google Family Link or managed-device controls for stronger device-wide supervision.
+
+Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe Browsing and local tracker blocking provide useful safeguards, but do not guarantee anonymity or block every tracker. The current 2.2.0 artifact on `main` was signed with a temporary one-time key and cannot be updated in place by a build signed with a different key. Configure permanent release-signing secrets before distributing future signed releases.
 
 ## Features
 - DuckDuckGo search by default; selectable DuckDuckGo, Startpage, Brave Search, Google, or Bing search providers.
@@ -26,8 +30,8 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Responsive home dashboard with Home / Tools / Explore / Privacy panels, quick links, encrypted bookmark tiles, and one-tap browser actions.
 - Home dashboard interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic, including persistent language choice in Settings and the home-page selector.
 - A Hari projects showcase on the start page linking to Hari CalcX, MentalX, VisualX, ChemX, BioQuest, MapX, HariPedia, Hari Editor, Hari GameX, the browser source code and the @inspiring_creatives_minds Instagram account.
-- Optional native Hari AI chat from the home-screen button; API-key settings are available in browser Settings. The key is encrypted at rest on-device, and chat history is not saved after the chat closes.
-- Optional native Hari AI assistant launched from the home screen, with API-key setup in Settings, an encrypted on-device key store, a short in-memory conversation context, and no saved chat transcript. Using it sends prompts to the configured AI service and requires a valid API key and an internet connection.
+- Optional native Hari AI assistant launched from the home screen, with API-key setup in Settings, an encrypted on-device key store, short in-memory conversation context, and no saved chat transcript. Using it sends prompts to the configured AI service and requires a valid API key and internet access.
+- Optional Teen Protection with a parent PIN, local blocking for a starter list of explicit search phrases, and strict SafeSearch query parameters for Google, Bing, Brave Search and DuckDuckGo. It applies in normal and private browser sessions. It is not foolproof and does not filter all website content or other apps; see the security notes below.
 - Searchable directory of 286 curated HTTPS destinations across 16 categories; destinations are not preloaded and open only when tapped.
 - A curated start-page toolbox presents 8 everyday tools first (calculator, unit converter, local notes, password generator, text toolkit, JSON formatter, URL encoder, and word counter); all 34 built-in local tools remain available through “Show all tools”.
 - Add up to 40 personal HTTPS shortcuts stored in the browser profile on the device; no account or external image/script assets are required by the start page.
@@ -38,13 +42,13 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Emergency-clear action clears current tabs, cookies, cache, site storage and saved history while retaining bookmarks and explicit downloads.
 - Translate the current page through Google Translate (the selected page URL is shared with that external service).
 - No account is required for normal browsing; Hari AI is optional and uses an API key you provide. No app analytics, advertising SDKs or remote blocklist downloads.
-- GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.2.0-unsigned.apk` and is not installable until signed.
+- GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.3.0-unsigned.apk` and is not installable until signed.
 
 ## Build and download the release APK
 1. Open the **Actions** tab of this repository.
 2. Open the latest successful **Build Hari Browser Release APK** run on `main`.
-3. Download the **hari-browser-2.2.0-release-apk** artifact. It contains only the release APK (no debug APK).
-4. If the filename ends in `-unsigned.apk`, it is a compile-validated release build but cannot be installed yet. Configure the four protected repository Actions secrets `HARI_RELEASE_KEYSTORE_BASE64`, `HARI_RELEASE_KEY_ALIAS`, `HARI_RELEASE_KEY_PASSWORD`, and `HARI_RELEASE_STORE_PASSWORD` to make CI sign it. Keep the keystore and passwords private; never commit them to source control.
+3. Download the **hari-browser-2.3.0-release-apk** artifact. It contains only the release APK (no debug APK).
+4. If the filename ends in `-unsigned.apk`, it is a compile-validated release build but cannot be installed until it is signed. Configure the four protected repository Actions secrets `HARI_RELEASE_KEYSTORE_BASE64`, `HARI_RELEASE_KEY_ALIAS`, `HARI_RELEASE_KEY_PASSWORD`, and `HARI_RELEASE_STORE_PASSWORD` to sign it with a stable key. Keep the keystore and passwords private; never commit them to source control. Do not use a temporary signing key for a version you expect to update.
 
 CI checks the release package ID, non-debuggable manifest, declared permissions, APK archive integrity, release size and lint results. When signing secrets are set, CI also verifies the APK signature and publishes a signed release APK. These checks improve build integrity but do not prove the application is vulnerability-free or malware-free. F-Droid should build and sign its own version from the public source. QR generation uses the ZXing Core library, which is Apache-2.0-licensed; that dependency retains its own licence.
 
@@ -56,7 +60,7 @@ Before creating an official release tag, confirm that the release build and lint
 ## Security and privacy notes
 This project is a privacy-oriented browser, not a guarantee of anonymity or perfect protection. Websites you visit and your chosen search provider still receive the requests needed to serve pages. Android System WebView and Safe Browsing are provided by the device. The local blocker is deliberately conservative and cannot block every tracker. Private mode separates WebView data on supported Android versions, hides normal-profile bookmarks, blocks bookmark import/export/save/remove in private sessions, uses a separate browser-settings preference file and clears common site data on exit. This cleanup is best-effort: it cannot erase downloads you explicitly save, screenshots, network/provider logs, or every artifact outside the app's control.
 
-The browser intentionally rejects HTTP instead of silently downgrading security. Some older sites will not open. JavaScript is enabled by default for compatibility and can be disabled in Settings. Review the source and build output before relying on this for sensitive activities.
+The browser intentionally rejects HTTP instead of silently downgrading security. Some older sites will not open. JavaScript is enabled by default for compatibility and can be disabled in Settings. Teen Protection is disabled until explicitly enabled and a parent PIN is configured; when enabled, the PIN is required to turn it off through browser settings. It blocks only a limited local list of explicit search terms, and SafeSearch support varies by provider. It does not inspect every webpage's content, block all adult domains, or protect other apps or browsers. Clearing app data or uninstalling bypasses this app-level PIN, so use operating-system parental controls for stronger enforcement. Review the source and build output before relying on this for sensitive activities.
 
 ## Build requirements
 - Android SDK Platform 36
