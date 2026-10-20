@@ -49,6 +49,18 @@ public class DownloadedFileScannerTest {
     }
 
     @Test
+    public void multiIndicatorSignatureRequiresReviewWithoutDeclaringMalware() throws Exception {
+        byte[] sample = ("<?php if (isset($_REQUEST['cmd'])) { " +
+                "echo base64_decode($x); system($x); eval($y); } ?>")
+                .getBytes(StandardCharsets.UTF_8);
+        DownloadedFileScanner.Result result = DownloadedFileScanner.scan(
+                new ByteArrayInputStream(sample), "payload.txt", "text/plain", sample.length);
+        assertEquals("REVIEW_REQUIRED", result.status);
+        assertFalse(result.isSuspicious());
+        assertTrue(result.details.contains("PHP_WEBSHELL_INDICATORS"));
+    }
+
+    @Test
     public void excessiveFilesAreNotReportedAsClean() throws Exception {
         DownloadedFileScanner.Result result = DownloadedFileScanner.scan(
                 new ByteArrayInputStream(new byte[0]), "large.bin", "application/octet-stream",
