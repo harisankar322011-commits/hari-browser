@@ -2,9 +2,9 @@
 
 A privacy-first Android browser built with the Android System WebView.
 
-## Version 2.1.0
+## Version 2.2.0
 
-Hari Browser 2.1 refreshes the start page with a clearer visual hierarchy, more responsive phone/tablet spacing, refined cards and focus states, broader translations across the nine supported languages, and batched rendering plus debounced directory search for smoother interaction. Choosing a search provider on the home page now saves it as the default. The Settings menu includes an in-app **About Hari Browser / What's new in 2.1** panel, alongside the privacy, tab, download, QR/PDF and local-tool features carried forward from 2.0.
+Hari Browser 2.2 adds an optional native **Hari AI** assistant launched from the home screen. Set up its API key through **Settings → Hari AI · API settings**. The key is encrypted on-device, chat transcripts are kept in memory only, and prompts are sent online only when you choose to chat. The release also carries forward the refreshed responsive home screen, nine home languages, quick tools, browser privacy controls, tabs, downloads, QR/PDF and encrypted bookmarks.
 
 Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe Browsing and local tracker blocking provide useful safeguards, but do not guarantee anonymity or block every tracker. The unsigned release APK is for build validation only; it is not ready for installation or publication.
 
@@ -37,12 +37,12 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Emergency-clear action clears current tabs, cookies, cache, site storage and saved history while retaining bookmarks and explicit downloads.
 - Translate the current page through Google Translate (the selected page URL is shared with that external service).
 - No app analytics, advertising SDKs, remote blocklist downloads, or account requirement.
-- GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.1.0-unsigned.apk` and is not installable until signed.
+- GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.2.0-unsigned.apk` and is not installable until signed.
 
 ## Build and download the release APK
 1. Open the **Actions** tab of this repository.
 2. Open the latest successful **Build Hari Browser Release APK** run on `main`.
-3. Download the **hari-browser-2.1.0-release-apk** artifact. It contains only the release APK (no debug APK).
+3. Download the **hari-browser-2.2.0-release-apk** artifact. It contains only the release APK (no debug APK).
 4. If the filename ends in `-unsigned.apk`, it is a compile-validated release build but cannot be installed yet. Configure the four protected repository Actions secrets `HARI_RELEASE_KEYSTORE_BASE64`, `HARI_RELEASE_KEY_ALIAS`, `HARI_RELEASE_KEY_PASSWORD`, and `HARI_RELEASE_STORE_PASSWORD` to make CI sign it. Keep the keystore and passwords private; never commit them to source control.
 
 CI checks the release package ID, non-debuggable manifest, declared permissions, APK archive integrity, release size and lint results. When signing secrets are set, CI also verifies the APK signature and publishes a signed release APK. These checks improve build integrity but do not prove the application is vulnerability-free or malware-free. F-Droid should build and sign its own version from the public source. QR generation uses the ZXing Core library, which is Apache-2.0-licensed; that dependency retains its own licence.
