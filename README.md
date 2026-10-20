@@ -26,6 +26,7 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Responsive home dashboard with Home / Tools / Explore / Privacy panels, quick links, encrypted bookmark tiles, and one-tap browser actions.
 - Home dashboard interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic, including persistent language choice in Settings and the home-page selector.
 - A Hari projects showcase on the start page linking to Hari CalcX, MentalX, VisualX, ChemX, BioQuest, MapX, HariPedia, Hari Editor, Hari GameX, the browser source code and the @inspiring_creatives_minds Instagram account.
+- Optional native Hari AI chat from the home-screen button; API-key settings are available in browser Settings. The key is encrypted at rest on-device, and chat history is not saved after the chat closes.
 - Optional native Hari AI assistant launched from the home screen, with API-key setup in Settings, an encrypted on-device key store, a short in-memory conversation context, and no saved chat transcript. Using it sends prompts to the configured AI service and requires a valid API key and an internet connection.
 - Searchable directory of 286 curated HTTPS destinations across 16 categories; destinations are not preloaded and open only when tapped.
 - A curated start-page toolbox presents 8 everyday tools first (calculator, unit converter, local notes, password generator, text toolkit, JSON formatter, URL encoder, and word counter); all 34 built-in local tools remain available through “Show all tools”.
@@ -36,7 +37,7 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Private browsing screens are hidden from screenshots and recent-app previews where Android honors secure-window flags.
 - Emergency-clear action clears current tabs, cookies, cache, site storage and saved history while retaining bookmarks and explicit downloads.
 - Translate the current page through Google Translate (the selected page URL is shared with that external service).
-- No app analytics, advertising SDKs, remote blocklist downloads, or account requirement.
+- No account is required for normal browsing; Hari AI is optional and uses an API key you provide. No app analytics, advertising SDKs or remote blocklist downloads.
 - GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.2.0-unsigned.apk` and is not installable until signed.
 
 ## Build and download the release APK
