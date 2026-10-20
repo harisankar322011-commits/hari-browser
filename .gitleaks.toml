@@ -8,5 +8,6 @@ regexes = [
 ]
 paths = [
   '''app/src/main/java/com/haricalcx/haribrowser/AntivirusActivity\.java''',
+  '''app/src/main/java/com/haricalcx/haribrowser/BrowserActivity\.java''',
   '''\.gitleaks\.toml'''
 ]
