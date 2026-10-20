@@ -80,6 +80,8 @@ try:
         check(label, fragment in browser)
     home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
+    teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
+    teen_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionTest.java")
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
     check("Hari AI API key is sent in a request header over HTTPS",
@@ -92,6 +94,23 @@ try:
     check("Hari AI key uses the encrypted store",
           "secureStore.put(KEY_HARI_AI_API_KEY, value)" in browser and
           'secureStore.get(KEY_HARI_AI_API_KEY, "")' in browser)
+    check("Teen Protection filter source is present", "public static boolean isBlockedSearch" in teen_protection)
+    check("Teen Protection blocks common explicit-content and gambling phrases",
+          "BLOCKED_PHRASES" in teen_protection and "online casino" in teen_protection and "porn videos" in teen_protection)
+    check("Teen Protection checks restricted domains and search-engine query parameters",
+          "BLOCKED_DOMAINS" in teen_protection and "SEARCH_HOSTS" in teen_protection and "getRawQuery()" in teen_protection)
+    check("Native browser navigation enforces Teen Protection",
+          "TeenProtection.isBlockedUrl(url)" in browser and "showTeenProtectionBlocked" in browser)
+    check("Private browsing always enables Teen Protection",
+          "return privateMode || settings.getBoolean(KEY_TEEN_PROTECTION, false)" in browser)
+    check("Disabling Teen Protection requires parent PIN verification",
+          "TeenProtection.verifyPin(pin, salt, hash)" in browser)
+    check("Parent PIN uses salted PBKDF2 hashing",
+          "PBKDF2WithHmacSHA256" in teen_protection and "PIN_ITERATIONS = 120_000" in teen_protection)
+    check("Teen Protection has focused Java unit tests",
+          "blocksExplicitAdultSearchesAndObfuscatedTerms" in teen_tests and
+          "preservesEducationalHealthAndSupportQueries" in teen_tests and
+          "hashesAndVerifiesParentPin" in teen_tests)
     check("No JavaScript-to-native bridge", re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
     check("Debugging is never turned on in source",
           re.search(r"setWebContentsDebuggingEnabled\s*\(\s*true\s*\)", browser) is None)
@@ -130,7 +149,7 @@ try:
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
     check("Build version advanced for 2.2 release",
-          "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
+          "versionCode 7" in gradle and "versionName '2.3.0'" in gradle)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
