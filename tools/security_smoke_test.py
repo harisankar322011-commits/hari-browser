@@ -81,6 +81,7 @@ try:
     home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
+    teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
     check("Teen protection menu and protected navigation are wired",
           '"Teen protection · "' in browser and "case 33:" in browser and
           "protectSearchUrl(url)" in browser)
@@ -100,9 +101,16 @@ try:
     check("Teen protection documents provider and device-level limitations",
           "Startpage's filtering is controlled by Startpage itself" in read("README.md") and
           "not a complete content filter" in teen_protection)
-    check("Teen protection is shared with private browsing",
-          'getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE)' in browser and
-          "protectionStore = new SecureStore(this, false)" in browser)
+    manifest_source = read("app/src/main/AndroidManifest.xml")
+    check("Private-process protection reads authoritative state through a non-exported provider",
+          'android:name=".TeenProtectionProvider"' in manifest_source and
+          'android:exported="false"' in manifest_source and
+          "getContentResolver().call(TeenProtectionProvider.CONTENT_URI" in browser and
+          "Fail closed rather than bypassing protection" in browser and
+          "RESULT_ENABLED" in teen_provider)
+    check("Private mode cannot modify Teen Protection or its parent PIN",
+          "if (privateMode)" in browser[browser.find("private void handleTeenProtectionMenu()"):
+                                          browser.find("private void showTeenProtectionSetupDialog()")])
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
     check("Hari AI API key is sent in a request header over HTTPS",
