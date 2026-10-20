@@ -51,6 +51,13 @@ public class TeenProtectionTest {
     }
 
     @Test
+    public void identifiesBraveSearchHostForStrictPreferenceCookie() {
+        assertTrue(TeenProtection.isBraveSearchHostUrl("https://search.brave.com/search?q=math"));
+        assertTrue(TeenProtection.isBraveSearchHostUrl("https://search.brave.com/"));
+        assertFalse(TeenProtection.isBraveSearchHostUrl("https://example.com/search?q=math"));
+    }
+
+    @Test
     public void doesNotRewriteNonSearchPagesOrUnsupportedProviders() {
         assertEquals("https://example.com/page?q=math", TeenProtection.withStrictSafeSearch("https://example.com/page?q=math"));
         assertEquals("https://www.google.com/", TeenProtection.withStrictSafeSearch("https://www.google.com/"));
