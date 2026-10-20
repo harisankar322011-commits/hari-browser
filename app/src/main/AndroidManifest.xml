@@ -32,6 +32,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".AntivirusActivity"
+            android:exported="false"
+            android:label="Hari Antivirus" />
+
+        <activity
             android:name=".PrivateActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"
