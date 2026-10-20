@@ -1425,15 +1425,35 @@ public class BrowserActivity extends ComponentActivity {
         keyInput.setPadding(dp(12), dp(10), dp(12), dp(10));
         keyInput.setBackground(round(CARD, OUTLINE, 12));
 
+        LinearLayout keyPanel = new LinearLayout(this);
+        keyPanel.setOrientation(LinearLayout.VERTICAL);
+        keyPanel.setPadding(dp(8), dp(4), dp(8), dp(4));
+        keyPanel.addView(keyInput, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(50)));
+
+        TextView testButton = pillButton("Test connection", false, () -> {});
+        LinearLayout.LayoutParams testButtonParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(42));
+        testButtonParams.setMargins(0, dp(8), 0, dp(4));
+        keyPanel.addView(testButton, testButtonParams);
+
+        TextView testStatus = new TextView(this);
+        testStatus.setText("Testing sends one short prompt and may use API quota.");
+        testStatus.setTextColor(MUTED);
+        testStatus.setTextSize(12);
+        testStatus.setPadding(dp(2), dp(4), dp(2), dp(4));
+        keyPanel.addView(testStatus);
+
         String message =
                 "Your key is encrypted on this device using Android Keystore. Prompts are sent online when you use Hari AI; the service may process them under its own terms. " +
                 "A key stored in a mobile app cannot be protected like a server-side secret, so use a restricted key and set usage limits.\n\n" +
-                (hasKey ? "A key is already saved. Enter a new key to replace it." : "No API key is saved yet.");
+                "Use Test connection to verify the key before saving; this sends a short request to the AI service.\n\n" +
+                (hasKey ? "A key is already saved. Enter a new key to replace it, or leave the field empty to test the saved key." : "No API key is saved yet.");
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle("Hari AI settings")
                 .setMessage(message)
-                .setView(keyInput)
+                .setView(keyPanel)
                 .setPositiveButton("Save key", null)
                 .setNeutralButton("Clear key", null)
                 .setNegativeButton("Cancel", null)
@@ -1442,6 +1462,41 @@ public class BrowserActivity extends ComponentActivity {
             Button saveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             Button clearButton = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
             clearButton.setEnabled(hasKey);
+            testButton.setOnClickListener(v -> {
+                String candidate = keyInput.getText().toString().trim();
+                if (candidate.isEmpty()) candidate = existingKey.trim();
+                if (candidate.isEmpty()) {
+                    keyInput.setError("Enter an API key to test.");
+                    return;
+                }
+                final String keyToTest = candidate;
+                testButton.setEnabled(false);
+                testStatus.setText("Testing Hari AI connection…");
+                Thread testThread = new Thread(() -> {
+                    String problem = null;
+                    try {
+                        HariAiClient.testConnection(keyToTest);
+                    } catch (Exception error) {
+                        problem = error.getMessage();
+                        if (TextUtils.isEmpty(problem)) {
+                            problem = "Could not test the connection. Check your internet and key settings.";
+                        }
+                    }
+                    final String result = problem;
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
+                        testButton.setEnabled(true);
+                        if (result == null) {
+                            testStatus.setText("Connection successful. Hari AI received and answered a test prompt.");
+                            testStatus.setTextColor(Color.rgb(23, 128, 73));
+                        } else {
+                            testStatus.setText(result);
+                            testStatus.setTextColor(Color.rgb(190, 48, 48));
+                        }
+                    });
+                }, "HariAI-key-test");
+                testThread.start();
+            });
             saveButton.setOnClickListener(v -> {
                 String value = keyInput.getText().toString().trim();
                 if (value.isEmpty()) {
