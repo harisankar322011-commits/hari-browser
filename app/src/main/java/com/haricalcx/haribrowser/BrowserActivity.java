@@ -1833,7 +1833,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Security & privacy scan",
                 "Site permission controls",
                 (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
-                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit")
+                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
+                "Hari Antivirus · scan a file and manage quarantine"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1994,6 +1995,11 @@ public class BrowserActivity extends ComponentActivity {
                                         ? "Browsing data will be cleared when you exit Hari Browser; Android may still terminate the app without a final callback."
                                         : "Automatic browsing-data clearing on exit disabled.");
                             }
+                            break;
+                        case 37:
+                            Intent antivirusIntent = new Intent(BrowserActivity.this, AntivirusActivity.class);
+                            antivirusIntent.putExtra("private_mode", privateMode);
+                            startActivity(antivirusIntent);
                             break;
                     }
                 })
@@ -2569,9 +2575,9 @@ public class BrowserActivity extends ComponentActivity {
         report.append("\nWHAT THIS SCAN CANNOT DO\n");
         report.append("• It checks Hari Browser's settings and URL patterns, not every privacy or security measure of a website.\n");
         report.append("• Certificate validation and Safe Browsing perform additional checks during connection. Site content and server security headers are not fully audited by this local scan.\n");
-        report.append("• Completed downloads explicitly tracked by Hari Browser receive a bounded local SHA-256, format-mismatch, risky-file-type and EICAR-test-signature check. No general malware signature database is included, so these checks are not a full antivirus verdict.\n");
+        report.append("• Tracked downloads and user-selected files receive bounded local SHA-256, format-mismatch, EICAR test-signature and ZIP-based archive checks. APKs also receive a limited package-permission review. Optional MalwareBazaar reputation sends only a SHA-256 hash when configured, and is disabled for private-mode downloads. No complete ClamAV/YARA-class malware-signature engine is included, so these checks are not a full antivirus verdict.\n");
         report.append("• A BASIC_CHECKS_ONLY result is not a guarantee that a file is safe. Large files can be marked SCAN_INCOMPLETE. No file or hash is uploaded by this checker.\n");
-        report.append("• This scan does not inspect all page content or prove a site's privacy claims. India-focused scam checks are URL heuristics and can miss scams or flag legitimate URLs.\n");
+        report.append("• This scan does not inspect all page content or prove a site's privacy claims. India-focused scam checks are URL heuristics and can miss scams or flag legitimate URLs. The Hari Antivirus screen lets you scan a user-selected file, review APK metadata, and manage an app-private quarantine; it does not scan every file or another app's private storage.\n");
         report.append("• Device-wide virus/malware scanning or cleaning is NOT available to Hari Browser. Android's app sandbox prevents an ordinary browser from safely scanning infections in other apps or private files. Use Google Play Protect for a device scan.");
 
         new AlertDialog.Builder(this)
@@ -2847,7 +2853,7 @@ public class BrowserActivity extends ComponentActivity {
                         "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\\n" +
                         "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\\n" +
                         "• History is off by default; private mode never saves history.\\n" +
-                        "• No app analytics, ad SDKs, account, or remote blocklist.\\n\\n" +
+                        "• No app analytics, ad SDKs, or browser account. No remote reputation request is made unless you explicitly configure MalwareBazaar hash lookup; only SHA-256 hashes are submitted, never file contents or URLs.\\n\\n" +
                         "Limitations: the device's WebView provides the rendering engine; websites and the selected search engine receive normal requests. This app does not hide traffic from your network or internet provider. The blocker is incomplete, and private mode cannot erase downloads, screenshots, DNS/network logs, or every possible site artifact.")
                 .setPositiveButton("OK", null)
                 .show();
