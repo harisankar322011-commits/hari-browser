@@ -132,7 +132,7 @@ try:
           '"HariAI-key-test"' in browser and "Testing sends one short prompt" in browser)
     check("Hari AI falls back across stable supported model identifiers only on HTTP 404",
           '"gemini-3.5-flash-lite"' in ai_client and '"gemini-3.1-flash-lite"' in ai_client and
-          '"gemini-3.5-flash"' in ai_client and "catch (ModelUnavailableException unavailable)" in ai_client)
+          '"gemini-3.6-flash"' in ai_client and "catch (ModelUnavailableException unavailable)" in ai_client)
     check("Hari AI presents actionable API-key and quota errors",
           "httpStatusMessage(int status)" in ai_client and
           "API key is invalid or expired" in ai_client and
