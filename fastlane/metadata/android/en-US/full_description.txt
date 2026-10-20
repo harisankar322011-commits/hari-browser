@@ -12,8 +12,12 @@ FEATURES
 • Light and dark themes, five accent colours and offline home-screen wallpapers.
 • Home-screen interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic.
 • Refreshed responsive home layout, improved localized quick actions, faster directory filtering and persistent home-page search-engine choice.
+• Optional Gemini-powered Hari AI chat and user-triggered webpage summaries. Requires each user to supply their own Gemini API key and an internet connection; prompts and selected page text are sent to Google. The app does not bundle a shared key.
 • Local tools, personal shortcuts and curated website directory.
 • No account requirement, app analytics, advertising SDKs or remote blocklist downloads.
+
+AI PRIVACY NOTES
+Hari AI is a cloud feature, not an offline assistant. The user's API key is encrypted on the device and is not built into the app. Message prompts and recent conversation context are sent to Google's Gemini API; page title, URL and visible text are sent only after the user confirms a page summary. Google's free API tier may use submitted content to improve Google products. Avoid submitting sensitive information, and review Google's current terms and quotas.
 
 PRIVACY NOTES
 Hari Browser is not a guarantee of anonymity. Websites and your chosen search provider receive the requests needed to serve content. Safe Browsing and WebView are supplied by Android on your device. The built-in tracker blocker is best-effort and cannot block every tracker. Private mode cannot erase downloaded files, screenshots, network/provider logs or every artifact outside the app's control. The browser rejects HTTP pages rather than silently downgrading to an insecure connection, so some websites may not open.

@@ -115,8 +115,35 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.1 release",
-          "versionCode 5" in gradle and "versionName '2.1.0'" in gradle)
+    check("Build version advanced for 2.2 release",
+          "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
+
+    ai_source = read("app/src/main/java/com/haricalcx/haribrowser/HariAIActivity.kt")
+    check("On-device LiteRT model runtime removed",
+          "litertlm-android" not in gradle.lower() and "com.google.ai.edge.litertlm" not in ai_source)
+    check("Cloud AI requests use HTTPS",
+          "https://generativelanguage.googleapis.com/" in ai_source)
+    check("Cloud AI uses the stable Interactions API without server-side interaction storage",
+          "v1/interactions" in ai_source and '.put("store", false)' in ai_source)
+    check("Cloud AI model request avoids unsupported sampling parameters",
+          "gemini-3.7-flash" in ai_source and '.put("temperature"' not in ai_source)
+    check("Gemini key sent as an HTTP header, not a URL query parameter",
+          '"x-goog-api-key"' in ai_source and "?key=" not in ai_source)
+    check("Gemini key uses encrypted Android Keystore-backed storage",
+          "SecureStore(this)" in ai_source and "secureStore.put(KEY_API_KEY" in ai_source)
+    check("No API key is embedded in Hari AI source",
+          "AIza" not in ai_source and "GEMINI_API_KEY =" not in ai_source)
+    check("Cloud AI privacy disclosure is present",
+          "your prompt and recent conversation context are sent to Google's AI service over HTTPS" in ai_source and
+          "its title, URL and text excerpt are sent too" in ai_source)
+    
+    home_source = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
+    browser_source = read("app/src/main/java/com/haricalcx/haribrowser/BrowserActivity.java")
+    check("Hari AI button is available on the home screen",
+          'href="https://hari-browser-home.invalid/action/ai"' in home_source)
+    check("Hari AI API settings are available from the home screen",
+          'href="https://hari-browser-home.invalid/action/ai-settings"' in home_source and
+          'case "ai-settings":' in browser_source and "openHariAISettings();" in browser_source)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
@@ -142,8 +169,10 @@ try:
     check("APK SHA-256 manifest created in CI", "sha256sum" in build_workflow and "SHA256SUMS.txt" in build_workflow)
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
-    check("Release-only artifact contains no debug APK",
-          "assembleRelease lint" in build_workflow and "assembleDebug" not in build_workflow and
+    check("Debug APK is only uploaded for PR testing; release artifact remains release-only",
+          "assembleRelease assembleDebug lint" in build_workflow and
+          "Upload installable debug APK for testing" in build_workflow and
+          "if: github.event_name == 'pull_request'" in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
     check("Release signing is conditional on protected signing secrets",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and

@@ -18,6 +18,11 @@
             android:value="true" />
 
         <activity
+            android:name=".HariAIActivity"
+            android:exported="false"
+            android:label="Hari AI (Gemini)" />
+
+        <activity
             android:name=".PrivateActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"

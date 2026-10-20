@@ -1,0 +1,1 @@
+Hari Browser 2.2.0: adds optional Gemini-powered Hari AI cloud chat and user-triggered webpage summaries. Requires each user to provide their own Gemini API key; the key is encrypted on-device and no shared key is bundled. Removes the on-device model runtime and separate model download. Prompts and selected page text are sent to Google only when the user submits them.
