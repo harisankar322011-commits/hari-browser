@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -56,6 +57,7 @@ public final class DownloadedFileScanner {
         }
 
         ByteArrayOutputStream header = new ByteArrayOutputStream(64);
+        MalwareSignatureEngine.StreamMatcher signatureMatcher = MalwareSignatureEngine.newScanner();
         byte[] buffer = new byte[8192];
         long total = 0;
         String overlap = "";
@@ -67,6 +69,7 @@ public final class DownloadedFileScanner {
                 return new Result("SCAN_INCOMPLETE", "File exceeded the 100 MiB local-check limit while reading; no clean verdict is available.", "", total);
             }
             digest.update(buffer, 0, count);
+            signatureMatcher.update(buffer, count);
             if (header.size() < 64) {
                 header.write(buffer, 0, Math.min(count, 64 - header.size()));
             }
@@ -77,6 +80,7 @@ public final class DownloadedFileScanner {
             }
         }
 
+        List<MalwareSignatureEngine.Finding> signatureFindings = signatureMatcher.finish();
         String hash = toHex(digest.digest());
         byte[] bytes = header.toByteArray();
         String name = filename == null ? "" : filename.toLowerCase(Locale.ROOT);
@@ -114,6 +118,10 @@ public final class DownloadedFileScanner {
             add(findings, "Server MIME type and filename extension disagree (PDF MIME)");
         }
 
+        for (MalwareSignatureEngine.Finding finding : signatureFindings) {
+            add(reviewFindings, "Offline signature rule " + finding.ruleId + ": " + finding.description);
+        }
+
         boolean activeType = endsWithAny(name, ".apk", ".exe", ".msi", ".bat", ".cmd", ".com",
                 ".scr", ".ps1", ".vbs", ".js", ".jar", ".sh", ".dex", ".so", ".html", ".htm", ".svg");
         if (activeType) {
@@ -127,7 +135,7 @@ public final class DownloadedFileScanner {
             return new Result("REVIEW_REQUIRED", reviewFindings.toString(), hash, total);
         }
         return new Result("BASIC_CHECKS_ONLY",
-                "No built-in test signature or obvious checked-format mismatch was detected. No general malware signature database is included; this does not mean the file is virus-free.",
+                "No included starter signature or obvious checked-format mismatch matched. The built-in multi-indicator rule set is limited and this does not mean the file is virus-free.",
                 hash, total);
     }
 
