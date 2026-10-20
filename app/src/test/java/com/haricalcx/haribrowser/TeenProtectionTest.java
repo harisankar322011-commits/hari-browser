@@ -9,8 +9,14 @@ public class TeenProtectionTest {
         assertTrue(TeenProtection.containsBlockedSearchTerm("best porn videos"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("HENTAI art"));
         assertTrue(TeenProtection.containsBlockedSearchTerm("search for leaked nudes"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("p.o.r.n videos"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("h3ntai art"));
         assertFalse(TeenProtection.containsBlockedSearchTerm("sex education for teenagers"));
         assertFalse(TeenProtection.containsBlockedSearchTerm("human reproductive system class 10"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("sexual health for teenagers"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("porn addiction help"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("someone leaked my nudes"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("online gambling addiction help"));
         assertFalse(TeenProtection.containsBlockedSearchTerm("astronomy for beginners"));
     }
 
@@ -29,6 +35,19 @@ public class TeenProtectionTest {
         assertTrue(TeenProtection.isBlockedSearchUrl("https://search.brave.com/search?q=hentai"));
         assertTrue(TeenProtection.isBlockedSearchUrl("https://duckduckgo.com/?q=sex+videos"));
         assertFalse(TeenProtection.isBlockedSearchUrl("https://www.google.com/search?q=sex%20education"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://www.google.com/search?q=p.o.r.n+videos"));
+        assertFalse(TeenProtection.isBlockedSearchUrl("https://www.google.com/search?q=porn+addiction+help"));
+    }
+
+    @Test
+    public void blocksRestrictedAdultAndGamblingDomainsButNotLookalikeHosts() {
+        assertTrue(TeenProtection.isBlockedDomain("https://www.pornhub.com/"));
+        assertTrue(TeenProtection.isBlockedDomain("https://www.bet365.com/sports"));
+        assertTrue(TeenProtection.isBlockedDomain("https://subdomain.stake.com/"));
+        assertFalse(TeenProtection.isBlockedDomain("https://notpornhub.com/"));
+        assertFalse(TeenProtection.isBlockedDomain("https://www.nasa.gov/"));
+        assertTrue(TeenProtection.isBlockedUrl("https://www.pornhub.com/"));
+        assertTrue(TeenProtection.isBlockedUrl("https://www.google.com/search?q=online+casino"));
     }
 
     @Test
