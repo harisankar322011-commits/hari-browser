@@ -13,6 +13,7 @@ FEATURES
 • Home-screen interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic.
 • Refreshed responsive home layout, improved localized quick actions, faster directory filtering and persistent home-page search-engine choice.
 • Local tools, personal shortcuts and curated website directory.
+• Optional Hari AI chat with API-key setup in Settings. Your key is encrypted on this device; prompts are sent online only when you choose to chat.
 • No account requirement, app analytics, advertising SDKs or remote blocklist downloads.
 
 PRIVACY NOTES
