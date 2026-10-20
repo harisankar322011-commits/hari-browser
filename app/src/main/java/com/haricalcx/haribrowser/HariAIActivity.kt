@@ -466,7 +466,7 @@ class HariAIActivity : Activity() {
         private const val API_KEY_URL = "https://aistudio.google.com/apikey"
         private const val MODEL_ID = "gemini-3.8-flash"
         private const val GEMINI_ENDPOINT =
-            "https://generativelanguage.googleapis.com/v1beta/interactions"
+            "https://generativelanguage.googleapis.com/v1/interactions"
         private const val MAX_PAGE_CHARS = 4000
         private const val MAX_USER_CHARS = 6000
         private const val MAX_HISTORY_TURNS = 12
