@@ -60,6 +60,7 @@ public final class AntivirusEngine {
         int entries;
         long expanded;
         boolean incomplete;
+        boolean suspicious;
         boolean testSignature;
         final List<String> findings = new ArrayList<>();
     }
@@ -97,11 +98,12 @@ public final class AntivirusEngine {
                 budget.incomplete = true;
                 add(budget.findings, "A ZIP-like file could not be fully parsed.");
             }
-        } else if (archiveByName) {
+        } else if (archiveByName || isUnsupportedArchiveName(lowerName)) {
             if (isUnsupportedArchiveName(lowerName)) {
                 budget.incomplete = true;
                 add(budget.findings, "This archive format is not unpacked by the current engine; only ZIP-based archives receive entry inspection.");
             } else {
+                budget.suspicious = true;
                 add(budget.findings, "The file extension suggests a ZIP-based archive, but the file signature is not ZIP.");
             }
         }
@@ -124,7 +126,7 @@ public final class AntivirusEngine {
         String status;
         if (budget.testSignature || "MALICIOUS_TEST_SIGNATURE".equals(basic.status)) {
             status = "MALICIOUS_TEST_SIGNATURE";
-        } else if (basic.isSuspicious() || !budget.findings.isEmpty() && !budget.incomplete) {
+        } else if (basic.isSuspicious() || budget.suspicious) {
             status = "SUSPICIOUS";
         } else if (budget.incomplete || "SCAN_INCOMPLETE".equals(basic.status)) {
             status = "SCAN_INCOMPLETE";
@@ -157,9 +159,11 @@ public final class AntivirusEngine {
                 String entryName = entry.getName() == null ? "" : entry.getName();
                 String lowerEntry = entryName.toLowerCase(Locale.ROOT);
                 if (isUnsafeArchivePath(entryName)) {
+                    budget.suspicious = true;
                     add(budget.findings, "Archive contains a path-traversal-style entry name: " + shortName(entryName));
                 }
                 if (hasActivePayloadExtension(lowerEntry) && !(apkContainer && (lowerEntry.endsWith(".dex") || lowerEntry.endsWith(".so")))) {
+                    budget.suspicious = true;
                     add(budget.findings, "Archive contains an active or executable entry: " + shortName(entryName));
                 }
                 long declaredSize = entry.getSize();
@@ -170,6 +174,7 @@ public final class AntivirusEngine {
                     return;
                 }
                 if (declaredSize > 10L * 1024L * 1024L && compressed > 0 && declaredSize / compressed > 200) {
+                    budget.suspicious = true;
                     add(budget.findings, "An archive entry has an unusually high declared expansion ratio.");
                 }
 
