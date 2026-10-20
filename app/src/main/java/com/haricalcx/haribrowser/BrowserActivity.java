@@ -95,6 +95,9 @@ public class BrowserActivity extends ComponentActivity {
     private static final String KEY_BOOKMARKS = "bookmarks_v1";
     private static final String KEY_HISTORY = "history_v1";
     private static final String KEY_HARI_AI_API_KEY = "hari_ai_api_key_v1";
+    private static final String KEY_TEEN_PROTECTION = "teen_protection_enabled_v1";
+    private static final String KEY_TEEN_PIN_SALT = "teen_protection_pin_salt_v1";
+    private static final String KEY_TEEN_PIN_HASH = "teen_protection_pin_hash_v1";
     private static final int MAX_HARI_AI_PROMPT_CHARS = 6000;
 
     private SharedPreferences settings;
@@ -128,6 +131,28 @@ public class BrowserActivity extends ComponentActivity {
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
     private boolean fingerprintProtectionEnabled() { return settings.getBoolean("fingerprint_protection", true); }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
+
+    /**
+     * Private browsing always uses Teen Protection; the main-profile setting applies otherwise.
+     * This intentionally keeps the basic filter active even if the main setting is off.
+     */
+    private boolean teenProtectionEnabled() {
+        return privateMode || settings.getBoolean(KEY_TEEN_PROTECTION, false);
+    }
+
+    private void showTeenProtectionBlocked() {
+        showToast("Teen Protection blocked this search or website.");
+    }
+
+    private void enforceTeenProtectionOnOpenTabs() {
+        if (!teenProtectionEnabled()) return;
+        for (Tab tab : tabs) {
+            if (tab != null && tab.webView != null && TeenProtection.isBlockedUrl(tab.url)) {
+                tab.webView.stopLoading();
+                loadHome(tab);
+            }
+        }
+    }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
         // Preserve the current WebView engine version while removing model/build identifiers.
@@ -630,6 +655,10 @@ public class BrowserActivity extends ComponentActivity {
                     runOnUiThread(() -> showToast("This link type is blocked for your safety."));
                     return true;
                 }
+                if (teenProtectionEnabled() && TeenProtection.isBlockedUrl(url)) {
+                    runOnUiThread(() -> showTeenProtectionBlocked());
+                    return true;
+                }
                 // Reset JavaScript to the user's website preference before a real HTTPS page loads.
                 view.getSettings().setJavaScriptEnabled(javascriptEnabled());
                 return false;
@@ -637,6 +666,15 @@ public class BrowserActivity extends ComponentActivity {
 
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                // Defensive fallback for a redirect that bypasses the normal navigation callback.
+                if (teenProtectionEnabled() && TeenProtection.isBlockedUrl(url)) {
+                    view.stopLoading();
+                    runOnUiThread(() -> {
+                        showTeenProtectionBlocked();
+                        loadHome(tab);
+                    });
+                    return;
+                }
                 tab.url = url == null ? "" : url;
                 tab.home = HOME_URL.equals(url) || "about:blank".equals(url);
                 if (currentTab() == tab) {
@@ -846,6 +884,10 @@ public class BrowserActivity extends ComponentActivity {
         if (tab == null || tab.webView == null) return;
         if (!PrivacyGuard.isHttpsUrl(url)) {
             showToast("Blocked: only HTTPS pages can be opened.");
+            return;
+        }
+        if (teenProtectionEnabled() && TeenProtection.isBlockedUrl(url)) {
+            showTeenProtectionBlocked();
             return;
         }
         tab.home = false;
@@ -1674,8 +1716,10 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose home page language",
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.2",
-                "Hari AI · API settings"
+                "About Hari Browser - What's new in 2.3",
+                "Hari AI · API settings",
+                (privateMode ? "✓ " : (teenProtectionEnabled() ? "✓ " : "○ ")) +
+                        "Teen Protection" + (privateMode ? " (always on in private mode)" : "")
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1817,10 +1861,156 @@ public class BrowserActivity extends ComponentActivity {
                         case 32:
                             showHariAiSettingsDialog();
                             break;
+                        case 33:
+                            showTeenProtectionSettings();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
                 .show();
+    }
+
+
+    private boolean hasAnyTeenProtectionPinData() {
+        return !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_SALT, "")) ||
+                !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_HASH, ""));
+    }
+
+    private boolean hasCompleteTeenProtectionPin() {
+        return !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_SALT, "")) &&
+                !TextUtils.isEmpty(secureStore.get(KEY_TEEN_PIN_HASH, ""));
+    }
+
+    private void showTeenProtectionSettings() {
+        if (privateMode) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Teen Protection")
+                    .setMessage("Teen Protection is always enabled in private browsing. Return to the normal browser to manage its main-profile setting.")
+                    .setPositiveButton("OK", null)
+                    .show();
+            return;
+        }
+
+        if (teenProtectionEnabled()) {
+            showDisableTeenProtectionDialog();
+            return;
+        }
+
+        String salt = secureStore.get(KEY_TEEN_PIN_SALT, "");
+        String hash = secureStore.get(KEY_TEEN_PIN_HASH, "");
+        if (salt.isEmpty() && hash.isEmpty()) {
+            showCreateTeenProtectionPinDialog();
+            return;
+        }
+        if (salt.isEmpty() || hash.isEmpty()) {
+            showToast("The saved Teen Protection PIN data is incomplete. Clear app data only if you need to reset it.");
+            return;
+        }
+
+        new AlertDialog.Builder(this)
+                .setTitle("Enable Teen Protection?")
+                .setMessage("Blocks common explicit adult-content searches, selected real-money gambling searches, and known adult/gambling sites. It is a basic local filter: it can miss new wording and does not scan every page.")
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Enable", (dialog, which) -> enableTeenProtection())
+                .show();
+    }
+
+    private void showCreateTeenProtectionPinDialog() {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(20), dp(6), dp(20), dp(6));
+
+        EditText pinInput = new EditText(this);
+        pinInput.setSingleLine(true);
+        pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setHint("Create a 4–8 digit parent PIN");
+        form.addView(pinInput, new LinearLayout.LayoutParams(-1, dp(50)));
+
+        EditText confirmInput = new EditText(this);
+        confirmInput.setSingleLine(true);
+        confirmInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        confirmInput.setHint("Confirm parent PIN");
+        form.addView(confirmInput, new LinearLayout.LayoutParams(-1, dp(50)));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Set up Teen Protection")
+                .setMessage("Choose a parent PIN to prevent the protection from being turned off in the normal browser. The PIN is salted, hashed, and stored through the encrypted on-device store.")
+                .setView(form)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Enable protection", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String pin = pinInput.getText().toString();
+            String confirmation = confirmInput.getText().toString();
+            if (!pin.matches("[0-9]{4,8}")) {
+                pinInput.setError("Use 4 to 8 digits.");
+                return;
+            }
+            if (!pin.equals(confirmation)) {
+                confirmInput.setError("The PINs do not match.");
+                return;
+            }
+
+            try {
+                String salt = TeenProtection.newPinSalt();
+                String hash = TeenProtection.hashPin(pin, salt);
+                secureStore.put(KEY_TEEN_PIN_SALT, salt);
+                secureStore.put(KEY_TEEN_PIN_HASH, hash);
+                if (!salt.equals(secureStore.get(KEY_TEEN_PIN_SALT, "")) ||
+                        !hash.equals(secureStore.get(KEY_TEEN_PIN_HASH, ""))) {
+                    secureStore.remove(KEY_TEEN_PIN_SALT);
+                    secureStore.remove(KEY_TEEN_PIN_HASH);
+                    showToast("Could not securely save the PIN. Try again.");
+                    return;
+                }
+                dialog.dismiss();
+                enableTeenProtection();
+            } catch (Exception error) {
+                showToast("Could not set up Teen Protection. Try again.");
+            }
+        }));
+        dialog.show();
+    }
+
+    private void enableTeenProtection() {
+        settings.edit().putBoolean(KEY_TEEN_PROTECTION, true).apply();
+        enforceTeenProtectionOnOpenTabs();
+        showToast("Teen Protection enabled.");
+    }
+
+    private void showDisableTeenProtectionDialog() {
+        if (!hasCompleteTeenProtectionPin()) {
+            showToast("The parent PIN is unavailable. Teen Protection remains enabled.");
+            return;
+        }
+
+        EditText pinInput = new EditText(this);
+        pinInput.setSingleLine(true);
+        pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setHint("Enter parent PIN");
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Turn off Teen Protection?")
+                .setMessage("Enter the parent PIN to disable the search and site filter.")
+                .setView(pinInput)
+                .setNegativeButton("Keep enabled", null)
+                .setPositiveButton("Turn off", null)
+                .create();
+
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String pin = pinInput.getText().toString();
+            String salt = secureStore.get(KEY_TEEN_PIN_SALT, "");
+            String hash = secureStore.get(KEY_TEEN_PIN_HASH, "");
+            if (!TeenProtection.verifyPin(pin, salt, hash)) {
+                pinInput.setError("Incorrect parent PIN.");
+                return;
+            }
+            settings.edit().putBoolean(KEY_TEEN_PROTECTION, false).apply();
+            dialog.dismiss();
+            showToast("Teen Protection disabled.");
+        }));
+        dialog.show();
     }
 
     private void showAboutDialog() {
