@@ -27,7 +27,7 @@ public final class UrlhausReputation {
         public final boolean listed;
         public final String status;
         public final String details;
-        private Result(boolean listed, String status, String details) {
+        Result(boolean listed, String status, String details) {
             this.listed = listed;
             this.status = status;
             this.details = details;
