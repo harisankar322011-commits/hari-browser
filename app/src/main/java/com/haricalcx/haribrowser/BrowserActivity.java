@@ -901,6 +901,9 @@ public class BrowserActivity extends ComponentActivity {
             case "ai":
                 openHariAI();
                 break;
+            case "ai-settings":
+                openHariAISettings();
+                break;
             case "find":
                 showFindDialog();
                 break;
@@ -1361,18 +1364,27 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     /**
-     * Opens the Gemini cloud AI screen. Private sessions are deliberately
-     * excluded so their WebView content does not cross into the regular process.
-     * A page excerpt is captured only when the user explicitly opens Hari AI; it is sent to Google only after they confirm a summary.
+     * Opens Hari AI. Private sessions are deliberately excluded. A page excerpt
+     * is captured only when the user opens Hari AI from an HTTPS page, and page
+     * text is sent to the cloud only after the user confirms a summary.
      */
     private void openHariAI() {
+        openHariAI(false);
+    }
+
+    private void openHariAISettings() {
+        openHariAI(true);
+    }
+
+    private void openHariAI(boolean openApiSettings) {
         if (privateMode) {
             showToast("Hari AI is unavailable in private browsing.");
             return;
         }
         Intent aiIntent = new Intent(BrowserActivity.this, HariAIActivity.class);
+        if (openApiSettings) aiIntent.putExtra("open_api_settings", true);
         Tab tab = currentTab();
-        if (tab == null || tab.home || tab.webView == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
+        if (openApiSettings || tab == null || tab.home || tab.webView == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
             startActivity(aiIntent);
             return;
         }
@@ -1433,7 +1445,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
                 "About Hari Browser - What's new in 2.2",
-                "Hari AI (Gemini cloud; API key required)"
+                "Hari AI",
+                "Hari AI API settings"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1575,6 +1588,9 @@ public class BrowserActivity extends ComponentActivity {
                         case 32:
                             openHariAI();
                             break;
+                        case 33:
+                            openHariAISettings();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -1584,11 +1600,11 @@ public class BrowserActivity extends ComponentActivity {
     private void showAboutDialog() {
         String message =
                 "Version 2.2.0\\n\\n" +
-                "Adds Hari AI, an optional Google Gemini cloud assistant. It requires your own Gemini API key and an internet connection; no shared key is built into the APK.\\n\\n" +
-                "- Chat and user-triggered webpage summaries using Gemini\\n" +
-                "- Your API key is encrypted on this device; prompts and selected page text are sent to Google\\n" +
+                "Hari AI is an optional cloud assistant. It requires your own API key from Google AI Studio and an internet connection; no shared key is built into the APK.\\n\\n" +
+                "- Chat and user-confirmed webpage summaries\\n" +
+                "- Your API key is encrypted on this device; prompts and selected page text are sent to Google's cloud AI service\\n" +
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\\n\\n" +
-                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Gemini API access and free-tier limits can change. Avoid sending sensitive information to the cloud assistant.";
+                "Privacy note: tracker blocking is best-effort and does not make you anonymous. Cloud API access and free-tier limits can change. Avoid sending sensitive information to Hari AI.";
         new AlertDialog.Builder(this)
                 .setTitle("Hari Browser 2.2")
                 .setMessage(message)
