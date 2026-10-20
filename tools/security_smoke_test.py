@@ -78,6 +78,20 @@ try:
         ("Document-start protection uses WebKit support API", "WebViewCompat.addDocumentStartJavaScript"),
     ]:
         check(label, fragment in browser)
+    home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
+    ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
+    check("Hari AI home button has a native internal route",
+          'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
+    check("Hari AI API key is sent in a request header over HTTPS",
+          'https://generativelanguage.googleapis.com/v1beta/models/' in ai_client and
+          'setRequestProperty("x-goog-api-key", apiKey)' in ai_client)
+    check("AI provider name is absent from app-facing UI",
+          "Gemini" not in browser and "Gemini" not in home_page)
+    check("No API key is hard-coded in source",
+          re.search(r"AIza[0-9A-Za-z_-]{20,}", browser + ai_client) is None)
+    check("Hari AI key uses the encrypted store",
+          "secureStore.put(KEY_HARI_AI_API_KEY, value)" in browser and
+          'secureStore.get(KEY_HARI_AI_API_KEY, "")' in browser)
     check("No JavaScript-to-native bridge", re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
     check("Debugging is never turned on in source",
           re.search(r"setWebContentsDebuggingEnabled\s*\(\s*true\s*\)", browser) is None)
@@ -115,8 +129,8 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.1 release",
-          "versionCode 5" in gradle and "versionName '2.1.0'" in gradle)
+    check("Build version advanced for 2.2 release",
+          "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
