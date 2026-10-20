@@ -32,8 +32,9 @@ public final class TeenProtection {
     private static final int PIN_SALT_BYTES = 16;
 
     private static final Set<String> BLOCKED_DOMAINS = immutableSet(
-            "pornhub.com", "xvideos.com", "xhamster.com", "xnxx.com", "redtube.com",
+            "porn.com", "pornhub.com", "xvideos.com", "xhamster.com", "xnxx.com", "redtube.com",
             "youporn.com", "tube8.com", "spankbang.com", "eporner.com", "hclips.com",
+            "pornpics.com", "e-hentai.org", "fapello.com", "adulttime.com",
             "erome.com", "chaturbate.com", "stripchat.com", "cam4.com", "livejasmin.com",
             "rule34.xxx", "nhentai.net", "brazzers.com", "bangbros.com", "xhamsterlive.com",
             "onlyfans.com", "bet365.com", "stake.com", "betway.com", "1xbet.com",
@@ -72,9 +73,11 @@ public final class TeenProtection {
             "sex tape", "sex tapes", "erotic videos", "xxx videos", "xxx photos",
             "explicit photos", "explicit videos",
             "online casino", "online casinos", "casino games for money",
-            "casino sites", "real money casino", "real money gambling",
+            "casino sites", "casino online", "casino games", "best casinos",
+            "real money casino", "real money gambling",
             "online gambling", "gambling sites", "sports betting", "betting sites",
-            "betting apps", "best betting apps", "poker for money", "real money poker",
+            "betting apps", "betting app", "best betting apps", "poker for money", "real money poker",
+            "adult websites", "adult website", "adult sites", "cam girl sites", "webcam girls", "cam girls",
             "slot machines online", "online slots", "slots for money", "bet now",
             "sportsbook", "sportsbooks", "bookmaker sites"
     };
