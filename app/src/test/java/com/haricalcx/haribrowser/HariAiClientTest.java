@@ -15,6 +15,9 @@ public class HariAiClientTest {
         assertEquals(
                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent",
                 HariAiClient.endpointForModel("gemini-3.1-flash-lite"));
+        assertEquals(
+                "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+                HariAiClient.endpointForModel("gemini-3.6-flash"));
     }
 
     @Test
