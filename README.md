@@ -2,11 +2,11 @@
 
 A privacy-first Android browser built with the Android System WebView.
 
-## Version 2.2.0
+## Version 2.3.0
 
-Hari Browser 2.2 adds an optional native **Hari AI** assistant launched from the home screen. Set up its API key through **Settings → Hari AI · API settings**. The key is encrypted on-device, chat transcripts are kept in memory only, and prompts are sent online only when you choose to chat. The release also carries forward the refreshed responsive home screen, nine home languages, quick tools, browser privacy controls, tabs, downloads, QR/PDF and encrypted bookmarks.
+Hari Browser 2.3 adds **Teen Protection**, a parent-PIN-protected, on-device filter for common explicit adult-content searches, selected real-money gambling searches and a built-in list of adult/gambling domains. The filter is always on in private browsing and can be enabled in Settings for the normal profile. It is deliberately a best-effort keyword/domain filter: it can miss new wording, can occasionally block an innocent query, and does not scan every page or filter prompts sent to Hari AI. The release also includes the optional native **Hari AI** assistant launched from the home screen. Set up its API key through **Settings → Hari AI · API settings**. The key is encrypted on-device, chat transcripts are kept in memory only, and prompts are sent online only when you choose to chat.
 
-Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe Browsing and local tracker blocking provide useful safeguards, but do not guarantee anonymity or block every tracker. The unsigned release APK is for build validation only; it is not ready for installation or publication.
+Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe Browsing, local tracker blocking and Teen Protection provide useful safeguards, but do not guarantee anonymity or complete content filtering. The 2.2.0 testing APK was signed with a temporary key that was discarded after its build; it cannot be updated in place by a later APK signed with a different key. Configure the permanent `HARI_RELEASE_*` signing secrets before distributing future updates. Without those secrets, ordinary future release builds remain unsigned and cannot be installed.
 
 ## Features
 - DuckDuckGo search by default; selectable DuckDuckGo, Startpage, Brave Search, Google, or Bing search providers.
@@ -26,8 +26,8 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Responsive home dashboard with Home / Tools / Explore / Privacy panels, quick links, encrypted bookmark tiles, and one-tap browser actions.
 - Home dashboard interface translations for English, Malayalam, Hindi, Tamil, Telugu, Kannada, Spanish, French and Arabic, including persistent language choice in Settings and the home-page selector.
 - A Hari projects showcase on the start page linking to Hari CalcX, MentalX, VisualX, ChemX, BioQuest, MapX, HariPedia, Hari Editor, Hari GameX, the browser source code and the @inspiring_creatives_minds Instagram account.
-- Optional native Hari AI chat from the home-screen button; API-key settings are available in browser Settings. The key is encrypted at rest on-device, and chat history is not saved after the chat closes.
-- Optional native Hari AI assistant launched from the home screen, with API-key setup in Settings, an encrypted on-device key store, a short in-memory conversation context, and no saved chat transcript. Using it sends prompts to the configured AI service and requires a valid API key and an internet connection.
+- Parent-PIN-protected Teen Protection in Settings. It blocks common explicit adult-content searches, selected real-money gambling searches and known adult/gambling domains before navigation. Private browsing always uses the filter. It does not scan all page content and is not a substitute for supervision or a network-level family filter.
+- Optional native Hari AI chat from the home-screen button, with API-key setup in Settings, an encrypted on-device key store and in-memory conversation context. Prompts are sent to the configured AI service only when you choose to chat; a valid API key and internet connection are required.
 - Searchable directory of 286 curated HTTPS destinations across 16 categories; destinations are not preloaded and open only when tapped.
 - A curated start-page toolbox presents 8 everyday tools first (calculator, unit converter, local notes, password generator, text toolkit, JSON formatter, URL encoder, and word counter); all 34 built-in local tools remain available through “Show all tools”.
 - Add up to 40 personal HTTPS shortcuts stored in the browser profile on the device; no account or external image/script assets are required by the start page.
@@ -38,15 +38,15 @@ Security claims remain deliberately limited: HTTPS-only navigation, WebView Safe
 - Emergency-clear action clears current tabs, cookies, cache, site storage and saved history while retaining bookmarks and explicit downloads.
 - Translate the current page through Google Translate (the selected page URL is shared with that external service).
 - No account is required for normal browsing; Hari AI is optional and uses an API key you provide. No app analytics, advertising SDKs or remote blocklist downloads.
-- GitHub Actions builds only the release variant and runs Android lint. The workflow publishes one release APK artifact, never a debug APK. When protected signing secrets are configured, the artifact is a signed installable APK; without them, it is explicitly named `HariBrowser-2.2.0-unsigned.apk` and is not installable until signed.
+- GitHub Actions builds the release variant, runs Android lint and unit tests, and publishes no debug APK. With the permanent protected signing secrets configured, the release artifact is signed and installable; without them, it is explicitly named `HariBrowser-2.3.0-unsigned.apk` and is not installable until signed.
 
 ## Build and download the release APK
 1. Open the **Actions** tab of this repository.
 2. Open the latest successful **Build Hari Browser Release APK** run on `main`.
-3. Download the **hari-browser-2.2.0-release-apk** artifact. It contains only the release APK (no debug APK).
+3. Download the **hari-browser-2.3.0-release-apk** artifact. It contains only the release APK (no debug APK).
 4. If the filename ends in `-unsigned.apk`, it is a compile-validated release build but cannot be installed yet. Configure the four protected repository Actions secrets `HARI_RELEASE_KEYSTORE_BASE64`, `HARI_RELEASE_KEY_ALIAS`, `HARI_RELEASE_KEY_PASSWORD`, and `HARI_RELEASE_STORE_PASSWORD` to make CI sign it. Keep the keystore and passwords private; never commit them to source control.
 
-CI checks the release package ID, non-debuggable manifest, declared permissions, APK archive integrity, release size and lint results. When signing secrets are set, CI also verifies the APK signature and publishes a signed release APK. These checks improve build integrity but do not prove the application is vulnerability-free or malware-free. F-Droid should build and sign its own version from the public source. QR generation uses the ZXing Core library, which is Apache-2.0-licensed; that dependency retains its own licence.
+CI checks the release package ID, non-debuggable manifest, declared permissions, APK archive integrity, release size, Android lint, Teen Protection unit tests and source-level security regressions. When stable signing secrets are set, CI also verifies the APK signature and publishes a signed release APK. These checks improve build integrity but do not prove the application is vulnerability-free or malware-free. F-Droid should build and sign its own version from the public source. QR generation uses the ZXing Core library, which is Apache-2.0-licensed; that dependency retains its own licence.
 
 ## F-Droid
 Hari Browser has an open request for packaging in the F-Droid Requests for Packaging tracker: [request #4588](https://gitlab.com/fdroid/rfp/-/work_items/4588). This is a request for review, not acceptance or a published F-Droid listing. The release build, source metadata, dependencies, licensing and reproducibility still need independent review.
