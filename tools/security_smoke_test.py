@@ -121,12 +121,12 @@ try:
     ai_source = read("app/src/main/java/com/haricalcx/haribrowser/HariAIActivity.kt")
     check("On-device LiteRT model runtime removed",
           "litertlm-android" not in gradle.lower() and "com.google.ai.edge.litertlm" not in ai_source)
-    check("Gemini API requests use HTTPS",
+    check("Cloud AI requests use HTTPS",
           "https://generativelanguage.googleapis.com/" in ai_source)
-    check("Gemini uses the Interactions API without server-side interaction storage",
-          "v1beta/interactions" in ai_source and '.put("store", false)' in ai_source)
-    check("Gemini 3.8 request avoids unsupported sampling parameters",
-          "gemini-3.8-flash" in ai_source and '.put("temperature"' not in ai_source)
+    check("Cloud AI uses the stable Interactions API without server-side interaction storage",
+          "v1/interactions" in ai_source and '.put("store", false)' in ai_source)
+    check("Cloud AI model request avoids unsupported sampling parameters",
+          "gemini-3.7-flash" in ai_source and '.put("temperature"' not in ai_source)
     check("Gemini key sent as an HTTP header, not a URL query parameter",
           '"x-goog-api-key"' in ai_source and "?key=" not in ai_source)
     check("Gemini key uses encrypted Android Keystore-backed storage",
@@ -134,8 +134,16 @@ try:
     check("No API key is embedded in Hari AI source",
           "AIza" not in ai_source and "GEMINI_API_KEY =" not in ai_source)
     check("Cloud AI privacy disclosure is present",
-          "the prompt and the recent conversation context are sent to Google" in ai_source and
-          "page title, URL and text excerpt are sent too" in ai_source)
+          "your prompt and recent conversation context are sent to Google's AI service over HTTPS" in ai_source and
+          "its title, URL and text excerpt are sent too" in ai_source)
+    
+    home_source = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
+    browser_source = read("app/src/main/java/com/haricalcx/haribrowser/BrowserActivity.java")
+    check("Hari AI button is available on the home screen",
+          'href="https://hari-browser-home.invalid/action/ai"' in home_source)
+    check("Hari AI API settings are available from the home screen",
+          'href="https://hari-browser-home.invalid/action/ai-settings"' in home_source and
+          'case "ai-settings":' in browser_source and "openHariAISettings();" in browser_source)
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
