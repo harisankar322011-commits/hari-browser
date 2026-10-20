@@ -600,20 +600,17 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri requestUri = request.getUrl();
-                if (request.isForMainFrame() && teenProtectionEnabled()) {
-                    String interceptedSearch = TeenProtection.extractSearchQuery(requestUri.toString());
-                    if (interceptedSearch != null
-                            && TeenProtection.containsBlockedSearchTerm(interceptedSearch)) {
-                        runOnUiThread(() -> showToast("Teen Protection blocked this search."));
-                        String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
-                                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                                + "<title>Search blocked</title><h2>Teen Protection</h2>"
-                                + "<p>This search was blocked because it matches a restricted adult-content term.</p>"
-                                + "<p>Try a learning-focused or age-appropriate search.</p>";
-                        return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
-                                Collections.singletonMap("Cache-Control", "no-store"),
-                                new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
-                    }
+                if (request.isForMainFrame() && teenProtectionEnabled()
+                        && TeenProtection.isBlockedUrl(requestUri.toString())) {
+                    runOnUiThread(() -> showToast("Teen Protection blocked this search or website."));
+                    String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
+                            + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                            + "<title>Browsing blocked</title><h2>Teen Protection</h2>"
+                            + "<p>This search or website matches a restricted adult-content or gambling rule.</p>"
+                            + "<p>Try a learning-focused or age-appropriate destination.</p>";
+                    return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
+                            Collections.singletonMap("Cache-Control", "no-store"),
+                            new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
                 }
                 String requestPath = requestUri.getPath();
                 if ("https".equalsIgnoreCase(requestUri.getScheme())
@@ -1874,16 +1871,15 @@ public class BrowserActivity extends ComponentActivity {
 
     private String protectSearchUrl(String url) {
         if (!teenProtectionEnabled()) return url;
+        if (TeenProtection.isBlockedUrl(url)) {
+            showToast("Teen Protection blocked this search or website.");
+            return null;
+        }
         if (TeenProtection.isBraveSearchHostUrl(url)) {
             // Brave documents its strict preference as a cookie; the query parameter below is only a fallback.
             CookieManager cookies = CookieManager.getInstance();
             cookies.setCookie("https://search.brave.com/", "safesearch=strict; Path=/; Secure; SameSite=Lax");
             cookies.flush();
-        }
-        String query = TeenProtection.extractSearchQuery(url);
-        if (query != null && TeenProtection.containsBlockedSearchTerm(query)) {
-            showToast("Teen Protection blocked this search.");
-            return null;
         }
         return TeenProtection.withStrictSafeSearch(url);
     }
