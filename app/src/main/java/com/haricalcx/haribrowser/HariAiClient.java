@@ -22,7 +22,7 @@ final class HariAiClient {
     private static final String[] MODEL_IDS = {
             "gemini-3.5-flash-lite",
             "gemini-3.1-flash-lite",
-            "gemini-3.5-flash"
+            "gemini-3.6-flash"
     };
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final int READ_TIMEOUT_MS = 45000;
