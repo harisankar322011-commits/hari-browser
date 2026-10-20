@@ -148,9 +148,8 @@ public final class UrlhausReputation {
                     uri.getUserInfo() != null) return null;
             // Fragments are local to the browser and are not sent to a web server.
             // Exclude them from the reputation query as well.
-            URI withoutFragment = new URI(uri.getScheme(), null, uri.getHost(), uri.getPort(),
-                    uri.getPath(), uri.getQuery(), null);
-            String clean = withoutFragment.toASCIIString();
+            int fragment = input.indexOf('#');
+            String clean = fragment >= 0 ? input.substring(0, fragment) : input;
             return clean.length() <= 4096 ? clean : null;
         } catch (Exception invalid) {
             return null;
