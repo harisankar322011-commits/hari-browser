@@ -1,0 +1,11 @@
+title = "Hari Browser secret scanning"
+
+[allowlist]
+description = "Exact false positive: local SharedPreferences key identifier is a preference name, not a credential. Real user-supplied credentials are not included in source."
+regexTarget = "match"
+regexes = [
+  '''KEY_REPUTATION_API\s*=\s*"hari_malwarebazaar_api_key_v1"'''
+]
+paths = [
+  '''app/src/main/java/com/haricalcx/haribrowser/AntivirusActivity\.java'''
+]
