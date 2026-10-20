@@ -60,6 +60,7 @@ public final class AntivirusActivity extends ComponentActivity {
     private Button quarantineButton;
     private Button reputationButton;
     private Button urlCheckButton;
+    private Button urlAutoCheckButton;
     private boolean privateModeLaunch;
     private Uri currentUri;
     private String currentName;
@@ -160,6 +161,10 @@ public final class AntivirusActivity extends ComponentActivity {
         urlCheckButton = button("Check a website URL with URLhaus");
         urlCheckButton.setOnClickListener(v -> checkUrlReputation());
         page.addView(urlCheckButton, buttonParams());
+
+        urlAutoCheckButton = button("Automatic URL reputation: OFF");
+        urlAutoCheckButton.setOnClickListener(v -> toggleAutomaticUrlReputation());
+        page.addView(urlAutoCheckButton, buttonParams());
 
         reputationStatus = new TextView(this);
         reputationStatus.setTextColor(MUTED);
@@ -454,6 +459,40 @@ public final class AntivirusActivity extends ComponentActivity {
                 .show();
     }
 
+    private void toggleAutomaticUrlReputation() {
+        if (privateModeLaunch) {
+            showMessage("Automatic reputation checks are never enabled in private browsing.");
+            return;
+        }
+        SharedPreferences preferences = getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE);
+        boolean enabled = preferences.getBoolean("auto_urlhaus_enabled", false);
+        if (enabled) {
+            preferences.edit().putBoolean("auto_urlhaus_enabled", false).apply();
+            refreshReputationStatus();
+            showMessage("Automatic URL reputation is off. Normal browsing URLs will no longer be sent to URLhaus.");
+            return;
+        }
+        if (secureStore.get(KEY_REPUTATION_PREF, "").isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Configure URLhaus first")
+                    .setMessage("Automatic checking requires an abuse.ch Auth-Key. Configure it first, then enable this setting. No URL has been sent.")
+                    .setPositiveButton("Configure key", (dialog, which) -> configureReputation())
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Enable automatic URL checks?")
+                .setMessage("When enabled, Hari Browser will send each new HTTPS destination URL you open in NORMAL browsing to URLhaus / abuse.ch before loading it. The service may log the URL and normal network metadata. Private browsing never sends URLs. URLhaus primarily identifies malware-distribution URLs, not every phishing or Indian payment scam. You can turn this off here at any time. Enable?")
+                .setNegativeButton("Keep off", null)
+                .setPositiveButton("Enable", (dialog, which) -> {
+                    preferences.edit().putBoolean("auto_urlhaus_enabled", true).apply();
+                    refreshReputationStatus();
+                    showMessage("Automatic URL reputation enabled for normal browsing only. Each new destination may be shared with URLhaus before it opens.");
+                })
+                .show();
+    }
+
     private void checkUrlReputation() {
         if (privateModeLaunch) {
             showMessage("Online website reputation checks are disabled in private browsing.");
@@ -564,11 +603,20 @@ public final class AntivirusActivity extends ComponentActivity {
             reputationStatus.setText("Online hash reputation: disabled in private browsing.");
             reputationButton.setVisibility(View.GONE);
             if (urlCheckButton != null) urlCheckButton.setVisibility(View.GONE);
+            if (urlAutoCheckButton != null) urlAutoCheckButton.setVisibility(View.GONE);
         } else {
             if (urlCheckButton != null) urlCheckButton.setVisibility(View.VISIBLE);
-            reputationStatus.setText(configured
-                    ? "Online hash reputation: configured. Only SHA-256 hashes are sent after a user-initiated scan."
-                    : "Online hash reputation: not configured. Local checks still work.");
+            boolean autoEnabled = getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                    .getBoolean("auto_urlhaus_enabled", false);
+            if (urlAutoCheckButton != null) {
+                urlAutoCheckButton.setVisibility(View.VISIBLE);
+                urlAutoCheckButton.setText("Automatic URL reputation: " + (autoEnabled ? "ON" : "OFF"));
+                urlAutoCheckButton.setEnabled(configured || autoEnabled);
+            }
+            reputationStatus.setText((configured
+                    ? "Hash reputation: configured (SHA-256 only). "
+                    : "Hash reputation: not configured. ") +
+                    "Automatic URLhaus sharing: " + (autoEnabled ? "ON for normal browsing only." : "OFF."));
         }
     }
 
