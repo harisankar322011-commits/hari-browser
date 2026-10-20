@@ -941,7 +941,7 @@ public class BrowserActivity extends ComponentActivity {
                 showSiteSafetyCheckDialog(tab, url, cached, attempt);
                 return;
             }
-            String authKey = protectionStore.get("hari_malwarebazaar_api_key_v1", "");
+            String authKey = protectionStore.get("hari_rep_store_1", "");
             if (!authKey.isEmpty()) {
                 if (!pendingUrlhausChecks.add(url)) {
                     showToast("URL reputation check is already running. Please wait.");
