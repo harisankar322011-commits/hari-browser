@@ -72,6 +72,26 @@ jobs:
             exit 1
           fi
           unzip -tq "$apk"
+          # The original APK bundled the standard harmless AV test pattern in DEX. Guard
+          # both APK variants against accidentally reintroducing that detection trigger.
+          dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
+          unzip -p "$apk" classes.dex > "$dex_tmp"
+          if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+            rm -f "$dex_tmp"
+            echo "::error::Debug APK still embeds the standard AV test pattern in classes.dex."
+            exit 1
+          fi
+          rm -f "$dex_tmp"
+          # The original APK bundled the standard harmless AV test pattern in DEX. Guard
+          # both APK variants against accidentally reintroducing that detection trigger.
+          dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
+          unzip -p "$apk" classes.dex > "$dex_tmp"
+          if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+            rm -f "$dex_tmp"
+            echo "::error::Release APK still embeds the standard AV test pattern in classes.dex."
+            exit 1
+          fi
+          rm -f "$dex_tmp"
           bytes="$(stat -c '%s' "$apk")"
           echo "Release APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
           if [ "$bytes" -le 10485760 ]; then
