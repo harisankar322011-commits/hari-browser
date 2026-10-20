@@ -381,6 +381,11 @@ h1 .accent{color:var(--accent)}
 .search select{max-width:116px;min-width:86px;border:0;background:transparent;color:var(--text);padding:9px 2px;outline:none;font-size:12px}
 .search input{min-width:0;flex:1;border:0;background:transparent;color:var(--text);outline:none;padding:10px 5px;font-size:15px}
 .primary{border:0;background:var(--accent);color:var(--accentText);border-radius:12px;padding:11px 16px;font-weight:900;white-space:nowrap}
+.ai-launch{display:flex;align-items:center;gap:12px;margin-top:10px;padding:12px 14px;border:1px solid color-mix(in srgb,var(--accent) 42%,var(--line));background:linear-gradient(115deg,var(--surface),var(--surface2));border-radius:16px;text-decoration:none;color:var(--text);box-shadow:0 6px 20px #4f46e411;transition:transform .12s,border-color .12s}
+.ai-launch:active{transform:scale(.99)}.ai-launch:hover{border-color:var(--accent)}
+.ai-launch-icon{display:grid;place-items:center;flex:0 0 40px;height:40px;border-radius:13px;background:var(--accent);color:var(--accentText);font-size:22px;font-weight:900}
+.ai-launch-copy{min-width:0;flex:1}.ai-launch-copy strong{display:block;font-size:14px;line-height:1.25}.ai-launch-copy small{display:block;color:var(--muted);font-size:11px;margin-top:3px;line-height:1.35}
+.ai-launch-open{font-size:11px;color:var(--accent);font-weight:900;white-space:nowrap}
 .pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
 .pill{border:1px solid var(--line);background:var(--surface);padding:7px 10px;border-radius:99px;font-size:11px;color:var(--muted)}
 .section-head{display:flex;gap:10px;align-items:center;justify-content:space-between;margin:23px 2px 12px}
@@ -621,6 +626,7 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
     <input id="query" type="search" placeholder="Search the web or enter an HTTPS site…" autocomplete="off" spellcheck="false" aria-label="Search or website address">
     <button class="primary" type="submit">Search ↗</button>
   </form>
+  <a class="ai-launch" href="https://hari-browser-home.invalid/action/ai" aria-label="Open Hari AI assistant"><span class="ai-launch-icon" aria-hidden="true">✦</span><span class="ai-launch-copy"><strong>Hari AI</strong><small>Ask questions, learn faster and explore new ideas</small></span><span class="ai-launch-open">Open →</span></a>
   <div class="pills"><span class="pill">🔒 HTTPS-only</span><span class="pill">🧩 Local tools</span><span class="pill" id="countPill">250+ destinations</span><span class="pill" id="clock">Your local time</span></div>
 </section>
 
@@ -710,7 +716,7 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
   <div class="card"><h3>What this browser does not promise</h3><p>It is not a complete anonymity system. Websites and your selected search provider still receive requests when you visit them. The local tracker blocklist is best-effort, and private mode cannot erase downloads, screenshots or network logs.</p></div>
 </section>
 
-<p class="localnote">Made for quick access. No external scripts, tracking pixels, remote fonts or AI shortcuts are loaded by this start page. External websites receive data when you choose to visit them.</p>
+<p class="localnote">Made for quick access. No external scripts, tracking pixels or remote fonts are loaded by this start page. Hari AI sends prompts online only when you choose to use it.</p>
 </div>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
