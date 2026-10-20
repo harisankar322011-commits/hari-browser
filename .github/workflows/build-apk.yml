@@ -114,8 +114,8 @@ jobs:
           retention-days: 7
 
       # Stable release signing uses the four protected HARI_RELEASE_* repository secrets.
-      # A marked one-time build may create a temporary key; it is never saved or uploaded.
-      - name: Sign or stage the release APK
+      # CI must never generate/discard a signing key; without a stable key, publish unsigned validation only.
+      - name: Sign release with stable key or stage unsigned validation APK
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         shell: bash
         env:
@@ -130,6 +130,7 @@ jobs:
           if [ -n "$HARI_RELEASE_KEYSTORE_BASE64" ] && [ -n "$HARI_RELEASE_KEY_ALIAS" ] \
              && [ -n "$HARI_RELEASE_KEY_PASSWORD" ] && [ -n "$HARI_RELEASE_STORE_PASSWORD" ]; then
             keystore="$RUNNER_TEMP/hari-browser-release.jks"
+            trap 'rm -f "$keystore"' EXIT
             printf '%s' "$HARI_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$keystore"
             test -s "$keystore"
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
@@ -138,30 +139,12 @@ jobs:
               --ks-pass env:HARI_RELEASE_STORE_PASSWORD \
               --key-pass env:HARI_RELEASE_KEY_PASSWORD \
               --out "dist/HariBrowser-2.3.0.apk" "$unsigned"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "dist/HariBrowser-2.3.0.apk"
-            echo "### Release signing: signed with the configured stable key" >> "$GITHUB_STEP_SUMMARY"
-            publish_apk="dist/HariBrowser-2.3.0.apk"
-          elif [[ "$(git log -1 --format=%s)" == *"[one-time-release-sign]"* ]]; then
-            keystore="$RUNNER_TEMP/hari-browser-one-time-release.p12"
-            temporary_password="$(openssl rand -hex 32)"
-            keytool -genkeypair -noprompt \
-              -keystore "$keystore" -storetype PKCS12 \
-              -storepass "$temporary_password" -keypass "$temporary_password" \
-              -alias hari-browser-one-time \
-              -keyalg RSA -keysize 3072 -validity 10000 \
-              -dname "CN=Hari Browser One-Time Release, O=Hari Browser, C=IN"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
-              --ks "$keystore" --ks-key-alias hari-browser-one-time \
-              --ks-pass "pass:$temporary_password" --key-pass "pass:$temporary_password" \
-              --out "dist/HariBrowser-2.3.0.apk" "$unsigned"
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "dist/HariBrowser-2.3.0.apk"
-            rm -f "$keystore"
-            echo "### Release signing: one-time signed APK" >> "$GITHUB_STEP_SUMMARY"
-            echo "This key is intentionally discarded after this build. Future APKs will need a configured stable signing key; until then, Android may require uninstalling this version before installing another, which can erase browser data." >> "$GITHUB_STEP_SUMMARY"
+            echo "### Release signing: signed with the configured stable key" >> "$GITHUB_STEP_SUMMARY"
             publish_apk="dist/HariBrowser-2.3.0.apk"
           else
             cp "$unsigned" "dist/HariBrowser-2.3.0-unsigned.apk"
-            echo "### Release signing: not configured" >> "$GITHUB_STEP_SUMMARY"
+            echo "### Release signing: no stable key configured; unsigned validation artifact only" >> "$GITHUB_STEP_SUMMARY"
             echo "The artifact is an unsigned release build and cannot be installed until signed with a stable release key. Set the four HARI_RELEASE_* repository Actions secrets to sign it." >> "$GITHUB_STEP_SUMMARY"
             publish_apk="dist/HariBrowser-2.3.0-unsigned.apk"
           fi
