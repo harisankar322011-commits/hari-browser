@@ -79,6 +79,40 @@ jobs:
             exit 1
           fi
 
+      # Pull requests get a separate installable debug APK for owner-only device testing.
+      # It is never included in the release artifact or published from main.
+      - name: Build installable debug APK for pull-request testing
+        if: github.event_name == 'pull_request'
+        run: gradle --no-daemon assembleDebug
+
+      - name: Validate debug APK for pull-request testing
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$apk" || { echo "::error::Debug APK was not created."; exit 1; }
+          application_id="$(apkanalyzer manifest application-id "$apk")"
+          test "$application_id" = "com.haricalcx.haribrowser.debug" || {
+            echo "::error::Unexpected debug application ID: $application_id"; exit 1;
+          }
+          debuggable="$(apkanalyzer manifest debuggable "$apk")"
+          test "$debuggable" = "true" || {
+            echo "::error::Test APK must be debuggable (reported: $debuggable)."; exit 1;
+          }
+          unzip -tq "$apk"
+          echo "Installable debug APK validated for device testing."
+
+      - name: Upload installable debug APK for pull-request testing
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: hari-browser-2.3.0-debug-pr-${{ github.event.pull_request.number }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
       # Stable release signing uses the four protected HARI_RELEASE_* repository secrets.
       # A marked one-time build may create a temporary key; it is never saved or uploaded.
       - name: Sign or stage the release APK
