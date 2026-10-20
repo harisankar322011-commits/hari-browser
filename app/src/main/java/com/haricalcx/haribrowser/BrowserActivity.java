@@ -1859,6 +1859,12 @@ public class BrowserActivity extends ComponentActivity {
 
     private String protectSearchUrl(String url) {
         if (!teenProtectionEnabled()) return url;
+        if (TeenProtection.isBraveSearchHostUrl(url)) {
+            // Brave documents its strict preference as a cookie; the query parameter below is only a fallback.
+            CookieManager cookies = CookieManager.getInstance();
+            cookies.setCookie("https://search.brave.com/", "safesearch=strict; Path=/; Secure; SameSite=Lax");
+            cookies.flush();
+        }
         String query = TeenProtection.extractSearchQuery(url);
         if (query != null && TeenProtection.containsBlockedSearchTerm(query)) {
             showToast("Teen Protection blocked this search.");
@@ -2020,7 +2026,7 @@ public class BrowserActivity extends ComponentActivity {
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
                 "Privacy note: tracker blocking is best-effort and does not make you anonymous. Websites and your selected search provider still receive the requests needed to load their services.";
         new AlertDialog.Builder(this)
-                .setTitle("Hari Browser 2.2")
+                .setTitle("Hari Browser 2.3")
                 .setMessage(message)
                 .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
                 .setPositiveButton("Done", null)
