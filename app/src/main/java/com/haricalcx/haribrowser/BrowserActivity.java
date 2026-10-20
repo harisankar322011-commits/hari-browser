@@ -99,6 +99,8 @@ public class BrowserActivity extends ComponentActivity {
 
     private SharedPreferences settings;
     private SecureStore secureStore;
+    private SharedPreferences protectionSettings;
+    private SecureStore protectionStore;
     private boolean privateMode;
     private LinearLayout root;
     private EditText addressBar;
@@ -127,6 +129,7 @@ public class BrowserActivity extends ComponentActivity {
     private boolean cookiesEnabled() { return settings.getBoolean("cookies_enabled", true); }
     private boolean historyEnabled() { return settings.getBoolean("history_enabled", false); }
     private boolean fingerprintProtectionEnabled() { return settings.getBoolean("fingerprint_protection", true); }
+    private boolean teenProtectionEnabled() { return TeenProtection.isEnabled(protectionSettings); }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
@@ -212,6 +215,9 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
+        // Shared by normal and private sessions so private browsing cannot bypass protection.
+        protectionSettings = getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE);
+        protectionStore = new SecureStore(this, false);
         applyThemePalette();
         fileChooserLauncher = registerForActivityResult(
                 new ActivityResultContracts.GetContent(),
@@ -580,6 +586,20 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri requestUri = request.getUrl();
+                String interceptedSearch = teenProtectionEnabled()
+                        ? TeenProtection.extractSearchQuery(requestUri.toString()) : null;
+                if (request.isForMainFrame() && interceptedSearch != null
+                        && TeenProtection.containsBlockedSearchTerm(interceptedSearch)) {
+                    runOnUiThread(() -> showToast("Teen Protection blocked this search."));
+                    String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
+                            + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                            + "<title>Search blocked</title><h2>Teen Protection</h2>"
+                            + "<p>This search was blocked because it matches a restricted adult-content term.</p>"
+                            + "<p>Try a learning-focused or age-appropriate search.</p>";
+                    return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
+                            Collections.singletonMap("Cache-Control", "no-store"),
+                            new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
+                }
                 String requestPath = requestUri.getPath();
                 if ("https".equalsIgnoreCase(requestUri.getScheme())
                         && "hari-browser-home.invalid".equalsIgnoreCase(requestUri.getHost())
@@ -628,6 +648,12 @@ public class BrowserActivity extends ComponentActivity {
                 }
                 if (!"https".equalsIgnoreCase(scheme) || uri.getHost() == null) {
                     runOnUiThread(() -> showToast("This link type is blocked for your safety."));
+                    return true;
+                }
+                String protectedUrl = protectSearchUrl(url);
+                if (protectedUrl == null) return true;
+                if (!protectedUrl.equals(url)) {
+                    view.loadUrl(protectedUrl);
                     return true;
                 }
                 // Reset JavaScript to the user's website preference before a real HTTPS page loads.
@@ -848,6 +874,9 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Blocked: only HTTPS pages can be opened.");
             return;
         }
+        String protectedUrl = protectSearchUrl(url);
+        if (protectedUrl == null) return;
+        url = protectedUrl;
         tab.home = false;
         tab.readerMode = false;
         // Local dashboard scripts stay available, but website JavaScript follows the user's setting.
@@ -1674,8 +1703,9 @@ public class BrowserActivity extends ComponentActivity {
                 "Choose home page language",
                 "Choose browser accent colour",
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.2",
-                "Hari AI · API settings"
+                "About Hari Browser - What's new in 2.3",
+                "Hari AI · API settings",
+                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF")
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -1817,15 +1847,169 @@ public class BrowserActivity extends ComponentActivity {
                         case 32:
                             showHariAiSettingsDialog();
                             break;
+                        case 33:
+                            handleTeenProtectionMenu();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
                 .show();
     }
 
+
+    private String protectSearchUrl(String url) {
+        if (!teenProtectionEnabled()) return url;
+        String query = TeenProtection.extractSearchQuery(url);
+        if (query != null && TeenProtection.containsBlockedSearchTerm(query)) {
+            showToast("Teen Protection blocked this search.");
+            return null;
+        }
+        return TeenProtection.withStrictSafeSearch(url);
+    }
+
+    private boolean verifyTeenProtectionPin(String candidate, EditText input) {
+        long now = System.currentTimeMillis();
+        long lockUntil = protectionSettings.getLong(TeenProtection.PIN_LOCK_UNTIL_KEY, 0L);
+        if (lockUntil > now) {
+            input.setError("Try again in " + Math.max(1, (lockUntil - now + 999) / 1000) + " seconds.");
+            return false;
+        }
+        String salt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
+        String hash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
+        if (!TeenProtection.verifyPin(candidate, salt, hash)) {
+            int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
+            if (failures >= 5) {
+                protectionSettings.edit()
+                        .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
+                        .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY, now + 60_000L)
+                        .apply();
+                input.setError("Too many attempts. Try again in 60 seconds.");
+            } else {
+                protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
+                input.setError("Incorrect PIN. Attempts left: " + (5 - failures) + ".");
+            }
+            return false;
+        }
+        protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
+                .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+        return true;
+    }
+
+    private void handleTeenProtectionMenu() {
+        if (teenProtectionEnabled()) showTeenProtectionDisableDialog();
+        else showTeenProtectionSetupDialog();
+    }
+
+    private void showTeenProtectionSetupDialog() {
+        LinearLayout panel = new LinearLayout(this);
+        panel.setOrientation(LinearLayout.VERTICAL);
+        panel.setPadding(dp(4), dp(4), dp(4), dp(2));
+
+        TextView description = new TextView(this);
+        description.setText(
+                "Blocks a starter list of explicit adult search terms and forces strict SafeSearch " +
+                "for Google, Bing, Brave Search and DuckDuckGo. Startpage's filtering is controlled " +
+                "by Startpage itself. A parent PIN is required to turn this feature off from Hari Browser.\n\n" +
+                "This is a browser-level safeguard, not a complete content filter or Android parental control. " +
+                "It cannot guarantee that every inappropriate page or image will be blocked.");
+        description.setTextColor(MUTED);
+        description.setTextSize(13);
+        description.setPadding(0, 0, 0, dp(10));
+        panel.addView(description);
+
+        EditText pinInput = new EditText(this);
+        pinInput.setSingleLine(true);
+        pinInput.setHint("Create parent PIN (6–8 digits)");
+        pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setTextColor(INK);
+        pinInput.setHintTextColor(MUTED);
+        pinInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+        panel.addView(pinInput);
+
+        EditText confirmInput = new EditText(this);
+        confirmInput.setSingleLine(true);
+        confirmInput.setHint("Confirm parent PIN");
+        confirmInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        confirmInput.setTextColor(INK);
+        confirmInput.setHintTextColor(MUTED);
+        confirmInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+        panel.addView(confirmInput);
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Enable Teen Protection")
+                .setView(panel)
+                .setPositiveButton("Enable", null)
+                .setNegativeButton("Cancel", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String pin = pinInput.getText().toString();
+            String confirm = confirmInput.getText().toString();
+            if (!pin.matches("[0-9]{6,8}")) {
+                pinInput.setError("Use 6 to 8 digits.");
+                return;
+            }
+            if (!pin.equals(confirm)) {
+                confirmInput.setError("The PINs do not match.");
+                return;
+            }
+            try {
+                String salt = TeenProtection.createPinSalt();
+                String hash = TeenProtection.hashPin(pin, salt);
+                protectionStore.put(TeenProtection.PIN_SALT_KEY, salt);
+                protectionStore.put(TeenProtection.PIN_HASH_KEY, hash);
+                String savedSalt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
+                String savedHash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
+                if (!TeenProtection.verifyPin(pin, savedSalt, savedHash)) {
+                    showToast("Could not securely save the parent PIN. Protection was not enabled.");
+                    return;
+                }
+                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
+                        .remove(TeenProtection.PIN_FAILURES_KEY)
+                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                dialog.dismiss();
+                showToast("Teen Protection enabled.");
+            } catch (Exception ignoredError) {
+                showToast("Could not configure Teen Protection. Try again.");
+            }
+        }));
+        dialog.show();
+    }
+
+    private void showTeenProtectionDisableDialog() {
+        EditText pinInput = new EditText(this);
+        pinInput.setSingleLine(true);
+        pinInput.setHint("Parent PIN");
+        pinInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_VARIATION_PASSWORD);
+        pinInput.setTextColor(INK);
+        pinInput.setHintTextColor(MUTED);
+        pinInput.setPadding(dp(10), dp(8), dp(10), dp(8));
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("Teen Protection is ON")
+                .setMessage("Enter the parent PIN to disable this browser's teen search protection.")
+                .setView(pinInput)
+                .setPositiveButton("Continue", null)
+                .setNegativeButton("Keep enabled", null)
+                .create();
+        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (!verifyTeenProtectionPin(pinInput.getText().toString(), pinInput)) return;
+            new AlertDialog.Builder(this)
+                    .setTitle("Disable Teen Protection?")
+                    .setMessage("Restricted search terms will no longer be blocked and strict SafeSearch will no longer be added by Hari Browser.")
+                    .setNegativeButton("Keep enabled", null)
+                    .setPositiveButton("Disable", (confirmation, which) -> {
+                        protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, false).apply();
+                        showToast("Teen Protection disabled.");
+                    })
+                    .show();
+            dialog.dismiss();
+        }));
+        dialog.show();
+    }
+
     private void showAboutDialog() {
         String message =
-                "Version 2.2.0\n\n" +
+                "Version 2.3.0\n\n" +
                 "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
                 "- Expanded home-screen translations across nine languages\n" +
                 "- Search-engine choice now persists from the home screen\n" +
