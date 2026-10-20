@@ -117,6 +117,9 @@ public final class SiteSafetyChecker {
             warnings.add("The URL has a very long query string that may contain tracking or login tokens. Avoid sharing it.");
         }
 
+        // Conservative India-focused scam checks inspect only the URL, not page text or reputation.
+        warnings.addAll(IndianScamChecker.inspect(value));
+
         if (warnings.isEmpty()) {
             passed.add("No obvious URL-structure warning found (this is not a trust or malware verdict)");
         }
