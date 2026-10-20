@@ -12,11 +12,12 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 
 /**
- * Scans only completed downloads explicitly enqueued through Hari Browser.
- * No file contents, URLs, or hashes are uploaded to a server.
+ * Checks only completed downloads explicitly enqueued through Hari Browser.
+ * No file contents, URLs, or hashes are uploaded. Private-mode metadata stays
+ * in the private profile and is discarded when that session closes.
  */
 public final class DownloadScanReceiver extends BroadcastReceiver {
-    private static final String PREFS = "hari_browser_settings";
+    private static final String REGISTRY = "hari_browser_download_tracking";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -24,31 +25,41 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
         long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
         if (id < 0) return;
 
-        SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
+        SharedPreferences registry = context.getSharedPreferences(REGISTRY, Context.MODE_PRIVATE);
+        String registryKey = "download_prefs_" + id;
+        String targetPrefsName = registry.getString(registryKey, null);
+        if (targetPrefsName == null) return;
+
+        boolean privateTarget = "hari_browser_private_settings".equals(targetPrefsName);
+        SharedPreferences prefs = context.getSharedPreferences(targetPrefsName, Context.MODE_PRIVATE);
         String trackedKey = "hari_browser_download_" + id;
-        if (!prefs.getBoolean(trackedKey, false)) return;
+        if (!prefs.getBoolean(trackedKey, false)) {
+            registry.edit().remove(registryKey).apply();
+            return;
+        }
 
         prefs.edit().remove(trackedKey).putBoolean("hari_browser_download_scanning_" + id, true).apply();
         PendingResult pending = goAsync();
         new Thread(() -> {
             try {
-                scanOne(context.getApplicationContext(), id, prefs);
+                scanOne(context.getApplicationContext(), id, prefs, privateTarget);
             } catch (Exception error) {
-                prefs.edit()
-                        .putString("last_download_scan_status", "SCAN_INCOMPLETE")
-                        .putString("last_download_scan_filename", prefs.getString("hari_browser_download_name_" + id, "Downloaded file"))
-                        .putString("last_download_scan", "Result: SCAN_INCOMPLETE\nDetails: The browser could not complete local checks for this download.")
-                        .putLong("last_download_scan_id", id)
-                        .apply();
+                if (!privateTarget || prefs.getBoolean("private_session_active", false)) {
+                    String filename = prefs.getString("hari_browser_download_name_" + id, "Downloaded file");
+                    saveResult(prefs, id, filename, "SCAN_INCOMPLETE",
+                            "The browser could not complete local checks for this download.", "", privateTarget);
+                }
             } finally {
                 prefs.edit().remove("hari_browser_download_scanning_" + id)
                         .remove("hari_browser_download_name_" + id).apply();
+                registry.edit().remove(registryKey).apply();
                 pending.finish();
             }
         }, "HariDownloadScan").start();
     }
 
-    private void scanOne(Context context, long id, SharedPreferences prefs) throws Exception {
+    private void scanOne(Context context, long id, SharedPreferences prefs, boolean privateTarget)
+            throws Exception {
         DownloadManager manager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
         if (manager == null) throw new IllegalStateException("Download service unavailable");
         Cursor resultCursor = manager.query(new DownloadManager.Query().setFilterById(id));
@@ -70,7 +81,7 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
 
         if (status != DownloadManager.STATUS_SUCCESSFUL) {
             saveResult(prefs, id, filename, "SCAN_INCOMPLETE",
-                    "The download did not complete successfully, so no file checks were made.", "");
+                    "The download did not complete successfully, so no file checks were made.", "", privateTarget);
             return;
         }
 
@@ -79,8 +90,8 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
              InputStream input = new FileInputStream(descriptor.getFileDescriptor())) {
             scan = DownloadedFileScanner.scan(input, filename, mimeType, size);
         }
-        saveResult(prefs, id, filename, scan.status, scan.details, scan.sha256);
-        if (scan.isSuspicious()) {
+        saveResult(prefs, id, filename, scan.status, scan.details, scan.sha256, privateTarget);
+        if (scan.isSuspicious() && (!privateTarget || prefs.getBoolean("private_session_active", false))) {
             prefs.edit().putLong("last_suspicious_download_id", id)
                     .putString("last_suspicious_download_filename", filename == null ? "Downloaded file" : filename)
                     .apply();
@@ -88,7 +99,9 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
     }
 
     private void saveResult(SharedPreferences prefs, long id, String filename, String status,
-                            String details, String hash) {
+                            String details, String hash, boolean privateTarget) {
+        // If private browsing closed while a scan was running, discard its result.
+        if (privateTarget && !prefs.getBoolean("private_session_active", false)) return;
         String safeName = filename == null ? "Downloaded file" : filename.replace('\n', ' ').replace('\r', ' ');
         String report = "File: " + safeName + "\nResult: " + status + "\n" +
                 "Details: " + details + "\n" +
