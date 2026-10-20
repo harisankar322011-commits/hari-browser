@@ -86,6 +86,10 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -129,6 +133,11 @@ public class BrowserActivity extends ComponentActivity {
     // Session-only approvals avoid repeated prompts for a URL the user already reviewed.
     private static final java.util.Set<String> APPROVED_SITE_URLS =
             java.util.Collections.synchronizedSet(new java.util.HashSet<>());
+
+    // Opt-in online URL reputation results remain in memory only and never enter browser history.
+    private final Set<String> pendingUrlhausChecks = Collections.synchronizedSet(new HashSet<>());
+    private final Map<String, UrlhausReputation.Result> urlhausSessionResults =
+            Collections.synchronizedMap(new HashMap<>());
 
     private boolean darkTheme() { return settings.getBoolean("dark_theme", false); }
     private boolean trackersEnabled() { return settings.getBoolean("block_trackers", true); }
@@ -200,6 +209,7 @@ public class BrowserActivity extends ComponentActivity {
         String url = HOME_URL;
         boolean home = true;
         boolean readerMode = false;
+        long navigationAttempt = 0L;
         ScriptHandler fingerprintScriptHandler;
     }
 
@@ -921,10 +931,57 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showSiteSafetyCheck(Tab tab, String url) {
         if (tab == null || tab.webView == null || !PrivacyGuard.isHttpsUrl(url)) return;
+        final long attempt = ++tab.navigationAttempt;
+        boolean onlineChecksEnabled = !privateMode &&
+                getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                        .getBoolean("auto_urlhaus_enabled", false);
+        if (onlineChecksEnabled) {
+            UrlhausReputation.Result cached = urlhausSessionResults.get(url);
+            if (cached != null) {
+                showSiteSafetyCheckDialog(tab, url, cached, attempt);
+                return;
+            }
+            String authKey = protectionStore.get("hari_malwarebazaar_api_key_v1", "");
+            if (!authKey.isEmpty()) {
+                if (!pendingUrlhausChecks.add(url)) {
+                    showToast("URL reputation check is already running. Please wait.");
+                    return;
+                }
+                showToast("Checking this destination with URLhaus…");
+                new Thread(() -> {
+                    UrlhausReputation.Result reputation;
+                    try {
+                        reputation = UrlhausReputation.lookup(url, authKey);
+                    } catch (Exception error) {
+                        reputation = new UrlhausReputation.Result(false, "SERVICE_UNAVAILABLE",
+                                "Online URL reputation was unavailable. Local URL checks remain active.");
+                    } finally {
+                        pendingUrlhausChecks.remove(url);
+                    }
+                    if ("KNOWN_MALWARE_URL".equals(reputation.status) || "NO_MATCH".equals(reputation.status)) {
+                        urlhausSessionResults.put(url, reputation);
+                    }
+                    UrlhausReputation.Result finalReputation = reputation;
+                    runOnUiThread(() -> {
+                        if (isFinishing() || isDestroyed() || tab.navigationAttempt != attempt ||
+                                !tabs.contains(tab)) return;
+                        showSiteSafetyCheckDialog(tab, url, finalReputation, attempt);
+                    });
+                }, "HariUrlReputation").start();
+                return;
+            }
+        }
         if (APPROVED_SITE_URLS.contains(url)) {
             loadAfterSiteSafetyCheck(tab, url);
             return;
         }
+        showSiteSafetyCheckDialog(tab, url, null, attempt);
+    }
+
+    private void showSiteSafetyCheckDialog(Tab tab, String url,
+                                           UrlhausReputation.Result reputation, long attempt) {
+        if (tab == null || tab.webView == null || tab.navigationAttempt != attempt ||
+                !PrivacyGuard.isHttpsUrl(url)) return;
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url);
         StringBuilder message = new StringBuilder();
         message.append("Destination: ").append(report.getHost()).append("\n\n");
@@ -938,21 +995,49 @@ public class BrowserActivity extends ComponentActivity {
                 message.append("⚠ ").append(warning).append("\n");
             }
         }
-        message.append("\nThis check runs on your device and does not send the URL to a third-party scanner. ");
-        message.append("It checks URL patterns only; it does not certify the website, inspect its page content, ");
-        message.append("verify its privacy policy/security headers, or determine whether it contains malware. ");
+        boolean knownMalware = reputation != null && reputation.listed;
+        if (reputation != null) {
+            message.append("\n\nONLINE URL REPUTATION (URLhaus)\n");
+            message.append(reputation.details).append("\n");
+            if (knownMalware) {
+                message.append("\nWARNING: avoid this URL. It has a URLhaus malware-distribution record.");
+            } else if ("NO_MATCH".equals(reputation.status)) {
+                message.append("\nNo record does not mean safe. URLhaus does not identify every phishing or scam site.");
+            } else {
+                message.append("\nThe online check did not complete. The URL has not received a clean verdict.");
+            }
+        } else if (!privateMode &&
+                getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                        .getBoolean("auto_urlhaus_enabled", false)) {
+            message.append("\n\nOnline URL reputation could not be run because no Auth-Key is configured. ");
+            message.append("Only the local URL checks below were performed.");
+        }
+        message.append("\n\nLocal checks run on this device and review URL patterns only; they do not certify the website or inspect all page content. ");
         message.append("India-focused scam checks look for selected impersonation and OTP/KYC/payment wording in the URL only; false positives and missed scams are possible. ");
         message.append("Android WebView certificate validation and Safe Browsing remain active during connection.");
+        if (reputation != null) {
+            message.append("\n\nThis URL was sent to URLhaus because online URL reputation is enabled in normal browsing.");
+        } else {
+            message.append("\n\nThis check did not send the URL to a third-party scanner.");
+        }
 
+        String title = knownMalware ? "⚠ Known malware-distribution URL" :
+                report.hasWarnings() ? "Review site before opening" : "Site safety check";
+        String positiveLabel = knownMalware ? "I understand — open anyway" :
+                report.hasWarnings() ? "Open anyway" : "Open site";
         new AlertDialog.Builder(this)
-                .setTitle(report.hasWarnings() ? "Review site before opening" : "Site safety check")
+                .setTitle(title)
                 .setMessage(message.toString())
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton(report.hasWarnings() ? "Open anyway" : "Open site",
-                        (dialog, which) -> {
-                            APPROVED_SITE_URLS.add(url);
-                            loadAfterSiteSafetyCheck(tab, url);
-                        })
+                .setPositiveButton(positiveLabel, (dialog, which) -> {
+                    if (isFinishing() || isDestroyed() || tab.navigationAttempt != attempt ||
+                            !tabs.contains(tab)) {
+                        showToast("The navigation changed. Please retry the address if you still want to open it.");
+                        return;
+                    }
+                    APPROVED_SITE_URLS.add(url);
+                    loadAfterSiteSafetyCheck(tab, url);
+                })
                 .show();
     }
 
