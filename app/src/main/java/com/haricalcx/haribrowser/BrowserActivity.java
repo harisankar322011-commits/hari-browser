@@ -1472,7 +1472,7 @@ public class BrowserActivity extends ComponentActivity {
         transcriptScroll.addView(transcript, new ScrollView.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         content.addView(transcriptScroll, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(235)));
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(175)));
 
         TextView status = new TextView(this);
         status.setTextColor(MUTED);
@@ -1614,6 +1614,8 @@ public class BrowserActivity extends ComponentActivity {
     private JSONArray buildHariAiContents(ArrayList<HariAiMessage> messages) throws JSONException {
         JSONArray contents = new JSONArray();
         int start = Math.max(0, messages.size() - 12);
+        // Keep the first item in a chat request as a user turn, even when trimming history.
+        if (start > 0 && "model".equals(messages.get(start).role)) start++;
         for (int i = start; i < messages.size(); i++) {
             HariAiMessage message = messages.get(i);
             JSONObject part = new JSONObject();
