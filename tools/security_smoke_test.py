@@ -121,6 +121,24 @@ try:
     check("Private mode cannot modify Teen Protection or its parent PIN",
           "if (privateMode)" in browser[browser.find("private void handleTeenProtectionMenu()"):
                                           browser.find("private void showTeenProtectionSetupDialog()")])
+    check("India public services directory includes verified official portals",
+          "India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/" in home_page and
+          "India services|UIDAI — Aadhaar|https://uidai.gov.in/" in home_page and
+          "India services|UMANG — Government Services|https://web.umang.gov.in/" in home_page and
+          "India services|DIKSHA — School Learning|https://diksha.gov.in/" in home_page and
+          "India services|Kerala Government|https://kerala.gov.in/" in home_page)
+    check("Five additional Indian-script home languages are available in the page UI",
+          all(code + ":" in home_page for code in ("bn", "mr", "gu", "pa", "ur")) and
+          all(('value="' + code + '"') in home_page for code in ("bn", "mr", "gu", "pa", "ur")))
+    check("Native language settings persist all five new Indian languages",
+          all(('"' + code + '"') in browser[browser.find("private void setHomeLanguage"):browser.find("private void setHomeSearchEngine")]
+              for code in ("bn", "mr", "gu", "pa", "ur")) and
+          all(name in browser for name in ("Bengali (বাংলা)", "Marathi (मराठी)", "Gujarati (ગુજરાતી)", "Punjabi (ਪੰਜਾਬੀ)", "Urdu (اردو)")))
+    check("Indian home languages use India date formatting and Urdu is right-to-left",
+          "en-IN" in home_page and "currentLanguage+'-IN'" in home_page and
+          "['ar','ur'].includes(currentLanguage)" in home_page)
+    check("Google selection prefers the India search endpoint",
+          "google.co.in/search?q=" in home_page and "google.co.in/search?q=" in browser)
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
     check("Hari AI API key is sent in a request header over HTTPS",
