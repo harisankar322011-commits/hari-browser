@@ -124,7 +124,7 @@ public final class AntivirusActivity extends ComponentActivity {
         page.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Offline signature scanning and opt-in threat reputation");
+        subtitle.setText("Hari Signature Engine " + MalwareSignatureEngine.ENGINE_VERSION + " · offline rules + opt-in threat reputation");
         subtitle.setTextColor(MUTED);
         subtitle.setTextSize(15);
         LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(-1, -2);
