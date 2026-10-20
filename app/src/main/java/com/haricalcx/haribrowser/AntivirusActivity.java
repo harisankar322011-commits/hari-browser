@@ -461,20 +461,13 @@ public final class AntivirusActivity extends ComponentActivity {
         input.setText(secureStore.get(KEY_REPUTATION_API, ""));
         new AlertDialog.Builder(this)
                 .setTitle("Optional hash reputation")
-                .setMessage("Enter an Auth-Key from abuse.ch MalwareBazaar. When configured, Hari Antivirus sends only a file's SHA-256 hash to the service for a known-malware lookup; it does not upload the file or its filename. The provider still receives the network request and may log normal connection metadata. A no-match response does not mean safe. Leave blank and choose Disable to turn this off.")
+                .setMessage("Enter an Auth-Key from abuse.ch MalwareBazaar (create one at https://auth.abuse.ch/). When configured, Hari Antivirus sends only a file's SHA-256 hash to the service for a known-malware lookup; it does not upload the file or its filename. The provider still receives the network request and may log normal connection metadata. A no-match response does not mean safe. Leave blank and choose Disable to turn this off.")
                 .setView(input)
                 .setNegativeButton("Cancel", null)
                 .setNeutralButton("Disable", (dialog, which) -> {
                     secureStore.remove(KEY_REPUTATION_API);
                     refreshReputationStatus();
                     showMessage("Online hash reputation disabled.");
-                })
-                .setNeutralButton("Get free Auth-Key", (dialog, which) -> {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://auth.abuse.ch/")));
-                    } catch (Exception ignored) {
-                        showMessage("Open https://auth.abuse.ch/ in a browser to create an Auth-Key.");
-                    }
                 })
                 .setPositiveButton("Save key", (dialog, which) -> {
                     String key = input.getText().toString().trim();
