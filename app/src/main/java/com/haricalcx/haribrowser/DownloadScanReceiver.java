@@ -94,7 +94,7 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
         // Online reputation is opt-in through an encrypted key setting. Private-mode downloads
         // remain local-only and never trigger this network lookup.
         if (!privateTarget && !scan.sha256.isEmpty()) {
-            String authKey = new SecureStore(context, false).get("hari_malwarebazaar_api_key_v1", "");
+            String authKey = new SecureStore(context, false).get("hari_rep_store_1", "");
             if (!authKey.isEmpty()) {
                 MalwareBazaarReputation.Result reputation = MalwareBazaarReputation.lookup(scan.sha256, authKey);
                 if (reputation.knownMalware) {
