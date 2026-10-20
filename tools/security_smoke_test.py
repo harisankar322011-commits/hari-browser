@@ -106,7 +106,7 @@ try:
           'android:name=".TeenProtectionProvider"' in manifest_source and
           'android:exported="false"' in manifest_source and
           "getContentResolver().call(TeenProtectionProvider.CONTENT_URI" in browser and
-          "Fail closed rather than bypassing protection" in browser and
+          "fails closed rather than bypassing protection" in browser and
           "RESULT_ENABLED" in teen_provider)
     check("Private mode cannot modify Teen Protection or its parent PIN",
           "if (privateMode)" in browser[browser.find("private void handleTeenProtectionMenu()"):
