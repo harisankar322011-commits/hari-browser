@@ -126,6 +126,20 @@ try:
     check("Hari AI API key is sent in a request header over HTTPS",
           'https://generativelanguage.googleapis.com/v1beta/models/' in ai_client and
           'setRequestProperty("x-goog-api-key", apiKey)' in ai_client)
+    ai_tests = read("app/src/test/java/com/haricalcx/haribrowser/HariAiClientTest.java")
+    check("Hari AI tests a key with an explicit non-blocking connection check",
+          "HariAiClient.testConnection(keyToTest)" in browser and
+          '"HariAI-key-test"' in browser and "Testing sends one short prompt" in browser)
+    check("Hari AI falls back across stable supported model identifiers only on HTTP 404",
+          '"gemini-3.5-flash-lite"' in ai_client and '"gemini-3.1-flash-lite"' in ai_client and
+          '"gemini-3.5-flash"' in ai_client and "catch (ModelUnavailableException unavailable)" in ai_client)
+    check("Hari AI presents actionable API-key and quota errors",
+          "httpStatusMessage(int status)" in ai_client and
+          "API key is invalid or expired" in ai_client and
+          "usage limit was reached" in ai_client)
+    check("Hari AI regression tests cover endpoints and error explanations",
+          "usesDocumentedGenerateContentEndpointShape" in ai_tests and
+          "explainsCommonApiKeyAndQuotaErrors" in ai_tests)
     check("AI provider name is absent from app-facing UI",
           "Gemini" not in browser and "Gemini" not in home_page)
     check("No API key is hard-coded in source",
