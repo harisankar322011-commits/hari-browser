@@ -870,7 +870,7 @@ public class BrowserActivity extends ComponentActivity {
                 String engine = searchEngine();
                 if ("Startpage".equals(engine)) return "https://www.startpage.com/sp/search?query=" + encoded;
                 if ("Brave Search".equals(engine)) return "https://search.brave.com/search?q=" + encoded;
-                if ("Google".equals(engine)) return "https://www.google.com/search?q=" + encoded;
+                if ("Google".equals(engine)) return "https://www.google.co.in/search?q=" + encoded;
                 if ("Bing".equals(engine)) return "https://www.bing.com/search?q=" + encoded;
                 return "https://duckduckgo.com/?q=" + encoded;
             } catch (Exception e) {
@@ -1050,7 +1050,7 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void setHomeLanguage(String languageCode) {
-        String[] validCodes = {"en", "ml", "hi", "ta", "te", "kn", "es", "fr", "ar"};
+        String[] validCodes = {"en", "ml", "hi", "ta", "te", "kn", "bn", "mr", "gu", "pa", "ur", "es", "fr", "ar"};
         boolean valid = false;
         for (String code : validCodes) {
             if (code.equals(languageCode)) { valid = true; break; }
@@ -2092,7 +2092,7 @@ public class BrowserActivity extends ComponentActivity {
         String message =
                 "Version 2.3.0\n\n" +
                 "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
-                "- Expanded home-screen translations across nine languages\n" +
+                "- Home page available in ten Indian languages plus English, Spanish, French and Arabic\n" +
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
                 "- Parent-PIN-protected Teen Protection blocks common adult/gambling searches and selected domains\n" +
@@ -2111,9 +2111,11 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showHomeLanguagePicker() {
-        String[] labels = {"English", "Malayalam (മലയാളം)", "Hindi (हिन्दी)", "Tamil (தமிழ்)",
-                "Telugu (తెలుగు)", "Kannada (ಕನ್ನಡ)", "Spanish (Español)", "French (Français)", "Arabic (العربية)"};
-        String[] codes = {"en", "ml", "hi", "ta", "te", "kn", "es", "fr", "ar"};
+        String[] labels = {"English (India)", "Malayalam (മലയാളം)", "Hindi (हिन्दी)", "Tamil (தமிழ்)",
+                "Telugu (తెలుగు)", "Kannada (ಕನ್ನಡ)", "Bengali (বাংলা)", "Marathi (मराठी)",
+                "Gujarati (ગુજરાતી)", "Punjabi (ਪੰਜਾਬੀ)", "Urdu (اردو)",
+                "Spanish (Español)", "French (Français)", "Arabic (العربية)"};
+        String[] codes = {"en", "ml", "hi", "ta", "te", "kn", "bn", "mr", "gu", "pa", "ur", "es", "fr", "ar"};
         String current = settings.getString("home_language", "en");
         int selected = 0;
         for (int i = 0; i < codes.length; i++) {
