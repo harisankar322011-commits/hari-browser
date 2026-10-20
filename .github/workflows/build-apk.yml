@@ -72,18 +72,7 @@ jobs:
             exit 1
           fi
           unzip -tq "$apk"
-          # The original APK bundled the standard harmless AV test pattern in DEX. Guard
-          # both APK variants against accidentally reintroducing that detection trigger.
-          dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
-          unzip -p "$apk" classes.dex > "$dex_tmp"
-          if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
-            rm -f "$dex_tmp"
-            echo "::error::Debug APK still embeds the standard AV test pattern in classes.dex."
-            exit 1
-          fi
-          rm -f "$dex_tmp"
-          # The original APK bundled the standard harmless AV test pattern in DEX. Guard
-          # both APK variants against accidentally reintroducing that detection trigger.
+          # The original APK contained the standard harmless AV test pattern in DEX. Guard release output against regressions.
           dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
           unzip -p "$apk" classes.dex > "$dex_tmp"
           if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
@@ -121,6 +110,15 @@ jobs:
             echo "::error::Test APK must be debuggable (reported: $debuggable)."; exit 1;
           }
           unzip -tq "$apk"
+          # Apply the same package-content guard to the installable PR debug APK.
+          dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
+          unzip -p "$apk" classes.dex > "$dex_tmp"
+          if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+            rm -f "$dex_tmp"
+            echo "::error::Debug APK still embeds the standard AV test pattern in classes.dex."
+            exit 1
+          fi
+          rm -f "$dex_tmp"
           echo "Installable debug APK validated for device testing."
 
       - name: Upload installable debug APK for pull-request testing
