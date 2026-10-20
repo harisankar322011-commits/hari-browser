@@ -80,6 +80,26 @@ try:
         check(label, fragment in browser)
     home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
+    teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
+    check("Teen protection menu and protected navigation are wired",
+          '"Teen protection · " in browser and "case 33:" in browser and
+          "protectSearchUrl(url)" in browser)
+    check("Teen protection filters main-frame search requests",
+          "request.isForMainFrame()" in browser and
+          "TeenProtection.extractSearchQuery(requestUri.toString())" in browser)
+    check("Teen protection uses a parent PIN stored as salted PBKDF2 hash",
+          "PBKDF2WithHmacSHA256" in teen_protection and
+          "protectionStore.put(TeenProtection.PIN_HASH_KEY, hash)" in browser and
+          "TeenProtection.verifyPin" in browser)
+    check("Teen protection applies strict SafeSearch parameters",
+          'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
+          'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)
+    check("Teen protection documents provider and device-level limitations",
+          "Startpage's filtering is controlled by Startpage itself" in browser and
+          "not a complete content filter" in teen_protection)
+    check("Teen protection is shared with private browsing",
+          'getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE)' in browser and
+          "protectionStore = new SecureStore(this, false)" in browser)
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
     check("Hari AI API key is sent in a request header over HTTPS",
@@ -129,8 +149,12 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.2 release",
-          "versionCode 6" in gradle and "versionName '2.2.0'" in gradle)
+    check("Build version advanced for 2.3 release",
+          "versionCode 7" in gradle and "versionName '2.3.0'" in gradle)
+    check("Teen protection JUnit dependency configured",
+          "testImplementation 'junit:junit:4.13.2'" in gradle)
+    check("CI runs release unit tests",
+          "testReleaseUnitTest" in read(".github/workflows/build-apk.yml"))
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
