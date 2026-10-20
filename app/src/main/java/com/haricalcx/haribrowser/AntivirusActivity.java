@@ -580,8 +580,10 @@ public final class AntivirusActivity extends ComponentActivity {
                 .setNegativeButton("Cancel", null)
                 .setNeutralButton("Disable", (dialog, which) -> {
                     secureStore.remove(KEY_REPUTATION_PREF);
+                    getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE).edit()
+                            .putBoolean("auto_urlhaus_enabled", false).apply();
                     refreshReputationStatus();
-                    showMessage("Online hash reputation disabled.");
+                    showMessage("Online reputation disabled. Automatic URL checks are off too.");
                 })
                 .setPositiveButton("Save key", (dialog, which) -> {
                     String key = input.getText().toString().trim();
@@ -611,7 +613,7 @@ public final class AntivirusActivity extends ComponentActivity {
             if (urlAutoCheckButton != null) {
                 urlAutoCheckButton.setVisibility(View.VISIBLE);
                 urlAutoCheckButton.setText("Automatic URL reputation: " + (autoEnabled ? "ON" : "OFF"));
-                urlAutoCheckButton.setEnabled(configured || autoEnabled);
+                urlAutoCheckButton.setEnabled(true);
             }
             reputationStatus.setText((configured
                     ? "Hash reputation: configured (SHA-256 only). "
