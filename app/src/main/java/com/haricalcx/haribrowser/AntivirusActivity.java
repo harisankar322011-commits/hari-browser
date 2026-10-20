@@ -469,6 +469,13 @@ public final class AntivirusActivity extends ComponentActivity {
                     refreshReputationStatus();
                     showMessage("Online hash reputation disabled.");
                 })
+                .setNeutralButton("Get free Auth-Key", (dialog, which) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://auth.abuse.ch/")));
+                    } catch (Exception ignored) {
+                        showMessage("Open https://auth.abuse.ch/ in a browser to create an Auth-Key.");
+                    }
+                })
                 .setPositiveButton("Save key", (dialog, which) -> {
                     String key = input.getText().toString().trim();
                     if (key.length() < 16 || key.length() > 512) {
@@ -484,7 +491,7 @@ public final class AntivirusActivity extends ComponentActivity {
 
     private void refreshReputationStatus() {
         if (reputationStatus == null) return;
-        boolean configured = !secureStore.get(KEY_REPUTATION_API, "").isEmpty();
+        boolean configured = !privateModeLaunch && !secureStore.get(KEY_REPUTATION_API, "").isEmpty();
         if (privateModeLaunch) {
             reputationStatus.setText("Online hash reputation: disabled in private browsing.");
             reputationButton.setVisibility(View.GONE);
