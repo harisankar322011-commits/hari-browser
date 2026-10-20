@@ -59,6 +59,7 @@ public final class AntivirusActivity extends ComponentActivity {
     private Button scanButton;
     private Button quarantineButton;
     private Button reputationButton;
+    private Button urlCheckButton;
     private boolean privateModeLaunch;
     private Uri currentUri;
     private String currentName;
@@ -130,7 +131,7 @@ public final class AntivirusActivity extends ComponentActivity {
         page.addView(subtitle, subtitleParams);
 
         TextView scope = new TextView(this);
-        scope.setText("Privacy first: files are scanned on this device. An optional MalwareBazaar lookup sends only the SHA-256 hash after you configure a key; file contents and filenames are not uploaded.");
+        scope.setText("Privacy first: files are scanned on this device. Optional MalwareBazaar checks send only a SHA-256 hash. URLhaus checks send a URL only after you paste it and confirm. No automatic URL reporting occurs.");
         scope.setTextColor(INK);
         scope.setTextSize(14);
         scope.setPadding(dp(14), dp(12), dp(14), dp(12));
@@ -155,6 +156,10 @@ public final class AntivirusActivity extends ComponentActivity {
         reputationButton = button("Configure online hash reputation");
         reputationButton.setOnClickListener(v -> configureReputation());
         page.addView(reputationButton, buttonParams());
+
+        urlCheckButton = button("Check a website URL with URLhaus");
+        urlCheckButton.setOnClickListener(v -> checkUrlReputation());
+        page.addView(urlCheckButton, buttonParams());
 
         reputationStatus = new TextView(this);
         reputationStatus.setTextColor(MUTED);
@@ -449,6 +454,76 @@ public final class AntivirusActivity extends ComponentActivity {
                 .show();
     }
 
+    private void checkUrlReputation() {
+        if (privateModeLaunch) {
+            showMessage("Online website reputation checks are disabled in private browsing.");
+            return;
+        }
+        String authKey = secureStore.get(KEY_REPUTATION_PREF, "");
+        if (authKey.isEmpty()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Configure URL reputation")
+                    .setMessage("First configure an abuse.ch Auth-Key using “Configure online hash reputation”. The same key supports the manual URLhaus query. No URL is sent until you paste a URL here and confirm the next dialog.")
+                    .setPositiveButton("Configure key", (dialog, which) -> configureReputation())
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            return;
+        }
+
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI);
+        input.setHint("https://example.com/path");
+        new AlertDialog.Builder(this)
+                .setTitle("Check a website URL")
+                .setMessage("Paste the HTTPS URL you want checked. After you press “Send URL for check”, the URL (without any #fragment) will be sent to URLhaus / abuse.ch using your Auth-Key. URLhaus focuses on known malware-distribution URLs; it is not a complete phishing, scam, or general website safety service. The provider receives the request and may log normal connection metadata. Cancel sends nothing.")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Continue", (dialog, which) -> {
+                    String candidate = input.getText().toString().trim();
+                    String validated = UrlhausReputation.validateHttpsUrl(candidate);
+                    if (validated == null) {
+                        showMessage("The address is invalid. Enter an HTTPS URL without a username or password in the address.");
+                        return;
+                    }
+                    new AlertDialog.Builder(this)
+                            .setTitle("Send URL to URLhaus?")
+                            .setMessage("Confirm that you want to send this website address to the external URLhaus / abuse.ch reputation service. It will not be saved in Hari Browser history by this screen. URLhaus results concern malware distribution, and a no-match result does not prove safety.")
+                            .setNegativeButton("Do not send", null)
+                            .setPositiveButton("Send URL for check", (confirmDialog, confirmWhich) -> performUrlhausLookup(validated))
+                            .show();
+                })
+                .show();
+    }
+
+    private void performUrlhausLookup(String url) {
+        String authKey = secureStore.get(KEY_REPUTATION_PREF, "");
+        if (authKey.isEmpty()) {
+            showMessage("No Auth-Key is configured. The URL was not sent.");
+            return;
+        }
+        urlCheckButton.setEnabled(false);
+        progress.setVisibility(View.VISIBLE);
+        resultText.setText("Checking the URL with URLhaus after your confirmation…");
+        worker.execute(() -> {
+            UrlhausReputation.Result result = UrlhausReputation.lookup(url, authKey);
+            runOnUiThread(() -> {
+                urlCheckButton.setEnabled(true);
+                progress.setVisibility(View.GONE);
+                String heading;
+                if (result.listed) {
+                    heading = "⚠ KNOWN MALWARE-DISTRIBUTION URL";
+                } else if ("NO_MATCH".equals(result.status)) {
+                    heading = "NO URLHAUS RECORD FOUND — NOT A SAFETY VERDICT";
+                } else {
+                    heading = "URL REPUTATION CHECK INCOMPLETE";
+                }
+                resultText.setText(heading + "\n\n" + result.details +
+                        "\n\nPrivacy: this screen does not save the checked URL to browser history. The external service received the URL because you explicitly confirmed the lookup.");
+            });
+        });
+    }
+
     private void configureReputation() {
         if (privateModeLaunch) {
             showMessage("Online reputation checks are disabled when Hari Antivirus is opened from a private browsing session.");
@@ -488,7 +563,9 @@ public final class AntivirusActivity extends ComponentActivity {
         if (privateModeLaunch) {
             reputationStatus.setText("Online hash reputation: disabled in private browsing.");
             reputationButton.setVisibility(View.GONE);
+            if (urlCheckButton != null) urlCheckButton.setVisibility(View.GONE);
         } else {
+            if (urlCheckButton != null) urlCheckButton.setVisibility(View.VISIBLE);
             reputationStatus.setText(configured
                     ? "Online hash reputation: configured. Only SHA-256 hashes are sent after a user-initiated scan."
                     : "Online hash reputation: not configured. Local checks still work.");
