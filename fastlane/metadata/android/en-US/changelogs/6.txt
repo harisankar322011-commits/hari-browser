@@ -1,0 +1,1 @@
+Hari Browser 2.2.0 adds Hari AI, an optional native AI chat launched from the home screen. Configure the API key in Settings. The key is encrypted on-device; prompts are sent online only when you choose to chat. Chat transcripts stay in memory only. Includes localized home-screen AI labels and updated privacy messaging.
