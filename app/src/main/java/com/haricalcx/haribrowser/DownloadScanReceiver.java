@@ -85,13 +85,31 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
             return;
         }
 
-        DownloadedFileScanner.Result scan;
-        try (ParcelFileDescriptor descriptor = manager.openDownloadedFile(id);
-             InputStream input = new FileInputStream(descriptor.getFileDescriptor())) {
-            scan = DownloadedFileScanner.scan(input, filename, mimeType, size);
+        AntivirusEngine.Result scan = AntivirusEngine.scan(
+                () -> new ParcelFileDescriptor.AutoCloseInputStream(manager.openDownloadedFile(id)),
+                filename, mimeType, size);
+        String scanStatus = scan.status;
+        String scanDetails = scan.details;
+        boolean reputationHit = false;
+        // Online reputation is opt-in through an encrypted key setting. Private-mode downloads
+        // remain local-only and never trigger this network lookup.
+        if (!privateTarget && !scan.sha256.isEmpty()) {
+            String authKey = new SecureStore(context, false).get("hari_malwarebazaar_api_key_v1", "");
+            if (!authKey.isEmpty()) {
+                MalwareBazaarReputation.Result reputation = MalwareBazaarReputation.lookup(scan.sha256, authKey);
+                if (reputation.knownMalware) {
+                    scanStatus = "KNOWN_MALWARE_HASH";
+                    scanDetails += "\n\nOnline hash reputation:\n" + reputation.details;
+                    reputationHit = true;
+                } else if (!"NO_MATCH".equals(reputation.status) && !"SERVICE_UNAVAILABLE".equals(reputation.status)) {
+                    scanDetails += "\n\nOnline hash reputation:\n" + reputation.details;
+                } else if ("NO_MATCH".equals(reputation.status)) {
+                    scanDetails += "\n\nOnline hash reputation:\n" + reputation.details;
+                }
+            }
         }
-        saveResult(prefs, id, filename, scan.status, scan.details, scan.sha256, privateTarget);
-        if (scan.isSuspicious() && (!privateTarget || prefs.getBoolean("private_session_active", false))) {
+        saveResult(prefs, id, filename, scanStatus, scanDetails, scan.sha256, privateTarget);
+        if ((scan.isSuspicious() || reputationHit) && (!privateTarget || prefs.getBoolean("private_session_active", false))) {
             prefs.edit().putLong("last_suspicious_download_id", id)
                     .putString("last_suspicious_download_filename", filename == null ? "Downloaded file" : filename)
                     .apply();
