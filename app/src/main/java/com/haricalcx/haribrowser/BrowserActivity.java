@@ -121,6 +121,9 @@ public class BrowserActivity extends ComponentActivity {
     private static ArrayList<String> pendingThemeRestoreUrls;
     private static int pendingThemeRestoreIndex;
     private static boolean pendingThemeRestorePrivateMode;
+    // Session-only approvals avoid repeated prompts for a URL the user already reviewed.
+    private static final java.util.Set<String> APPROVED_SITE_URLS =
+            java.util.Collections.synchronizedSet(new java.util.HashSet<>());
 
     private boolean darkTheme() { return settings.getBoolean("dark_theme", false); }
     private boolean trackersEnabled() { return settings.getBoolean("block_trackers", true); }
@@ -910,6 +913,10 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showSiteSafetyCheck(Tab tab, String url) {
         if (tab == null || tab.webView == null || !PrivacyGuard.isHttpsUrl(url)) return;
+        if (APPROVED_SITE_URLS.contains(url)) {
+            loadAfterSiteSafetyCheck(tab, url);
+            return;
+        }
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url);
         StringBuilder message = new StringBuilder();
         message.append("Destination: ").append(report.getHost()).append("\n\n");
@@ -933,7 +940,10 @@ public class BrowserActivity extends ComponentActivity {
                 .setMessage(message.toString())
                 .setNegativeButton("Cancel", null)
                 .setPositiveButton(report.hasWarnings() ? "Open anyway" : "Open site",
-                        (dialog, which) -> loadAfterSiteSafetyCheck(tab, url))
+                        (dialog, which) -> {
+                            APPROVED_SITE_URLS.add(url);
+                            loadAfterSiteSafetyCheck(tab, url);
+                        })
                 .show();
     }
 
