@@ -4,9 +4,9 @@ Hari AI uses Google's Gemini Interactions API instead of an on-device language m
 
 ## First-time setup
 
-1. Open Hari Browser, open **Settings**, and choose **Hari AI (Gemini cloud; API key required)**.
+1. Open Hari Browser and tap **Hari AI** on the home screen, or choose **Hari AI** from browser Settings.
 2. Tap **Get API key** to open Google AI Studio, sign in if required, and create a Gemini API key: [Google AI Studio API keys](https://aistudio.google.com/apikey).
-3. Return to Hari Browser, open **Gemini API settings**, choose **Enter API key**, and paste your key.
+3. Return to Hari Browser, open **AI settings** from the home screen (or choose **Hari AI API settings** in browser Settings), select **Enter API key**, and paste your key.
 4. Send a question. Hari AI sends the prompt and a limited recent conversation history to Google's Gemini API over HTTPS.
 5. To summarize an open HTTPS page, choose **Summarize current page** and explicitly confirm. Only then does the app send the page title, URL, and up to 4,000 characters of visible page text to Gemini.
 
@@ -14,7 +14,7 @@ Hari AI uses Google's Gemini Interactions API instead of an on-device language m
 
 - The app contains no Gemini API key. Each person must supply their own key; never share it or commit it to source control.
 - Google AI Studio/API access and free-tier quotas are controlled by Google and can change. Free usage is not unlimited, and requests may be rejected if a key, model, region, quota, or billing setup is not eligible. Review Google's current [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing).
-- This version uses the stable model identifier `gemini-3.8-flash` through the Interactions API, the recommended API for new projects. Model availability and API terms may change.
+- This version uses the documented model identifier `gemini-3.7-flash` through the stable Interactions API. Model availability and API terms may change.
 - Prompts require internet access. The assistant cannot work offline.
 
 ## Privacy and key handling
