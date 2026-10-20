@@ -45,6 +45,16 @@ public class SiteSafetyCheckerTest {
     }
 
     @Test
+    public void indianBankLookalikeAndOtpScamPatternsAreIncludedInSitePreflight() {
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(
+                "https://secure-sbi-kyc.example/verify?otp=1&urgent=refund");
+        String combined = String.join(" ", report.getWarnings()).toLowerCase(java.util.Locale.ROOT);
+        assertTrue(report.hasWarnings());
+        assertTrue(combined.contains("recognized official domain"));
+        assertTrue(combined.contains("possible indian payment"));
+    }
+
+    @Test
     public void invalidUrlRaisesWarningInsteadOfThrowing() {
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://[not-an-ip");
         assertTrue(report.hasWarnings());
