@@ -94,6 +94,9 @@ try:
     check("Teen protection applies strict SafeSearch parameters",
           'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
           'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)
+    check("Brave strict preference cookie is set during protected navigation",
+          "TeenProtection.isBraveSearchHostUrl(url)" in browser and
+          'setCookie("https://search.brave.com/", "safesearch=strict;' in browser)
     check("Teen protection documents provider and device-level limitations",
           "Startpage's filtering is controlled by Startpage itself" in browser and
           "not a complete content filter" in teen_protection)
