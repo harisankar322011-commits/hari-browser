@@ -78,6 +78,11 @@ final class TeenProtection {
         return query != null && containsBlockedSearchTerm(query);
     }
 
+    static boolean isBraveSearchHostUrl(String url) {
+        URI uri = parseUri(url);
+        return uri != null && "search.brave.com".equalsIgnoreCase(uri.getHost());
+    }
+
     /**
      * Apply strict search parameters only to recognized result-query URLs.
      * Startpage is intentionally not rewritten because a verified strict-mode
