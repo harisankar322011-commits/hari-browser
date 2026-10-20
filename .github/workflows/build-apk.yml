@@ -72,14 +72,18 @@ jobs:
             exit 1
           fi
           unzip -tq "$apk"
-          # The original APK contained the standard harmless AV test pattern in DEX. Guard release output against regressions.
-          dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
-          unzip -p "$apk" classes.dex > "$dex_tmp"
-          if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
-            rm -f "$dex_tmp"
-            echo "::error::Release APK still embeds the standard AV test pattern in classes.dex."
-            exit 1
-          fi
+          # Check every DEX file so multidex packages cannot evade this guard.
+          mapfile -t dex_entries < <(unzip -Z1 "$apk" | grep -E '^classes[0-9]*\.dex$')
+          test "${#dex_entries[@]}" -gt 0 || { echo "::error::No DEX files found in Release APK."; exit 1; }
+          dex_tmp="$RUNNER_TEMP/hari-browser-dex.tmp"
+          for dex_entry in "${dex_entries[@]}"; do
+            unzip -p "$apk" "$dex_entry" > "$dex_tmp"
+            if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+              rm -f "$dex_tmp"
+              echo "::error::Release APK still embeds the standard AV test pattern in $dex_entry."
+              exit 1
+            fi
+          done
           rm -f "$dex_tmp"
           bytes="$(stat -c '%s' "$apk")"
           echo "Release APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
@@ -110,14 +114,18 @@ jobs:
             echo "::error::Test APK must be debuggable (reported: $debuggable)."; exit 1;
           }
           unzip -tq "$apk"
-          # Apply the same package-content guard to the installable PR debug APK.
-          dex_tmp="$RUNNER_TEMP/hari-browser-classes.dex"
-          unzip -p "$apk" classes.dex > "$dex_tmp"
-          if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
-            rm -f "$dex_tmp"
-            echo "::error::Debug APK still embeds the standard AV test pattern in classes.dex."
-            exit 1
-          fi
+          # Check every DEX file so multidex packages cannot evade this guard.
+          mapfile -t dex_entries < <(unzip -Z1 "$apk" | grep -E '^classes[0-9]*\.dex$')
+          test "${#dex_entries[@]}" -gt 0 || { echo "::error::No DEX files found in Debug APK."; exit 1; }
+          dex_tmp="$RUNNER_TEMP/hari-browser-dex.tmp"
+          for dex_entry in "${dex_entries[@]}"; do
+            unzip -p "$apk" "$dex_entry" > "$dex_tmp"
+            if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+              rm -f "$dex_tmp"
+              echo "::error::Debug APK still embeds the standard AV test pattern in $dex_entry."
+              exit 1
+            fi
+          done
           rm -f "$dex_tmp"
           echo "Installable debug APK validated for device testing."
 
@@ -130,6 +138,18 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
+      # This artifact is intentionally unsigned and cannot be installed. It lets reviewers inspect
+      # the optimized release-variant package produced by the PR before release signing is enabled.
+      - name: Upload unsigned release APK for PR static inspection
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: hari-browser-2.3.0-unsigned-validation-pr-${{ github.event.pull_request.number }}
+          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+
 
       # Stable release signing uses the four protected HARI_RELEASE_* repository secrets.
       # CI must never generate/discard a signing key; without a stable key, publish unsigned validation only.
