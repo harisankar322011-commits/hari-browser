@@ -10,8 +10,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Bounded local checks for files downloaded by Hari Browser. This is not a
- * general-purpose antivirus engine: it has no full malware-signature database.
+ * Bounded local checks for files downloaded by Hari Browser. It combines
+ * byte-format checks and a small offline multi-indicator signature rule set;
+ * it is not a comprehensive antivirus engine or maintained malware database.
  */
 public final class DownloadedFileScanner {
     public static final long MAX_SCAN_BYTES = 100L * 1024L * 1024L;
