@@ -124,7 +124,7 @@ public final class AntivirusActivity extends ComponentActivity {
         page.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Local file checks and opt-in threat reputation");
+        subtitle.setText("Offline signature scanning and opt-in threat reputation");
         subtitle.setTextColor(MUTED);
         subtitle.setTextSize(15);
         LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(-1, -2);
@@ -186,12 +186,12 @@ public final class AntivirusActivity extends ComponentActivity {
         resultText.setText(
                 "Ready to scan.\n\n" +
                 "Supported local checks:\n" +
-                "• SHA-256 and selected file-format mismatch checks.\n" +
-                "• EICAR antivirus test signature detection.\n" +
-                "• Bounded inspection of ZIP-based archives, APKs, JARs and Office Open XML files.\n" +
-                "• Archive path traversal markers, executable entries, expansion and resource limits.\n" +
-                "• Optional MalwareBazaar hash reputation lookup.\n\n" +
-                "Important: this is not yet a complete ClamAV/YARA-class antivirus engine. A basic-check result is not a clean bill of health. Android limits Hari Browser to files you select and its own tracked downloads; it cannot scan every other app or the whole device.");
+                "• SHA-256, selected format mismatches and the EICAR antivirus test signature.\n" +
+                "• Streaming multi-indicator signature rules for PHP web-shell combinations, PowerShell download/execute chains, Android dropper capability combinations, cryptocurrency miners, ransomware-note phrases and obfuscated scripts.\n" +
+                "• Bounded ZIP-based archive, APK, JAR and Office Open XML entry inspection, including nested-archive limits.\n" +
+                "• Archive traversal markers, active/executable entries, APK package metadata and signer-certificate fingerprints.\n" +
+                "• Optional MalwareBazaar known-malware hash reputation; only SHA-256 is submitted, never file bytes or filename.\n\n" +
+                "Important: the offline rule set is a small starter set, not a comprehensive maintained malware-signature database. Multi-indicator matches require review and are not by themselves proof of malware. Hashes with no reputation match are not guaranteed safe. Hari Browser only sees files you select and its own tracked downloads; Android prevents it from scanning every other app or the whole device.");
         LinearLayout.LayoutParams reportParams = new LinearLayout.LayoutParams(-1, -2);
         reportParams.topMargin = dp(10);
         page.addView(resultText, reportParams);
