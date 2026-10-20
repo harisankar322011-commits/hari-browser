@@ -124,7 +124,7 @@ public final class AntivirusActivity extends ComponentActivity {
         page.addView(title);
 
         TextView subtitle = new TextView(this);
-        subtitle.setText("Local file checks for Hari Browser");
+        subtitle.setText("Local file checks and opt-in threat reputation");
         subtitle.setTextColor(MUTED);
         subtitle.setTextSize(15);
         LinearLayout.LayoutParams subtitleParams = new LinearLayout.LayoutParams(-1, -2);
