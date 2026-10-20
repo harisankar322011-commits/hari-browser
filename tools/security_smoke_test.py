@@ -75,6 +75,18 @@ try:
           "MalwareSignatureEngine.StreamMatcher signatureMatcher" in antivirus_engine and
           "signatureMatcher.finish()" in antivirus_engine and
           "MAX_EXPANDED_ARCHIVE_BYTES" in antivirus_engine)
+
+    antivirus_ui = read("app/src/main/java/com/haricalcx/haribrowser/AntivirusActivity.java")
+    # Keep the standard AV test sample out of production DEX: scanners may
+    # classify an app containing this known detector pattern as a threat.
+    test_marker = ("X5O!P%@AP[" + "4\\\\PZX54(P^)7CC)7}$" +
+                   "EICAR-" + "STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
+    check("Production scanner code does not bundle the standard AV test pattern",
+          test_marker not in download_scanner and
+          test_marker not in antivirus_engine and
+          test_marker not in antivirus_ui and
+          "MALICIOUS_TEST_SIGNATURE" not in download_scanner and
+          "MALICIOUS_TEST_SIGNATURE" not in antivirus_engine)
     check("Malware signature rules have automated combination and chunk-boundary tests",
           "multiIndicatorSignatureRequiresReviewWithoutDeclaringMalware" in
           read("app/src/test/java/com/haricalcx/haribrowser/DownloadedFileScannerTest.java") and
