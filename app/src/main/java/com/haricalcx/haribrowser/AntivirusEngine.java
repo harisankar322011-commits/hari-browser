@@ -62,6 +62,9 @@ public final class AntivirusEngine {
         boolean incomplete;
         boolean suspicious;
         boolean testSignature;
+        boolean signatureReviewRequired;
+        boolean signatureMatchesTruncated;
+        int signatureMatchesReported;
         final List<String> findings = new ArrayList<>();
     }
 
@@ -121,7 +124,8 @@ public final class AntivirusEngine {
             if (details.length() > 0) details.append("\n");
             details.append("Some content could not be fully inspected because an archive or resource limit was reached.");
         }
-        details.append("\nLocal scanner capability: bounded heuristics and test signatures only; no complete malware-signature engine is bundled.");
+        details.append("\nLocal signature engine: a small offline multi-indicator rule set is included; rule hits require review and the rules are not a comprehensive malware database.");
+        if (budget.signatureMatchesTruncated) details.append("\nAdditional archive signature findings were omitted from the report to keep it readable.");
 
         String status;
         if (budget.testSignature || "MALICIOUS_TEST_SIGNATURE".equals(basic.status)) {
@@ -130,7 +134,7 @@ public final class AntivirusEngine {
             status = "SUSPICIOUS";
         } else if (budget.incomplete || "SCAN_INCOMPLETE".equals(basic.status)) {
             status = "SCAN_INCOMPLETE";
-        } else if ("REVIEW_REQUIRED".equals(basic.status)) {
+        } else if (budget.signatureReviewRequired || "REVIEW_REQUIRED".equals(basic.status)) {
             status = "REVIEW_REQUIRED";
         } else {
             status = "BASIC_CHECKS_ONLY";
@@ -183,6 +187,7 @@ public final class AntivirusEngine {
                 boolean nestedTooLarge = false;
                 long entryBytes = 0;
                 String overlap = "";
+                MalwareSignatureEngine.StreamMatcher signatureMatcher = MalwareSignatureEngine.newScanner();
                 int count;
                 while ((count = zip.read(buffer)) != -1) {
                     entryBytes += count;
@@ -192,6 +197,7 @@ public final class AntivirusEngine {
                         add(budget.findings, "Expanded archive content exceeded the safety limit.");
                         return;
                     }
+                    signatureMatcher.update(buffer, count);
                     String chunk = overlap + new String(buffer, 0, count, java.nio.charset.StandardCharsets.ISO_8859_1);
                     if (chunk.contains(EICAR)) {
                         budget.testSignature = true;
@@ -207,6 +213,16 @@ public final class AntivirusEngine {
                             budget.incomplete = true;
                             add(budget.findings, "A nested archive was too large for bounded recursive inspection.");
                         }
+                    }
+                }
+                for (MalwareSignatureEngine.Finding finding : signatureMatcher.finish()) {
+                    budget.signatureReviewRequired = true;
+                    if (budget.signatureMatchesReported < 12) {
+                        add(budget.findings, "Offline signature rule " + finding.ruleId + " matched archive entry " +
+                                shortName(entryName) + ": " + finding.description);
+                        budget.signatureMatchesReported++;
+                    } else {
+                        budget.signatureMatchesTruncated = true;
                     }
                 }
                 zip.closeEntry();
