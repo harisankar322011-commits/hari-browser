@@ -147,7 +147,13 @@ final class TeenProtection {
         // generic terms like "porn" or "gambling", but never overrides explicit-media phrases.
         for (String phrase : BLOCKED_PHRASES) {
             String candidate = normalize(phrase);
-            if (candidate.isEmpty() || !padded.contains(" " + candidate + " ")) continue;
+            if (candidate.isEmpty()) continue;
+            // Also compare compact forms so punctuation-separated phrases cannot trivially bypass
+            // multiword rules (for example, "h.o.w to m.a.k.e a b.o.m.b").
+            String candidateCompact = foldLeetspeak(candidate.replace(" ", ""));
+            boolean phraseMatch = padded.contains(" " + candidate + " ")
+                    || compact.contains(candidateCompact);
+            if (!phraseMatch) continue;
             boolean supportSensitive = false;
             for (String sensitive : SUPPORT_SENSITIVE_TERMS) {
                 if (candidate.equals(normalize(sensitive))) {
