@@ -625,7 +625,7 @@ public class BrowserActivity extends ComponentActivity {
                     String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
                             + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
                             + "<title>Browsing blocked</title><h2>Teen Protection</h2>"
-                            + "<p>This search or website matches a restricted adult-content or gambling rule.</p>"
+                            + "<p>This search or website matches a restricted age-safety rule covering selected explicit, gambling, graphic-violence, self-harm-instruction, weapon/explosive-instruction, or illegal-drug queries.</p>"
                             + "<p>Try a learning-focused or age-appropriate destination.</p>";
                     return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
                             Collections.singletonMap("Cache-Control", "no-store"),
@@ -2157,11 +2157,15 @@ public class BrowserActivity extends ComponentActivity {
 
         TextView description = new TextView(this);
         description.setText(
-                "Blocks a starter list of explicit adult search terms and forces strict SafeSearch " +
-                "for Google, Bing, Brave Search and DuckDuckGo. Startpage's filtering is controlled " +
+                "Checks search queries on this device for a starter list of explicit adult-content, gambling, " +
+                "graphic real-world violence, self-harm instructions, dangerous weapon/explosive instructions, " +
+                "and illegal-drug procurement/manufacture. It blocks selected adult/gambling domains and requests " +
+                "strict SafeSearch for Google, Bing, Brave Search and DuckDuckGo. Startpage filtering is controlled " +
                 "by Startpage itself. A parent PIN is required to turn this feature off from Hari Browser.\n\n" +
-                "This is a browser-level safeguard, not a complete content filter or Android parental control. " +
-                "It cannot guarantee that every inappropriate page or image will be blocked.");
+                "Filtering is phrase-based and can miss altered wording or content inside a webpage; legitimate " +
+                "queries can occasionally be blocked. Prevention, educational and help-seeking searches are allowed " +
+                "where possible. This is a browser-level safeguard, not a complete content filter or Android " +
+                "parental-control service, and it cannot guarantee that every inappropriate page or image is blocked.");
         description.setTextColor(MUTED);
         description.setTextSize(13);
         description.setPadding(0, 0, 0, dp(10));
@@ -2264,7 +2268,7 @@ public class BrowserActivity extends ComponentActivity {
                 "- Home page available in ten Indian languages plus English, Spanish, French and Arabic\n" +
                 "- Search-engine choice now persists from the home screen\n" +
                 "- Faster directory filtering and batched shortcut rendering\n" +
-                "- Parent-PIN-protected Teen Protection blocks common adult/gambling searches and selected domains\n" +
+                "- Parent-PIN-protected Teen Protection blocks selected explicit, gambling, graphic-violence, dangerous-instruction and self-harm-instruction searches\n" +
                 "- Hari AI Settings can test the API key and explain common key, model and quota errors\n" +
                 "- Optional Hari AI chat with API setup in Settings\n" +
                 "- API key encrypted locally; prompts are sent online only when you use Hari AI\n" +
