@@ -7,6 +7,8 @@ Please use GitHub's private vulnerability reporting feature for this repository 
 ## Security design
 
 - Network requests from web content are HTTPS-only; cleartext traffic is disabled in the Android manifest and network security configuration.
+- New top-level destinations receive a local URL-structure preflight before loading. This is a heuristic warning, not a reputation verdict: it does not fetch or certify the site, inspect response headers/content, or detect all malicious URLs. Android WebView Safe Browsing and TLS certificate validation remain separate connection-time protections.
+- Hari Browser does not provide device-wide antivirus scanning or malware removal. Android's application sandbox does not let a normal browser inspect and clean other apps' private files; do not advertise this feature as available.
 - WebView Safe Browsing is enabled. TLS certificate errors are always cancelled.
 - Mixed content, local file access, content-provider access, geolocation, popup windows, and web camera/microphone permission requests are blocked or disabled.
 - Third-party cookies are disabled by the browser.
