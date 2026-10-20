@@ -604,15 +604,15 @@ public class BrowserActivity extends ComponentActivity {
                     String interceptedSearch = TeenProtection.extractSearchQuery(requestUri.toString());
                     if (interceptedSearch != null
                             && TeenProtection.containsBlockedSearchTerm(interceptedSearch)) {
-                    runOnUiThread(() -> showToast("Teen Protection blocked this search."));
-                    String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
-                            + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-                            + "<title>Search blocked</title><h2>Teen Protection</h2>"
-                            + "<p>This search was blocked because it matches a restricted adult-content term.</p>"
-                            + "<p>Try a learning-focused or age-appropriate search.</p>";
-                    return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
-                            Collections.singletonMap("Cache-Control", "no-store"),
-                            new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
+                        runOnUiThread(() -> showToast("Teen Protection blocked this search."));
+                        String blockedPage = "<!doctype html><meta charset=\"utf-8\">"
+                                + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+                                + "<title>Search blocked</title><h2>Teen Protection</h2>"
+                                + "<p>This search was blocked because it matches a restricted adult-content term.</p>"
+                                + "<p>Try a learning-focused or age-appropriate search.</p>";
+                        return new WebResourceResponse("text/html", "UTF-8", 200, "OK",
+                                Collections.singletonMap("Cache-Control", "no-store"),
+                                new ByteArrayInputStream(blockedPage.getBytes(StandardCharsets.UTF_8)));
                     }
                 }
                 String requestPath = requestUri.getPath();
