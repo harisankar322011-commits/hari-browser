@@ -45,8 +45,8 @@ jobs:
           gradle-version: '9.6.0'
           cache-provider: basic
 
-      - name: Build only the release variant and run lint
-        run: gradle --no-daemon clean assembleRelease lint
+      - name: Build release variant, run lint and unit tests
+        run: gradle --no-daemon clean assembleRelease lint test
 
       - name: Validate release APK and package manifest
         shell: bash
@@ -103,10 +103,10 @@ jobs:
               --ks-key-alias "$HARI_RELEASE_KEY_ALIAS" \
               --ks-pass env:HARI_RELEASE_STORE_PASSWORD \
               --key-pass env:HARI_RELEASE_KEY_PASSWORD \
-              --out "dist/HariBrowser-2.2.0.apk" "$unsigned"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "dist/HariBrowser-2.2.0.apk"
+              --out "dist/HariBrowser-2.3.0.apk" "$unsigned"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "dist/HariBrowser-2.3.0.apk"
             echo "### Release signing: signed with the configured stable key" >> "$GITHUB_STEP_SUMMARY"
-            publish_apk="dist/HariBrowser-2.2.0.apk"
+            publish_apk="dist/HariBrowser-2.3.0.apk"
           elif [[ "$(git log -1 --format=%s)" == *"[one-time-release-sign]"* ]]; then
             keystore="$RUNNER_TEMP/hari-browser-one-time-release.p12"
             temporary_password="$(openssl rand -hex 32)"
@@ -119,17 +119,17 @@ jobs:
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
               --ks "$keystore" --ks-key-alias hari-browser-one-time \
               --ks-pass "pass:$temporary_password" --key-pass "pass:$temporary_password" \
-              --out "dist/HariBrowser-2.2.0.apk" "$unsigned"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "dist/HariBrowser-2.2.0.apk"
+              --out "dist/HariBrowser-2.3.0.apk" "$unsigned"
+            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "dist/HariBrowser-2.3.0.apk"
             rm -f "$keystore"
             echo "### Release signing: one-time signed APK" >> "$GITHUB_STEP_SUMMARY"
             echo "This key is intentionally discarded after this build. Future APKs will need a configured stable signing key; until then, Android may require uninstalling this version before installing another, which can erase browser data." >> "$GITHUB_STEP_SUMMARY"
-            publish_apk="dist/HariBrowser-2.2.0.apk"
+            publish_apk="dist/HariBrowser-2.3.0.apk"
           else
-            cp "$unsigned" "dist/HariBrowser-2.2.0-unsigned.apk"
+            cp "$unsigned" "dist/HariBrowser-2.3.0-unsigned.apk"
             echo "### Release signing: not configured" >> "$GITHUB_STEP_SUMMARY"
             echo "The artifact is an unsigned release build and cannot be installed until signed with a stable release key. Set the four HARI_RELEASE_* repository Actions secrets to sign it." >> "$GITHUB_STEP_SUMMARY"
-            publish_apk="dist/HariBrowser-2.2.0-unsigned.apk"
+            publish_apk="dist/HariBrowser-2.3.0-unsigned.apk"
           fi
           sha256sum "$publish_apk" | tee "$RUNNER_TEMP/SHA256SUMS.txt"
           echo "SHA-256: $(sha256sum "$publish_apk" | cut -d ' ' -f1)" >> "$GITHUB_STEP_SUMMARY"
@@ -138,7 +138,7 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
-          name: hari-browser-2.2.0-release-apk
+          name: hari-browser-2.3.0-release-apk
           path: dist/*.apk
           if-no-files-found: error
           compression-level: 0
