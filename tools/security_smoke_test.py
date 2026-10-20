@@ -184,7 +184,7 @@ try:
     check("APK artifacts publish only from main outside pull requests",
           "if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'" in build_workflow)
     check("Release-only artifact contains no debug APK",
-          "assembleRelease" in build_workflow and "testReleaseUnitTest" in build_workflow and
+          "assembleRelease" in build_workflow and "testDebugUnitTest" in build_workflow and
           "lint" in build_workflow and "assembleDebug" not in build_workflow and
           "path: dist/*.apk" in build_workflow and "Publish only the release APK" in build_workflow)
     check("Release signing is conditional on protected signing secrets",
