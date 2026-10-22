@@ -57,7 +57,7 @@ Optional MalwareBazaar hash reputation can send a file's SHA-256 hash to the ser
 
 Teen Protection can be enabled in Settings and protected by a parent PIN. It uses local phrase checks, selected domain rules, and strict-search preferences for supported search providers. It aims to block selected explicit adult-content, gambling, graphic-violence, self-harm-instruction, dangerous weapon/explosive-instruction, and illegal-drug purchase/manufacture searches while allowing prevention, educational, and help-seeking searches where possible.
 
-Teen Protection is **not foolproof**. Search providers behave differently; altered wording, other languages, content inside pages, images, videos, other apps, or another browser may bypass it. It can also block legitimate searches. Anyone with sufficient access to the device may bypass the app-level PIN by clearing app data or uninstalling the app. For device-wide supervision, use Android parental controls or Google Family Link.
+Teen Protection is **not foolproof**. Startpage's filtering is controlled by Startpage itself, so Hari Browser does not enforce strict mode there. Search providers behave differently; altered wording, other languages, content inside pages, images, videos, other apps, or another browser may bypass it. It can also block legitimate searches. Anyone with sufficient access to the device may bypass the app-level PIN by clearing app data or uninstalling the app. For device-wide supervision, use Android parental controls or Google Family Link.
 
 ### Optional Hari AI
 
