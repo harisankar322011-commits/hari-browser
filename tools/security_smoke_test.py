@@ -116,9 +116,13 @@ try:
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
     teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
     teen_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionTest.java")
+    browser_ui_text = read("app/src/main/java/com/haricalcx/haribrowser/BrowserUiText.java")
     check("Teen protection menu and protected navigation are wired",
-          '"Teen protection · "' in browser and "case 33:" in browser and
-          "protectSearchUrl(url)" in browser)
+          'ui("Teen protection")' in browser and '"Teen protection"' in browser_ui_text and
+          "case 33:" in browser and "protectSearchUrl(url)" in browser)
+    check("Teen protection label includes Indian-language translations",
+          'addExtras(all, "ml"' in browser_ui_text and '"ടീൻ സംരക്ഷണം"' in browser_ui_text and
+          'addExtras(all, "hi"' in browser_ui_text and '"किशोर सुरक्षा"' in browser_ui_text)
     check("Teen protection filters restricted URLs in main-frame requests",
           "request.isForMainFrame()" in browser and
           "TeenProtection.isBlockedUrl(requestUri.toString())" in browser)
@@ -269,8 +273,8 @@ try:
     gradle = read("app/build.gradle")
     check("Release code shrinking enabled", "minifyEnabled true" in gradle)
     check("Release resource shrinking enabled", "shrinkResources true" in gradle)
-    check("Build version advanced for 2.3 release",
-          "versionCode 7" in gradle and "versionName '2.3.0'" in gradle)
+    check("Build version advanced for 2.4 family release",
+          "versionCode 8" in gradle and "versionName '2.4.0'" in gradle)
     check("Teen protection JUnit dependency configured",
           "testImplementation 'junit:junit:4.13.2'" in gradle)
     check("CI runs release unit tests",
@@ -333,7 +337,7 @@ try:
           "hari-browser-one-time-release" not in build_workflow and
           "keytool -genkeypair" not in build_workflow)
     check("Missing stable signer produces only an unsigned validation artifact",
-          "dist/HariBrowser-2.3.0-unsigned.apk" in build_workflow and
+          "dist/HariBrowser-2.4.0-unsigned.apk" in build_workflow and
           "cannot be installed until signed with a stable release key" in build_workflow)
     secret_scan_workflow = read(".github/workflows/secret-scan.yml")
     check("Secret scanner uses complete Git history", "fetch-depth: 0" in secret_scan_workflow)

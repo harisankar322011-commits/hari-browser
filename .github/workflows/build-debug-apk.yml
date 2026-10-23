@@ -72,14 +72,14 @@ jobs:
           rm -f "$dex_tmp"
           echo "Debug APK size: $(stat -c '%s' "$apk") bytes"
           mkdir -p dist
-          cp "$apk" dist/HariBrowser-2.3.0-debug.apk
-          sha256sum dist/HariBrowser-2.3.0-debug.apk
+          cp "$apk" dist/HariBrowser-2.4.0-debug.apk
+          sha256sum dist/HariBrowser-2.4.0-debug.apk
 
       - name: Upload debug APK
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: hari-browser-2.3.0-debug-apk
-          path: dist/HariBrowser-2.3.0-debug.apk
+          name: hari-browser-2.4.0-debug-apk
+          path: dist/HariBrowser-2.4.0-debug.apk
           if-no-files-found: error
           compression-level: 0
           retention-days: 14

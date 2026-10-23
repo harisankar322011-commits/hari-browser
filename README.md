@@ -13,7 +13,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 | --- | --- |
 | Platform | Android |
 | Application ID | `com.haricalcx.haribrowser` |
-| Current source version | 2.3.0 (version code 7) |
+| Current source version | 2.4.0 (version code 8) |
 | Minimum Android version | Android 9 (API 28) |
 | Target / compile SDK | API 36 |
 | Runtime | Android System WebView |
@@ -32,7 +32,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 
 - DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
 - Address bar accepts a web address or search query. Optional voice search asks Android's selected speech-recognition service for text in the selected dashboard language; audio/transcript handling follows that service's own privacy policy.
-- Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader-style mode, adjustable text size, page sharing, and full-screen web video.
+- Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader-style mode, adjustable text size, page sharing, and full-screen web video. Reader-style mode uses responsive line spacing and system sans-serif fallback fonts to improve readability across Latin and Indic scripts; it changes page styling rather than extracting a clean article, so page-specific navigation and clutter may remain.
 - Optional **Read later** saves up to eight explicitly selected HTTPS pages as encrypted, text-only snapshots (up to 24,000 characters per page). It does not save images, live links, scripts, cookies, login sessions, or the full page layout; snapshots may be incomplete or out of date. Saving is disabled in Private mode, and saved pages can be removed individually or cleared.
 - QR-code generation, printing to PDF, bookmark import/export, and a directory of curated destinations covering education and Indian public services.
 - A home dashboard with quick actions, personal HTTPS shortcuts, offline wallpapers, themed colours, and local tools such as a calculator, unit converter, notes, password generator, JSON formatter, and text tools.
@@ -51,7 +51,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 
 ### Site-safety checks
 
-Hari Browser can review a destination before opening it. On-device URL heuristics flag selected suspicious patterns, including embedded credentials, punycode hostnames, IP-literal hosts, unusual HTTPS ports, long query strings, and some combinations associated with Indian banking or government-service impersonation scams.
+Hari Browser can review a destination before opening it. On-device URL heuristics flag selected suspicious patterns, including embedded credentials, punycode hostnames, IP-literal hosts, unusual HTTPS ports, long query strings, and some combinations associated with Indian banking or government-service impersonation scams. A separate non-blocking reminder appears when the URL contains login, OTP, KYC, Aadhaar, identity, or verification terms. It inspects the URL only—not page content—and prompts the user to verify the hostname; it is not a verdict that the site is malicious or trustworthy.
 
 Optional URLhaus reputation checks are available after explicit user confirmation, or through a separate opt-in for automatic checks. URLs are not sent for reputation checks from private browsing. URL-based heuristics and reputation services can miss threats, report false positives, or be unavailable. A warning-free result does **not** certify a website as safe.
 
@@ -77,7 +77,7 @@ Hari AI is designed to support India-focused responses, including ₹/INR, lakh/
 
 ### Languages and Indian-friendly features
 
-The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, core navigation labels, voice-search prompts, and family-safety guide title also use the selected language where translations are available. Many settings dialogs and all website content may still be in English. Voice recognition is handled by Android's selected speech service and follows that service's privacy policy. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
+The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, core navigation labels, Settings menu, voice-search prompts, and family-safety guide title use the selected language where translations are available. Some confirmation dialogs and all website content may still be in English. Voice recognition is handled by Android's selected speech service and follows that service's privacy policy. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
 
 ## Security and privacy limits
 
@@ -96,8 +96,8 @@ Use only builds linked from the official [Hari Browser repository](https://githu
 The repository's release workflow can produce a build artifact for family testing/sideloading. This is not a Google Play publishing workflow. Because the previously tested APK triggered a device-protection warning, do not install it or assume a newly built APK is safe until the exact artifact has been investigated and verified.
 
 1. Open the repository's **Actions** tab.
-2. Open the latest successful **Build Hari Browser Release APK** workflow run on `main`.
-3. Download the `hari-browser-2.3.0-release-apk` artifact and read the artifact's notes.
+2. Open the latest successful **Build Hari Browser Release APK** workflow run on `main` after the 2.4.0 change has merged.
+3. Download the `hari-browser-2.4.0-release-apk` artifact and read the artifact's notes.
 4. Check the APK filename and signing status before installation. An APK named `*-unsigned.apk` is not ready to install.
 5. Do not install or redistribute the previously flagged 2.3.0 APK until the Android device-protection alert has been investigated.
 

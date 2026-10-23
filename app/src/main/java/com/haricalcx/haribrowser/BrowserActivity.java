@@ -1065,6 +1065,13 @@ public class BrowserActivity extends ComponentActivity {
         }
         message.append("\n\nLocal checks run on this device and review URL patterns only; they do not certify the website or inspect all page content. ");
         message.append("India-focused scam checks look for selected impersonation and OTP/KYC/payment wording in the URL only; false positives and missed scams are possible. ");
+        if (SensitiveInfoReminder.shouldRemind(url)) {
+            message.append("\n\nSENSITIVE INFORMATION REMINDER\n");
+            message.append("This address contains login, verification, OTP, KYC, or identity-related words. ");
+            message.append("This is a URL-text clue only, not a verdict that the website is unsafe or trustworthy. ");
+            message.append("Before entering Aadhaar details or account/financial information, verify the exact hostname independently. ");
+            message.append("Never share an OTP, bank PIN, password, or recovery code with a caller, message sender, or support agent.");
+        }
         message.append("Android WebView certificate validation and Safe Browsing remain active during connection.");
         if (reputation != null) {
             message.append("\n\nThis URL was sent to URLhaus because online URL reputation is enabled in normal browsing.");
@@ -1951,52 +1958,52 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showSettings() {
         String[] options = {
-                (trackersEnabled() ? "✓ " : "○ ") + "Block ads and trackers",
-                (javascriptEnabled() ? "✓ " : "○ ") + "JavaScript (compatibility / risk)",
-                (desktopEnabled() ? "✓ " : "○ ") + "Desktop website mode",
-                (cookiesEnabled() ? "✓ " : "○ ") + "Allow first-party cookies",
-                (historyEnabled() ? "✓ " : "○ ") + "Save browsing history",
-                (currentTab() != null && currentTab().readerMode ? "✓ " : "○ ") + "Toggle reader-style view",
-                "Clear cookies, cache, site storage and history",
-                "Open downloads",
-                "Bookmarks",
-                "About privacy and security",
-                "Open private browsing",
-                "Share current page",
-                "Choose search engine",
-                (imagesEnabled() ? "✓ " : "○ ") + "Load website images",
-                "Choose page text size",
-                "Copy current page address",
-                "Translate current page to English",
-                "Open current page in another app",
-                "Duplicate current tab",
-                "Close other tabs",
-                "Restore last closed tab",
-                "Export bookmarks",
-                "Import bookmarks",
-                (darkTheme() ? "✓ " : "○ ") + "Dark browser theme",
-                "Site security details",
-                "Emergency clear browsing data",
-                "Show QR code for current page",
-                "Print / save current page as PDF",
-                "Choose home page language",
-                "Choose browser accent colour",
-                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + "Maximum anti-fingerprinting shield",
-                "About Hari Browser - What's new in 2.3",
-                "Hari AI · API settings",
-                "Teen protection · " + (teenProtectionEnabled() ? "ON" : "OFF"),
-                "Security & privacy scan",
-                "Site permission controls",
-                (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
-                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
-                "Hari Antivirus · scan a file and manage quarantine",
-                (dataSaverEnabled() ? "✓ " : "○ ") + "Lite mode · block images and known trackers",
+                (trackersEnabled() ? "✓ " : "○ ") + ui("Block ads and trackers"),
+                (javascriptEnabled() ? "✓ " : "○ ") + ui("JavaScript (compatibility / risk)"),
+                (desktopEnabled() ? "✓ " : "○ ") + ui("Desktop website mode"),
+                (cookiesEnabled() ? "✓ " : "○ ") + ui("Allow first-party cookies"),
+                (historyEnabled() ? "✓ " : "○ ") + ui("Save browsing history"),
+                (currentTab() != null && currentTab().readerMode ? "✓ " : "○ ") + ui("Toggle reader-style view"),
+                ui("Clear cookies, cache, site storage and history"),
+                ui("Open downloads"),
+                ui("Bookmarks"),
+                ui("About privacy and security"),
+                ui("Open private browsing"),
+                ui("Share current page"),
+                ui("Choose search engine"),
+                (imagesEnabled() ? "✓ " : "○ ") + ui("Load website images"),
+                ui("Choose page text size"),
+                ui("Copy current page address"),
+                ui("Translate current page to English"),
+                ui("Open current page in another app"),
+                ui("Duplicate current tab"),
+                ui("Close other tabs"),
+                ui("Restore last closed tab"),
+                ui("Export bookmarks"),
+                ui("Import bookmarks"),
+                (darkTheme() ? "✓ " : "○ ") + ui("Dark browser theme"),
+                ui("Site security details"),
+                ui("Emergency clear browsing data"),
+                ui("Show QR code for current page"),
+                ui("Print / save current page as PDF"),
+                ui("Choose home page language"),
+                ui("Choose browser accent colour"),
+                (fingerprintProtectionEnabled() ? "✓ " : "○ ") + ui("Maximum anti-fingerprinting shield"),
+                ui("About Hari Browser - What's new in 2.4"),
+                ui("Hari AI · API settings"),
+                ui("Teen protection") + " · " + (teenProtectionEnabled() ? "ON" : "OFF"),
+                ui("Security & privacy scan"),
+                ui("Site permission controls"),
+                (privateMode ? ui("Clear browsing data on exit (automatic in private mode)") :
+                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + ui("Clear browsing data on browser exit")),
+                ui("Hari Antivirus · scan a file and manage quarantine"),
+                (dataSaverEnabled() ? "✓ " : "○ ") + ui("Lite mode · block images and known trackers"),
                 ui("Family safety guide"),
-                "Save current page for offline reading",
-                "Read saved pages (offline text)"
+                ui("Save current page for offline reading"),
+                ui("Read saved pages (offline text)")
         };
         new AlertDialog.Builder(this)
-                .setTitle(privateMode ? "Private settings" : "Settings")
+                .setTitle(privateMode ? ui("Private settings") : ui("Settings"))
                 .setItems(options, (dialog, which) -> {
                     switch (which) {
                         case 0:
@@ -2504,7 +2511,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showAboutDialog() {
         String message =
-                "Version 2.3.0\n\n" +
+                "Version 2.4.0\n\n" +
                 "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
                 "- Home page available in ten Indian languages plus English, Spanish, French and Arabic\n" +
                 "- Search-engine choice now persists from the home screen\n" +
@@ -2517,7 +2524,7 @@ public class BrowserActivity extends ComponentActivity {
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
                 "Privacy note: tracker blocking and Teen Protection are best-effort. Some search providers control their own filtering, and websites or your selected search provider still receive the requests needed to load services.";
         new AlertDialog.Builder(this)
-                .setTitle("Hari Browser 2.3")
+                .setTitle("Hari Browser 2.4")
                 .setMessage(message)
                 .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
                 .setPositiveButton("Done", null)
@@ -3049,14 +3056,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void applyReaderStyles(Tab tab) {
         if (tab == null || tab.webView == null) return;
-        String js = "(function(){var old=document.getElementById('hari-reader-style');" +
-                "if(old)old.remove();var s=document.createElement('style');s.id='hari-reader-style';" +
-                "s.textContent='body{max-width:780px!important;margin:24px auto!important;padding:18px!important;" +
-                "font-family:Georgia,serif!important;font-size:20px!important;line-height:1.8!important;" +
-                "background:#fff!important;color:#172033!important}img,video,iframe,nav,aside,footer,header," +
-                "[role=banner],[role=navigation],.ad,.ads,.advertisement{max-width:100%!important}' ;" +
-                "document.head.appendChild(s);})();";
-        tab.webView.evaluateJavascript(js, null);
+        tab.webView.evaluateJavascript(ReaderModeStyles.documentStyleScript(), null);
     }
 
     private void confirmClearData() {
