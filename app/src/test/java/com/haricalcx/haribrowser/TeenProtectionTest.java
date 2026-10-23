@@ -25,6 +25,12 @@ public class TeenProtectionTest {
         assertEquals("adult videos", TeenProtection.extractSearchQuery("https://www.google.com/search?q=adult%20videos"));
         assertEquals("porn photos", TeenProtection.extractSearchQuery("https://duckduckgo.com/?q=porn+photos&kp=1"));
         assertEquals("porn", TeenProtection.extractSearchQuery("https://www.startpage.com/sp/search?query=porn"));
+        assertEquals("adult videos", TeenProtection.extractSearchQuery("https://search.yahoo.com/search?p=adult%20videos"));
+        assertEquals("porn", TeenProtection.extractSearchQuery("https://www.ecosia.org/search?q=porn"));
+        assertEquals("xxx photos", TeenProtection.extractSearchQuery("https://www.mojeek.com/search?q=xxx+photos"));
+        assertEquals("nude", TeenProtection.extractSearchQuery("https://www.qwant.com/?q=nude"));
+        assertEquals("casino", TeenProtection.extractSearchQuery("https://www.yandex.com/search/?text=casino"));
+        assertEquals("adult videos", TeenProtection.extractSearchQuery("https://www.baidu.com/s?wd=adult%20videos"));
         assertNull(TeenProtection.extractSearchQuery("https://example.com/?q=porn"));
     }
 
@@ -34,6 +40,12 @@ public class TeenProtectionTest {
         assertTrue(TeenProtection.isBlockedSearchUrl("https://www.bing.com/search?q=adult%20videos"));
         assertTrue(TeenProtection.isBlockedSearchUrl("https://search.brave.com/search?q=hentai"));
         assertTrue(TeenProtection.isBlockedSearchUrl("https://duckduckgo.com/?q=sex+videos"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://www.ecosia.org/search?q=porn"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://search.yahoo.com/search?p=adult+videos"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://www.mojeek.com/search?q=hentai"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://www.qwant.com/?q=xxx"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://www.yandex.com/search/?text=online+casino"));
+        assertTrue(TeenProtection.isBlockedSearchUrl("https://www.baidu.com/s?wd=porn"));
         assertFalse(TeenProtection.isBlockedSearchUrl("https://www.google.com/search?q=sex%20education"));
         assertTrue(TeenProtection.isBlockedSearchUrl("https://www.google.com/search?q=p.o.r.n+videos"));
         assertFalse(TeenProtection.isBlockedSearchUrl("https://www.google.com/search?q=porn+addiction+help"));
@@ -51,11 +63,16 @@ public class TeenProtectionTest {
     }
 
     @Test
-    public void forcesGoogleBingDuckDuckGoAndBraveSafeSearch() {
+    public void forcesGoogleBingDuckDuckGoBraveAndYahooSafeSearch() {
         assertTrue(TeenProtection.withStrictSafeSearch("https://www.google.com/search?q=math").contains("safe=active"));
         assertTrue(TeenProtection.withStrictSafeSearch("https://www.bing.com/search?q=math").contains("adlt=strict"));
         assertTrue(TeenProtection.withStrictSafeSearch("https://duckduckgo.com/?q=math").contains("kp=1"));
         assertTrue(TeenProtection.withStrictSafeSearch("https://search.brave.com/search?q=math").contains("safesearch=strict"));
+        String yahoo = TeenProtection.withStrictSafeSearch("https://search.yahoo.com/search?p=math&vm=off&vm=n");
+        assertTrue(yahoo.contains("vm=r"));
+        assertFalse(yahoo.contains("vm=off"));
+        assertFalse(yahoo.contains("vm=n"));
+        assertEquals(1, yahoo.split("vm=r", -1).length - 1);
     }
 
     @Test
@@ -82,6 +99,10 @@ public class TeenProtectionTest {
         assertEquals("https://www.google.com/", TeenProtection.withStrictSafeSearch("https://www.google.com/"));
         assertEquals("https://www.startpage.com/sp/search?query=math",
                 TeenProtection.withStrictSafeSearch("https://www.startpage.com/sp/search?query=math"));
+        assertEquals("https://www.ecosia.org/search?q=math",
+                TeenProtection.withStrictSafeSearch("https://www.ecosia.org/search?q=math"));
+        assertEquals("https://www.yandex.com/search/?text=math",
+                TeenProtection.withStrictSafeSearch("https://www.yandex.com/search/?text=math"));
     }
 
     @Test
