@@ -195,7 +195,7 @@ public final class CryptographyActivity extends ComponentActivity {
         });
     }
 
-    private final class CryptoFileBridge {
+    public final class CryptoFileBridge {
         @JavascriptInterface
         public void saveFileBase64(String encoded, String filename, String mimeType, String statusId) {
             String safeStatus = "textStatus".equals(statusId) ? "textStatus" : "fileStatus";
