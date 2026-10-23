@@ -94,6 +94,25 @@ public class TeenProtectionTest {
     }
 
     @Test
+    public void filtersGenericSearchResultRoutesWithoutRewritingTheirSafeSearchSettings() {
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://search.example/search?q=porn+videos"));
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://portal.example/results.php?query=online+satta"));
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://site.example/web-search?term=adult+videos"));
+        assertTrue(TeenProtection.isBlockedSearchUrl(
+                "https://site.example/find?wd=online+casino"));
+
+        assertFalse(TeenProtection.isBlockedSearchUrl(
+                "https://site.example/article?q=porn+videos"));
+        assertFalse(TeenProtection.isBlockedSearchUrl(
+                "https://site.example/search?query=weather"));
+        assertEquals("https://search.example/search?q=porn",
+                TeenProtection.withStrictSafeSearch("https://search.example/search?q=porn"));
+    }
+
+    @Test
     public void doesNotRewriteNonSearchPagesOrUnsupportedProviders() {
         assertEquals("https://example.com/page?q=math", TeenProtection.withStrictSafeSearch("https://example.com/page?q=math"));
         assertEquals("https://www.google.com/", TeenProtection.withStrictSafeSearch("https://www.google.com/"));

@@ -63,7 +63,7 @@ Optional MalwareBazaar hash reputation can send a file's SHA-256 hash to the ser
 
 ### Optional Teen Protection
 
-Teen Protection can be enabled in Settings and protected by a parent PIN. It uses local phrase checks, selected domain rules, and strict-search preferences for supported search providers. It aims to block selected explicit adult-content, gambling, graphic-violence, self-harm-instruction, dangerous weapon/explosive-instruction, and illegal-drug purchase/manufacture searches while allowing prevention, educational, and help-seeking searches where possible.
+Teen Protection can be enabled in Settings and protected by a parent PIN. It uses local phrase checks, selected domain rules, and strict-search preferences for supported search providers. For unrecognized providers, it also checks query parameters on URL paths that clearly identify search-result pages; it does not inspect page contents or all search forms. It aims to block selected explicit adult-content, gambling, graphic-violence, self-harm-instruction, dangerous weapon/explosive-instruction, and illegal-drug purchase/manufacture searches while allowing prevention, educational, and help-seeking searches where possible.
 
 Teen Protection is **not foolproof**. Startpage's filtering is controlled by Startpage itself, so Hari Browser does not enforce strict mode there. Search providers behave differently; altered wording, other languages, content inside pages, images, videos, other apps, or another browser may bypass it. It can also block legitimate searches. Anyone with sufficient access to the device may bypass the app-level PIN by clearing app data or uninstalling the app. For device-wide supervision, use Android parental controls or Google Family Link.
 
@@ -71,7 +71,7 @@ Teen Protection is **not foolproof**. Startpage's filtering is controlled by Sta
 
 Hari AI is available from the home screen when configured. Add an API key in **Settings → Hari AI · API settings**, then use the connection test before chatting. The key is encrypted on the device using Android Keystore-backed storage, and chat context is kept in memory rather than saved as a transcript. **When you send a prompt, it is transmitted to the AI service configured by you** and requires internet access and a valid API key. Review that provider's privacy terms before use.
 
-Hari AI is designed to support India-focused responses, including ₹/INR, lakh/crore conventions, IST, and supported Indian languages. It is optional and is not required for normal browsing.
+Hari AI is designed to support India-focused responses, including ₹/INR, lakh/crore conventions, IST, and supported Indian languages. It first tries a small set of preferred Flash models and, only if all are unavailable, asks the Gemini API for models available to the supplied key and retries eligible text-generation Flash models. It is optional and is not required for normal browsing.
 
 ### Languages and Indian-friendly features
 

@@ -224,7 +224,9 @@ final class TeenProtection {
         if (uri == null || uri.getHost() == null) return null;
         String host = uri.getHost().toLowerCase(Locale.ROOT);
         String key = queryKeyForHost(host);
-        if (key == null || uri.getRawQuery() == null) return null;
+        if (uri.getRawQuery() == null) return null;
+        if (key == null) key = genericSearchQueryKey(uri.getPath(), uri.getRawQuery());
+        if (key == null) return null;
         for (String parameter : uri.getRawQuery().split("&")) {
             int split = parameter.indexOf('=');
             String rawName = split < 0 ? parameter : parameter.substring(0, split);
@@ -325,6 +327,42 @@ final class TeenProtection {
         } catch (GeneralSecurityException | IllegalArgumentException ignored) {
             return false;
         }
+    }
+
+    /**
+     * For unrecognized providers, apply the local phrase filter only on paths that
+     * clearly represent search results. This intentionally does not rewrite
+     * SafeSearch settings for arbitrary sites.
+     */
+    private static String genericSearchQueryKey(String path, String rawQuery) {
+        if (path == null || rawQuery == null) return null;
+        String normalizedPath = path.toLowerCase(Locale.ROOT);
+        boolean searchResultsPath = false;
+        String[] segments = normalizedPath.split("/");
+        for (String segment : segments) {
+            int extension = segment.indexOf('.');
+            String route = extension < 0 ? segment : segment.substring(0, extension);
+            if ("search".equals(route) || "results".equals(route)
+                    || "search-results".equals(route) || "searchresults".equals(route)
+                    || "find".equals(route) || "web-search".equals(route)
+                    || "websearch".equals(route)) {
+                searchResultsPath = true;
+                break;
+            }
+        }
+        if (!searchResultsPath) return null;
+
+        String[] queryKeys = {"q", "query", "term", "text", "wd", "p",
+                "search_query", "keyword", "keywords"};
+        for (String parameter : rawQuery.split("&")) {
+            int split = parameter.indexOf('=');
+            String rawName = split < 0 ? parameter : parameter.substring(0, split);
+            String decodedName = decode(rawName);
+            for (String queryKey : queryKeys) {
+                if (queryKey.equalsIgnoreCase(decodedName)) return queryKey;
+            }
+        }
+        return null;
     }
 
     private static String queryKeyForHost(String host) {

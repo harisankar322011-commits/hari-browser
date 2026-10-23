@@ -21,6 +21,36 @@ public class HariAiClientTest {
     }
 
     @Test
+    public void discoversOnlyAvailableGeminiFlashTextModelsInStablePriorityOrder() throws Exception {
+        String response = "{\"models\":["
+                + "{\"name\":\"models/gemini-3.8-flash\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                + "{\"name\":\"models/gemini-3.5-flash-lite\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                + "{\"name\":\"models/gemini-3.1-flash-lite\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                + "{\"name\":\"models/gemini-3.1-flash-image\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                + "{\"name\":\"models/gemini-3.5-flash-tts\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                + "{\"name\":\"models/gemma-4-31b-it\",\"supportedGenerationMethods\":[\"generateContent\"]},"
+                + "{\"name\":\"models/gemini-3.6-flash\",\"supportedGenerationMethods\":[\"embedContent\"]}"
+                + "]}";
+        assertEquals(java.util.Arrays.asList(
+                        "gemini-3.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.8-flash"),
+                HariAiClient.parseAvailableFlashModels(response));
+    }
+
+    @Test
+    public void modelListEndpointDoesNotEmbedAnApiKey() {
+        assertEquals("https://generativelanguage.googleapis.com/v1beta/models",
+                HariAiClient.modelsEndpoint());
+    }
+
+    @Test
+    public void modelDiscoveryHandlesEmptyAndMalformedResponses() throws Exception {
+        assertTrue(HariAiClient.parseAvailableFlashModels("{\"models\":[] }").isEmpty());
+        assertTrue(HariAiClient.parseAvailableFlashModels("{}").isEmpty());
+        assertThrows(java.io.IOException.class,
+                () -> HariAiClient.parseAvailableFlashModels("not-json"));
+    }
+
+    @Test
     public void endpointBuilderRejectsMalformedModelIdentifiers() {
         assertThrows(IllegalArgumentException.class,
                 () -> HariAiClient.endpointForModel("https://example.com/"));
