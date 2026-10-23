@@ -104,6 +104,7 @@ public class BrowserActivity extends ComponentActivity {
     private static final String HOME_URL = "https://hari-browser-home.invalid/";
     private static final String KEY_BOOKMARKS = "bookmarks_v1";
     private static final String KEY_HISTORY = "history_v1";
+    private static final String KEY_READ_LATER = "read_later_v1";
     private static final String KEY_HARI_AI_API_KEY = "hari_ai_api_key_v1";
     private static final int MAX_HARI_AI_PROMPT_CHARS = 6000;
 
@@ -1990,7 +1991,9 @@ public class BrowserActivity extends ComponentActivity {
                         (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
                 "Hari Antivirus · scan a file and manage quarantine",
                 (dataSaverEnabled() ? "✓ " : "○ ") + "Lite mode · block images and known trackers",
-                ui("Family safety guide")
+                ui("Family safety guide"),
+                "Save current page for offline reading",
+                "Read saved pages (offline text)"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -2172,6 +2175,12 @@ public class BrowserActivity extends ComponentActivity {
                         case 39:
                             showFamilySafetyGuide();
                             break;
+                        case 40:
+                            saveCurrentPageForOfflineReading();
+                            break;
+                        case 41:
+                            showSavedPages();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -2193,6 +2202,129 @@ public class BrowserActivity extends ComponentActivity {
                 .setMessage(message)
                 .setPositiveButton("OK", null)
                 .setNeutralButton("Site security details", (dialog, which) -> showSiteSecurity())
+                .show();
+    }
+
+    private void saveCurrentPageForOfflineReading() {
+        if (privateMode) {
+            showToast("Offline reading is disabled in Private mode so private pages are not persisted.");
+            return;
+        }
+        Tab tab = currentTab();
+        if (tab == null || tab.home || tab.webView == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS website first to save its readable text.");
+            return;
+        }
+        final String pageUrl = tab.url;
+        final String pageTitle = tab.title == null || tab.title.trim().isEmpty()
+                ? safeHost(pageUrl) : tab.title.trim();
+        try {
+            tab.webView.evaluateJavascript(
+                    "(function(){try{return document.body ? document.body.innerText.slice(0,24000) : '';}catch(e){return '';}})()",
+                    encodedText -> {
+                        String body = OfflineReading.decodeJavascriptString(encodedText);
+                        if (body.isEmpty()) {
+                            showToast("No readable page text was available to save.");
+                            return;
+                        }
+                        String existing = secureStore.get(KEY_READ_LATER, "[]");
+                        final JSONArray updated;
+                        try {
+                            updated = OfflineReading.addOrReplace(existing, pageTitle,
+                                    pageUrl, body, System.currentTimeMillis());
+                        } catch (IllegalArgumentException invalidPage) {
+                            showToast("This address or page could not be saved safely.");
+                            return;
+                        }
+                        String serialized = updated.toString();
+                        secureStore.put(KEY_READ_LATER, serialized);
+                        if (!serialized.equals(secureStore.get(KEY_READ_LATER, ""))) {
+                            showToast("The offline snapshot could not be stored securely.");
+                            return;
+                        }
+                        showToast("Saved a text-only offline snapshot. Images, links, scripts and cookies are not saved.");
+                    });
+        } catch (RuntimeException unavailable) {
+            showToast("Could not capture this page for offline reading.");
+        }
+    }
+
+    private void showSavedPages() {
+        if (privateMode) {
+            showToast("Saved pages are available only in normal browsing, not Private mode.");
+            return;
+        }
+        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"));
+        if (saved.length() == 0) {
+            new AlertDialog.Builder(this).setTitle("Saved pages")
+                    .setMessage("No offline reading snapshots yet. Open an HTTPS page and choose 'Save current page for offline reading'.")
+                    .setPositiveButton("OK", null).show();
+            return;
+        }
+        String[] labels = new String[saved.length()];
+        String[] urls = new String[saved.length()];
+        for (int i = 0; i < saved.length(); i++) {
+            JSONObject item = saved.optJSONObject(i);
+            if (item == null) {
+                labels[i] = "Saved page";
+                urls[i] = "";
+                continue;
+            }
+            String title = item.optString("title", "Saved page");
+            urls[i] = item.optString("url", "");
+            labels[i] = title + "  —  " + safeHost(urls[i]);
+        }
+        new AlertDialog.Builder(this).setTitle("Saved pages · text only")
+                .setItems(labels, (dialog, which) -> showSavedPage(urls[which]))
+                .setNeutralButton("Clear all", (dialog, which) ->
+                        new AlertDialog.Builder(this)
+                                .setTitle("Clear saved pages?")
+                                .setMessage("This removes all encrypted offline text snapshots from this browser profile.")
+                                .setNegativeButton("Cancel", null)
+                                .setPositiveButton("Clear saved pages", (confirm, selected) -> {
+                                    secureStore.put(KEY_READ_LATER, "[]");
+                                    showToast("Offline saved pages cleared.");
+                                }).show())
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void showSavedPage(String pageUrl) {
+        if (pageUrl == null || pageUrl.isEmpty()) return;
+        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"));
+        JSONObject selected = null;
+        for (int i = 0; i < saved.length(); i++) {
+            JSONObject item = saved.optJSONObject(i);
+            if (item != null && pageUrl.equals(item.optString("url", ""))) {
+                selected = item;
+                break;
+            }
+        }
+        if (selected == null) {
+            showToast("That offline snapshot is no longer available.");
+            return;
+        }
+        String title = selected.optString("title", "Saved page");
+        String body = selected.optString("body", "");
+        ScrollView scroll = new ScrollView(this);
+        TextView text = new TextView(this);
+        text.setText(body);
+        text.setTextSize(16);
+        text.setTextColor(INK);
+        text.setTextIsSelectable(true);
+        text.setPadding(dp(16), dp(12), dp(16), dp(16));
+        scroll.addView(text, new ScrollView.LayoutParams(-1, -2));
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(pageUrl + "\n\nText-only saved copy. It is offline and may be out of date.")
+                .setView(scroll)
+                .setPositiveButton("Close", null)
+                .setNeutralButton("Remove saved page", (dialog, which) -> {
+                    String current = secureStore.get(KEY_READ_LATER, "[]");
+                    secureStore.put(KEY_READ_LATER,
+                            OfflineReading.removeByUrl(current, pageUrl).toString());
+                    showToast("Offline snapshot removed.");
+                })
                 .show();
     }
 
