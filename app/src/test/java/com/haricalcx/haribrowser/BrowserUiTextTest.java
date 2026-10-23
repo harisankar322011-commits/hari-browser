@@ -31,10 +31,12 @@ public class BrowserUiTextTest {
                 "es", "fr", "ar"
         };
         for (String language : languages) {
-            assertNotEquals(language, "Block ads and trackers",
-                    BrowserUiText.translate(language, "Block ads and trackers"));
-            assertNotEquals(language, "Choose search engine",
-                    BrowserUiText.translate(language, "Choose search engine"));
+            assertFalse("Block ads and trackers should be translated for " + language,
+                    "Block ads and trackers".equals(
+                            BrowserUiText.translate(language, "Block ads and trackers")));
+            assertFalse("Choose search engine should be translated for " + language,
+                    "Choose search engine".equals(
+                            BrowserUiText.translate(language, "Choose search engine")));
         }
     }
 
