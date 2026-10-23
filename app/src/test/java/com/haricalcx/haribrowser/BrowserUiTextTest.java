@@ -25,6 +25,20 @@ public class BrowserUiTextTest {
     }
 
     @Test
+    public void translatesSettingsLabelsForEveryNonEnglishDashboardLocale() {
+        String[] languages = {
+                "ml", "hi", "ta", "te", "kn", "bn", "mr", "gu", "pa", "ur",
+                "es", "fr", "ar"
+        };
+        for (String language : languages) {
+            assertNotEquals(language, "Block ads and trackers",
+                    BrowserUiText.translate(language, "Block ads and trackers"));
+            assertNotEquals(language, "Choose search engine",
+                    BrowserUiText.translate(language, "Choose search engine"));
+        }
+    }
+
+    @Test
     public void keepsUnknownAndUntranslatedLabelsInEnglish() {
         assertEquals("Custom label", BrowserUiText.translate("ml", "Custom label"));
         assertEquals("Settings", BrowserUiText.translate("unknown", "Settings"));
