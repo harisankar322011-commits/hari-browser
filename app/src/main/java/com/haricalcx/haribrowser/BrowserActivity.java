@@ -3049,21 +3049,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void applyReaderStyles(Tab tab) {
         if (tab == null || tab.webView == null) return;
-        String js = "(function(){var old=document.getElementById('hari-reader-style');" +
-                "if(old)old.remove();var s=document.createElement('style');s.id='hari-reader-style';" +
-                "s.textContent='html{background:#fff!important;color:#172033!important}' +" +
-                "'body{box-sizing:border-box!important;width:auto!important;max-width:780px!important;" +
-                "margin:0 auto!important;padding:clamp(16px,4vw,28px)!important;" +
-                "font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif!important;" +
-                "font-size:19px!important;line-height:1.8!important;overflow-wrap:break-word!important;" +
-                "word-break:normal!important;background:#fff!important;color:#172033!important}' +" +
-                "'body *{font-family:inherit!important;line-height:inherit!important}' +" +
-                "'p,li,blockquote,pre,td,th{margin-top:.75em!important;margin-bottom:.75em!important}' +" +
-                "'img,video,iframe{max-width:100%!important;height:auto!important}' +" +
-                "'nav,aside,footer,[role=navigation],.advertisement,.advert,.ads,.ad-slot,.social-share," +
-                ".cookie-banner,.newsletter-signup{max-width:100%!important}' ;" +
-                "document.head.appendChild(s);})();";
-        tab.webView.evaluateJavascript(js, null);
+        tab.webView.evaluateJavascript(ReaderModeStyles.documentStyleScript(), null);
     }
 
     private void confirmClearData() {
