@@ -128,7 +128,7 @@ public final class OfficialDomainRegistry {
         while (host.endsWith(".")) host = host.substring(0, host.length() - 1);
         if (host.isEmpty() || host.length() > 253 || host.indexOf('/') >= 0
                 || host.indexOf(':') >= 0 || host.indexOf('@') >= 0
-                || host.indexOf(' ') >= 0 || host.indexOf('\\t') >= 0) return null;
+                || host.indexOf(' ') >= 0 || host.indexOf('\t') >= 0) return null;
         String[] labels = host.split("\\.", -1);
         if (labels.length < 2) return null;
         for (String label : labels) {
