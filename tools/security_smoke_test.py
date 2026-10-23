@@ -199,7 +199,29 @@ try:
     check("Hari AI key uses the encrypted store",
           "secureStore.put(KEY_HARI_AI_API_KEY, value)" in browser and
           'secureStore.get(KEY_HARI_AI_API_KEY, "")' in browser)
-    check("No JavaScript-to-native bridge", re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
+    check("No JavaScript-to-native bridge in the general browser WebView",
+          re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
+    crypto_html = read("app/src/main/assets/hari_cryptography.html")
+    crypto_activity = read("app/src/main/java/com/haricalcx/haribrowser/CryptographyActivity.java")
+    crypto_policy = read("app/src/main/java/com/haricalcx/haribrowser/CryptographySecurityPolicy.java")
+    check("Cryptography page uses local authenticated encryption and denies remote connections",
+          "AES-GCM" in crypto_html and "PBKDF2-HMAC-SHA-256" in crypto_html and
+          "connect-src 'none'" in crypto_html and "frame-src 'none'" in crypto_html and
+          "MAX_BYTES = 8 * 1024 * 1024" in crypto_html)
+    check("Cryptography WebView is restricted to its bundled asset origin",
+          "WebViewAssetLoader" in crypto_activity and
+          "settings.setAllowFileAccess(false)" in crypto_activity and
+          "settings.setAllowContentAccess(false)" in crypto_activity and
+          "shouldInterceptRequest" in crypto_activity and
+          "CryptographySecurityPolicy.isAllowedAssetUrl" in crypto_activity and
+          'ASSET_HOST = "appassets.androidplatform.net"' in crypto_policy)
+    check("Cryptography save bridge is bounded and invokes Android's save picker",
+          "MAX_BRIDGE_BASE64_CHARS" in crypto_activity and
+          "MAX_OUTPUT_BYTES" in crypto_activity and
+          "Intent.ACTION_CREATE_DOCUMENT" in crypto_activity and
+          "Arrays.fill(decoded, (byte) 0)" in crypto_activity)
+    check("Cryptography toolbox action reaches its dedicated native screen",
+          "action/cryptography" in home_page and 'case "cryptography":' in browser)
     check("Debugging is never turned on in source",
           re.search(r"setWebContentsDebuggingEnabled\s*\(\s*true\s*\)", browser) is None)
 
