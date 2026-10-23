@@ -33,6 +33,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 - DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
 - Address bar accepts a web address or search query. Optional voice search asks Android's selected speech-recognition service for text in the selected dashboard language; audio/transcript handling follows that service's own privacy policy.
 - Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader-style mode, adjustable text size, page sharing, and full-screen web video.
+- Optional **Read later** saves up to eight explicitly selected HTTPS pages as encrypted, text-only snapshots (up to 24,000 characters per page). It does not save images, live links, scripts, cookies, login sessions, or the full page layout; snapshots may be incomplete or out of date. Saving is disabled in Private mode, and saved pages can be removed individually or cleared.
 - QR-code generation, printing to PDF, bookmark import/export, and a directory of curated destinations covering education and Indian public services.
 - A home dashboard with quick actions, personal HTTPS shortcuts, offline wallpapers, themed colours, and local tools such as a calculator, unit converter, notes, password generator, JSON formatter, and text tools.
 
@@ -56,7 +57,7 @@ Optional URLhaus reputation checks are available after explicit user confirmatio
 
 ### Hari Antivirus and download checks
 
-Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker is intentionally kept out of production scanner bytecode to avoid triggering device-protection heuristics; this does not make the scanner a full antivirus engine.
+Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker was removed from production scanner bytecode as a precaution after a device-protection warning; Samsung has not confirmed the warning's cause, so this change alone does not establish that the alert is resolved. This does not make the scanner a full antivirus engine.
 
 Optional MalwareBazaar hash reputation can send a file's SHA-256 hash to the service when the user configures an Auth-Key. The file contents and filename are not uploaded for that lookup. Optional URLhaus checks share only the URL being checked. These online checks are off until configured or explicitly enabled, and private browsing does not send hashes or URLs for reputation checks.
 
@@ -76,11 +77,11 @@ Hari AI is designed to support India-focused responses, including ₹/INR, lakh/
 
 ### Languages and Indian-friendly features
 
-The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, main navigation labels, voice-search prompts, and family-safety guide title also use the selected language where translations are available. Many settings dialogs and all website content may still be in English. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
+The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, core navigation labels, voice-search prompts, and family-safety guide title also use the selected language where translations are available. Many settings dialogs and all website content may still be in English. Voice recognition is handled by Android's selected speech service and follows that service's privacy policy. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
 
 ## Security and privacy limits
 
-Hari Browser is intended for family use and reduces some common risks, but it does not guarantee anonymity, prevent every tracking technique, or certify the safety of a website or file. Its local family-safety guide explains the main limits and safe browsing habits.
+Hari Browser is intended for family use and reduces some common risks, but it does not guarantee anonymity, prevent every tracking technique, or certify the safety of a website or file. Its local family-safety guide explains safe browsing habits, the limits of Teen Protection and file checks, and how external AI/voice services may process submitted content.
 
 - Websites and search providers still receive the requests needed to deliver content. External services receive data whenever you choose to use them—for example, when you use Hari AI, translate a page with Google Translate, or opt in to reputation checks.
 - Private mode helps separate browser data, but cannot erase downloads you explicitly save, screenshots, network/provider logs, or every trace outside the app's control. Exit cleanup is best-effort.
