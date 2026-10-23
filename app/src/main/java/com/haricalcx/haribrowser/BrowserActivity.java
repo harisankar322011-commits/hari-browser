@@ -162,6 +162,7 @@ public class BrowserActivity extends ComponentActivity {
         return true;
     }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
+    private boolean dataSaverEnabled() { return settings.getBoolean("lite_mode_enabled", false); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
         // Preserve the current WebView engine version while removing model/build identifiers.
@@ -598,7 +599,7 @@ public class BrowserActivity extends ComponentActivity {
         WebView webView = tab.webView;
         WebSettings web = webView.getSettings();
         web.setJavaScriptEnabled(javascriptEnabled());
-        web.setBlockNetworkImage(!tab.home && !imagesEnabled());
+        web.setBlockNetworkImage(!tab.home && (!imagesEnabled() || dataSaverEnabled()));
         web.setTextZoom(textZoom());
         web.setDomStorageEnabled(true);
         web.setAllowFileAccess(false);
@@ -660,7 +661,7 @@ public class BrowserActivity extends ComponentActivity {
                                 new ByteArrayInputStream(new byte[0]));
                     }
                 }
-                return PrivacyGuard.intercept(request, trackersEnabled());
+                return PrivacyGuard.intercept(request, trackersEnabled() || dataSaverEnabled());
             }
 
             @Override
@@ -933,7 +934,7 @@ public class BrowserActivity extends ComponentActivity {
         tab.home = false;
         tab.readerMode = false;
         tab.webView.getSettings().setJavaScriptEnabled(javascriptEnabled());
-        tab.webView.getSettings().setBlockNetworkImage(!imagesEnabled());
+        tab.webView.getSettings().setBlockNetworkImage(!imagesEnabled() || dataSaverEnabled());
         tab.url = url;
         tab.webView.loadUrl(url);
         updateTabControls();
@@ -1932,7 +1933,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Site permission controls",
                 (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
                         (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
-                "Hari Antivirus · scan a file and manage quarantine"
+                "Hari Antivirus · scan a file and manage quarantine",
+                (dataSaverEnabled() ? "✓ " : "○ ") + "Lite mode · block images and known trackers"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -2098,6 +2100,18 @@ public class BrowserActivity extends ComponentActivity {
                             Intent antivirusIntent = new Intent(BrowserActivity.this, AntivirusActivity.class);
                             antivirusIntent.putExtra("private_mode", privateMode);
                             startActivity(antivirusIntent);
+                            break;
+                        case 38:
+                            boolean liteMode = !dataSaverEnabled();
+                            settings.edit().putBoolean("lite_mode_enabled", liteMode).apply();
+                            reconfigureWebViews();
+                            Tab liteTab = currentTab();
+                            if (liteMode && liteTab != null && !liteTab.home && liteTab.webView != null) {
+                                liteTab.webView.reload();
+                            }
+                            showToast(liteMode
+                                    ? "Lite mode enabled: website images and known tracker requests are blocked. Data savings are not estimated."
+                                    : "Lite mode disabled. Your separate image and tracker settings apply.");
                             break;
                     }
                 })
