@@ -291,6 +291,16 @@ try:
         check(f"Checkout credentials not persisted ({workflow_name})",
               "actions/checkout@" not in workflow or "persist-credentials: false" in workflow)
     build_workflow = read(".github/workflows/build-apk.yml")
+    debug_build_workflow = read(".github/workflows/build-debug-apk.yml")
+    codeql_workflow = read(".github/workflows/codeql.yml")
+    wrapper_properties = read("gradle/wrapper/gradle-wrapper.properties")
+    check("Every Android CI build uses the checksum-pinned Gradle wrapper",
+          "distributionSha256Sum=" in wrapper_properties and
+          "./gradlew --no-daemon" in build_workflow and
+          "./gradlew --no-daemon" in debug_build_workflow and
+          "./gradlew --no-daemon" in codeql_workflow and
+          not re.search(r"(?m)^\s*gradle --no-daemon", build_workflow + debug_build_workflow + codeql_workflow) and
+          "gradle-version:" not in build_workflow + debug_build_workflow + codeql_workflow)
     check("Build workflow repository permission is read-only",
           re.search(r"(?m)^permissions:\s*\n\s+contents:\s*read\s*$", build_workflow) is not None)
     check("APK signature verification enabled in CI",
