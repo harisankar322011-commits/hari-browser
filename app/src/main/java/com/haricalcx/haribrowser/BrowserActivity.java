@@ -21,6 +21,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.print.PrintAttributes;
 import android.print.PrintManager;
+import android.speech.RecognizerIntent;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -122,6 +123,7 @@ public class BrowserActivity extends ComponentActivity {
     private int currentTabIndex = -1;
     private String defaultUserAgent;
     private ActivityResultLauncher<String> fileChooserLauncher;
+    private ActivityResultLauncher<Intent> voiceSearchLauncher;
     private ValueCallback<Uri[]> fileChooserCallback;
     private View fullscreenCustomView;
     private WebChromeClient.CustomViewCallback fullscreenCallback;
@@ -138,6 +140,24 @@ public class BrowserActivity extends ComponentActivity {
     private final Set<String> pendingUrlhausChecks = Collections.synchronizedSet(new HashSet<>());
     private final Map<String, UrlhausReputation.Result> urlhausSessionResults =
             Collections.synchronizedMap(new HashMap<>());
+
+    private String ui(String english) {
+        return BrowserUiText.translate(settings.getString("home_language", "en"), english);
+    }
+
+    private void startVoiceSearch() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,
+                BrowserUiText.speechLocale(settings.getString("home_language", "en")));
+        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, ui("Speak your search"));
+        try {
+            voiceSearchLauncher.launch(intent);
+        } catch (RuntimeException unavailable) {
+            showToast(ui("Voice search isn't available on this device."));
+        }
+    }
 
     private boolean darkTheme() { return settings.getBoolean("dark_theme", false); }
     private boolean trackersEnabled() { return settings.getBoolean("block_trackers", true); }
@@ -261,6 +281,21 @@ public class BrowserActivity extends ComponentActivity {
                         fileChooserCallback = null;
                     }
                 });
+        voiceSearchLauncher = registerForActivityResult(
+                new ActivityResultContracts.StartActivityForResult(), result -> {
+                    if (result.getResultCode() != android.app.Activity.RESULT_OK) return;
+                    Intent voiceResult = result.getData();
+                    ArrayList<String> matches = voiceResult == null ? null :
+                            voiceResult.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS);
+                    if (matches == null || matches.isEmpty() || matches.get(0).trim().isEmpty()) {
+                        showToast(ui("No speech was recognized."));
+                        return;
+                    }
+                    if (addressBar != null) {
+                        addressBar.setText(matches.get(0).trim());
+                        navigateFromAddressBar();
+                    }
+                });
         secureStore = new SecureStore(this, privateMode);
         defaultUserAgent = WebSettings.getDefaultUserAgent(this);
         WebView.setWebContentsDebuggingEnabled(false);
@@ -368,8 +403,8 @@ public class BrowserActivity extends ComponentActivity {
         addressBar.setSingleLine(true);
         addressBar.setTextColor(INK);
         addressBar.setHintTextColor(MUTED);
-        addressBar.setHint("Search or enter an HTTPS address");
-        addressBar.setContentDescription("Search privately or enter a secure HTTPS website address");
+        addressBar.setHint(ui("Search or enter an HTTPS address"));
+        addressBar.setContentDescription(ui("Search privately or enter a secure HTTPS website address"));
         addressBar.setTextSize(compact ? 12 : (widthDp < 480 ? 13 : 14));
         addressBar.setAutoSizeTextTypeUniformWithConfiguration(11, 15, 1, TypedValue.COMPLEX_UNIT_SP);
         addressBar.setSelectAllOnFocus(false);
@@ -379,7 +414,10 @@ public class BrowserActivity extends ComponentActivity {
         addressBar.setBackgroundColor(Color.TRANSPARENT);
         addressRow.addView(addressBar, new LinearLayout.LayoutParams(0, dp(36), 1));
 
-        TextView goButton = pillButton("GO", true, () -> navigateFromAddressBar());
+        TextView voiceButton = compactButton("🎙", ui("Voice search"), () -> startVoiceSearch());
+        voiceButton.setTextSize(14);
+        addressRow.addView(voiceButton, new LinearLayout.LayoutParams(dp(36), dp(29)));
+        TextView goButton = pillButton(ui("GO"), true, () -> navigateFromAddressBar());
         addressRow.addView(goButton, new LinearLayout.LayoutParams(dp(42), dp(29)));
         root.addView(addressRow, new LinearLayout.LayoutParams(-1, dp(42)));
 
@@ -398,15 +436,15 @@ public class BrowserActivity extends ComponentActivity {
         controls.setGravity(Gravity.CENTER_VERTICAL);
         controls.setOrientation(LinearLayout.HORIZONTAL);
         controls.setPadding(0, dp(1), 0, dp(1));
-        addCompactButton(controls, "‹", "Back", () -> {
+        addCompactButton(controls, "‹", ui("Back"), () -> {
             WebView w = currentWebView();
             if (w != null && w.canGoBack()) w.goBack();
         });
-        addCompactButton(controls, "›", "Forward", () -> {
+        addCompactButton(controls, "›", ui("Forward"), () -> {
             WebView w = currentWebView();
             if (w != null && w.canGoForward()) w.goForward();
         });
-        TextView reloadButton = compactButton("↻", "Reload page (long press to stop)", () -> {
+        TextView reloadButton = compactButton("↻", ui("Reload page (long press to stop)"), () -> {
             WebView w = currentWebView();
             if (w != null) {
                 if (currentTab().home) loadHome(currentTab());
@@ -418,15 +456,15 @@ public class BrowserActivity extends ComponentActivity {
             if (w != null) {
                 w.stopLoading();
                 progressBar.setVisibility(View.GONE);
-                showToast("Loading stopped.");
+                showToast(ui("Loading stopped."));
             }
             return true;
         });
         controls.addView(reloadButton, new LinearLayout.LayoutParams(0, dp(29), 1));
-        tabButton = compactButton("Tabs 1", "Open tab switcher", () -> showTabSwitcher());
+        tabButton = compactButton(ui("Tabs") + " 1", ui("Open tab switcher"), () -> showTabSwitcher());
         controls.addView(tabButton, new LinearLayout.LayoutParams(0, dp(29), 1));
-        addCompactButton(controls, "□", "New tab", () -> addNewTab(null, true));
-        addCompactButton(controls, "⋮", "Menu", () -> showSettings());
+        addCompactButton(controls, "□", ui("New tab"), () -> addNewTab(null, true));
+        addCompactButton(controls, "⋮", ui("Menu"), () -> showSettings());
         root.addView(controls, new LinearLayout.LayoutParams(-1, dp(32)));
 
         progressBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
@@ -448,21 +486,21 @@ public class BrowserActivity extends ComponentActivity {
         securityStatus.setGravity(Gravity.CENTER_VERTICAL);
         securityStatus.setPadding(dp(3), dp(2), dp(3), dp(2));
         root.addView(securityStatus, new LinearLayout.LayoutParams(-1, dp(15)));
-        securityStatus.setContentDescription("Tap to view site security information");
+        securityStatus.setContentDescription(ui("Tap to view site security information"));
         securityStatus.setOnClickListener(v -> showSiteSecurity());
 
         LinearLayout bottom = new LinearLayout(this);
         bottom.setOrientation(LinearLayout.HORIZONTAL);
         bottom.setGravity(Gravity.CENTER);
         bottom.setPadding(0, dp(1), 0, 0);
-        addBottomButton(bottom, "⌂\nHome", () -> {
+        addBottomButton(bottom, "⌂\n" + ui("Home"), () -> {
             Tab t = currentTab();
             if (t != null) loadHome(t);
         });
-        addBottomButton(bottom, "★\nSave", () -> addBookmark());
-        addBottomButton(bottom, "◷\nHistory", () -> showHistory());
-        addBottomButton(bottom, "⌕\nFind", () -> showFindDialog());
-        addBottomButton(bottom, "⚙\nSettings", () -> showSettings());
+        addBottomButton(bottom, "★\n" + ui("Save"), () -> addBookmark());
+        addBottomButton(bottom, "◷\n" + ui("History"), () -> showHistory());
+        addBottomButton(bottom, "⌕\n" + ui("Find"), () -> showFindDialog());
+        addBottomButton(bottom, "⚙\n" + ui("Settings"), () -> showSettings());
         root.addView(bottom, new LinearLayout.LayoutParams(-1, dp(compact ? 39 : 37)));
 
         setContentView(root);
@@ -573,7 +611,7 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void updateTabControls() {
-        if (tabButton != null) tabButton.setText("Tabs " + tabs.size());
+        if (tabButton != null) tabButton.setText(ui("Tabs") + " " + tabs.size());
         Tab tab = currentTab();
         if (tab != null && securityStatus != null) {
             String message = privateMode ? "Private • history not saved" :
@@ -1950,7 +1988,8 @@ public class BrowserActivity extends ComponentActivity {
                 (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
                         (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
                 "Hari Antivirus · scan a file and manage quarantine",
-                (dataSaverEnabled() ? "✓ " : "○ ") + "Lite mode · block images and known trackers"
+                (dataSaverEnabled() ? "✓ " : "○ ") + "Lite mode · block images and known trackers",
+                ui("Family safety guide")
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -2129,12 +2168,32 @@ public class BrowserActivity extends ComponentActivity {
                                     ? "Lite mode enabled: website images and known tracker requests are blocked. Data savings are not estimated."
                                     : "Lite mode disabled. Your separate image and tracker settings apply.");
                             break;
+                        case 39:
+                            showFamilySafetyGuide();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
                 .show();
     }
 
+
+    private void showFamilySafetyGuide() {
+        String message =
+                "A few habits make the browser safer for everyone\n\n" +
+                "• Check the actual website address before signing in. A padlock or HTTPS means the connection is encrypted; it does not prove the site is honest.\n\n" +
+                "• Never share passwords, bank PINs, OTPs, recovery codes, or an AI API key with an unexpected website, message, or person. A legitimate support agent should not ask for an OTP.\n\n" +
+                "• If a site warning appears, stop and ask a trusted adult before continuing. The official-site label means only that the hostname matches Hari Browser's curated list.\n\n" +
+                "• Teen Protection and tracker blocking are helpful but incomplete. They may miss harmful content or block a harmless result. App-level protection can be bypassed if someone clears app data or uninstalls the app; use Android family controls for device-wide supervision.\n\n" +
+                "• Hari Antivirus performs limited local file checks. It is not a complete antivirus and does not scan other apps. Keep Android and System WebView updated. Do not install the previously flagged Hari Browser 2.3.0 APK while its device-protection warning remains unresolved.\n\n" +
+                "• Hari AI sends the prompts you submit to the AI service configured in Settings. Voice search uses Android's selected speech-recognition service, which may process audio or transcripts according to that service's policy.";
+        new AlertDialog.Builder(this)
+                .setTitle(ui("Family safety guide"))
+                .setMessage(message)
+                .setPositiveButton("OK", null)
+                .setNeutralButton("Site security details", (dialog, which) -> showSiteSecurity())
+                .show();
+    }
 
     private String protectSearchUrl(String url) {
         if (!teenProtectionEnabled()) return url;
