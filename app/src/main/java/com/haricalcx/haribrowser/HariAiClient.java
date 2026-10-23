@@ -11,7 +11,6 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -130,8 +129,10 @@ final class HariAiClient {
             }
             if (supportsGenerateContent && !available.contains(modelId)) available.add(modelId);
         }
-        available.sort(Comparator.comparingInt(HariAiClient::modelPriority)
-                .thenComparing(String::compareTo));
+        available.sort((left, right) -> {
+            int priority = Integer.compare(modelPriority(left), modelPriority(right));
+            return priority != 0 ? priority : left.compareTo(right);
+        });
         return Collections.unmodifiableList(available);
     }
 
