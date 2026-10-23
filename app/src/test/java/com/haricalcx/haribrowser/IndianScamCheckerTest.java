@@ -47,6 +47,23 @@ public class IndianScamCheckerTest {
     }
 
     @Test
+    public void recognizedFinancialGroupAliasesAreNotFalsePositives() {
+        assertFalse(containsBrandWarning("https://www.sbi-life.com/"));
+        assertFalse(containsBrandWarning("https://www.hdfcsec.com/"));
+        assertFalse(containsBrandWarning("https://www.icicidirect.com/"));
+        assertFalse(containsBrandWarning("https://www.axismf.com/"));
+        assertFalse(containsBrandWarning("https://www.digilocker.gov.in/"));
+    }
+
+    @Test
+    public void scamWarningAndOfficialIndicatorUseTheSameDomainRegistry() {
+        assertTrue(containsBrandWarning("https://fake-uidai-verify.example/"));
+        assertFalse(containsBrandWarning("https://portal.uidai.gov.in/"));
+        assertTrue(OfficialDomainRegistry.isOfficialDomainForBrand("portal.uidai.gov.in", "uidai"));
+        assertFalse(OfficialDomainRegistry.isOfficialDomainForBrand("uidai.gov.in.example", "uidai"));
+    }
+
+    @Test
     public void unrelatedWebsiteDoesNotGetAnIndianBrandWarning() {
         assertTrue(IndianScamChecker.inspect("https://example.com/about").isEmpty());
     }
