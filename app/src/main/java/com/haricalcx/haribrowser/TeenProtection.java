@@ -336,10 +336,18 @@ final class TeenProtection {
     private static String genericSearchQueryKey(String path) {
         if (path == null) return null;
         String normalizedPath = path.toLowerCase(Locale.ROOT);
-        if (!normalizedPath.matches("(^|.*/)(search|results|search-results|searchresults|find|web-search|websearch)(/|\\\\.[^/]*|$)")) {
-            return null;
+        String[] segments = normalizedPath.split("/");
+        for (String segment : segments) {
+            int extension = segment.indexOf('.');
+            String route = extension < 0 ? segment : segment.substring(0, extension);
+            if ("search".equals(route) || "results".equals(route)
+                    || "search-results".equals(route) || "searchresults".equals(route)
+                    || "find".equals(route) || "web-search".equals(route)
+                    || "websearch".equals(route)) {
+                return "q";
+            }
         }
-        return "q";
+        return null;
     }
 
     private static String queryKeyForHost(String host) {
