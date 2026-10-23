@@ -78,6 +78,12 @@ public final class SiteSafetyChecker {
             hostLabel = host;
             String normalizedHost = host.toLowerCase(Locale.ROOT);
 
+            String listedService = OfficialDomainRegistry.serviceForHost(normalizedHost);
+            if (listedService != null) {
+                passed.add("Hostname matches the curated official-domain list: " + listedService
+                        + " (a list match, not a guarantee that this page is safe)");
+            }
+
             if (uri.getUserInfo() != null) {
                 warnings.add("The URL contains text before the hostname that can disguise the real destination.");
             } else {

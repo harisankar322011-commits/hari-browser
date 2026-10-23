@@ -66,6 +66,18 @@ final class TeenProtection {
         "आत्महत्या के तरीके", "बम कैसे बनाएं", "ആത്മഹത്യ മാർഗങ്ങൾ",
         "ബോംബ് ഉണ്ടാക്കുന്നത് എങ്ങനെ",
         "पोर्न", "पोर्नोग्राफी", "अश्लील वीडियो", "अश्लील तस्वीरें",
+        // More Indic scripts: Bengali, Marathi, Gujarati, Punjabi and Odia.
+        "অশ্লীল ভিডিও", "পর্ন ভিডিও", "নগ্ন ছবি", "আত্মহত্যার উপায়", "বোমা বানানোর উপায়",
+        "अश्लील व्हिडिओ", "नग्न फोटो", "आत्महत्येचे मार्ग", "बॉम्ब कसा बनवायचा",
+        "અશ્લીલ વીડિયો", "નગ્ન ફોટા", "આત્મહત્યાની રીત", "બૉમ્બ કેવી રીતે બનાવવો",
+        "ਅਸ਼ਲੀਲ ਵੀਡੀਓ", "ਨੰਗੀਆਂ ਤਸਵੀਰਾਂ", "ਖੁਦਕੁਸ਼ੀ ਦੇ ਤਰੀਕੇ", "ਬੰਬ ਕਿਵੇਂ ਬਣਾਉਣਾ",
+        "ଅଶ୍ଳୀଳ ଭିଡିଓ", "ନଗ୍ନ ଫଟୋ", "ଆତ୍ମହତ୍ୟା ଉପାୟ", "ବୋମା କିପରି ତିଆରି କରିବେ",
+        // Common Latin-script transliterations used in Indian search queries.
+        "ashleel video", "ashlil video", "gandi video", "nangi tasveer", "nangi photo",
+        "bina kapde ki photo", "adult video dekhna", "porn site kholna",
+        "online satta", "jua online", "real paisa satta", "satta app",
+        "bomb kaise banaye", "bomb banane ka tarika", "khudkushi karne ka tarika",
+        "aatmahatya ke tarike", "khud ko nuksan pahunchane ke tarike",
         "ஆபாச வீடியோ", "అశ్లీల వీడియో", "ಅಶ್ಲೀಲ ವೀಡಿಯೊ",
         "അശ്ലീലം", "നീലച്ചിത്രം", "pornografía", "pornographie", "إباحي"
     };
@@ -93,12 +105,22 @@ final class TeenProtection {
         "self harm recovery", "self harm support", "help a suicidal friend",
         "help someone suicidal", "drug addiction treatment", "drug addiction help",
         "overdose emergency", "report a bomb threat", "explosives safety",
-        "firearm safety laws"
+        "firearm safety laws",
+        // Prevention, recovery and help-seeking phrases in Indian languages/Hinglish.
+        "आत्महत्या रोकथाम हेल्पलाइन", "आत्महत्या से मदद",
+        "আত্মহত্যা প্রতিরোধ সাহায্য", "আত্মহত্যা থেকে সাহায্য",
+        "આપઘાત નિવારણ મદદ", "આત્મહત્યા નિવારણ મદદ",
+        "ਆਤਮਹੱਤਿਆ ਰੋਕਥਾਮ ਮਦਦ", "ਆਤਮਹੱਤਿਆ ਤੋਂ ਮਦਦ",
+        "ଆତ୍ମହତ୍ୟା ରୋକଥାମ ସହାୟତା", "ଆତ୍ମହତ୍ୟା ପ୍ରତିରୋଧ",
+        "porn ki lat se chutkara", "gandi video dekhna band kaise kare",
+        "পর্ন আসক্তি থেকে মুক্তি", "ਪੋਰਨ ਦੀ ਲਤ ਤੋਂ ਛੁਟਕਾਰਾ",
+        "અશ્લીલ સામગ્રી અંગે મદદ", "અશ્લીલ વીડિયો શેર કર્યો મદદ"
     };
 
     private static final String[] SUPPORT_SENSITIVE_TERMS = {
         "porn", "pornography", "pornographic", "nudes", "leaked nudes",
-        "online gambling", "real money gambling", "gambling sites"
+        "online gambling", "real money gambling", "gambling sites", "online satta",
+        "पोर्न", "পর্ন", "ਪੋਰਨ", "ಅಶ್ಲೀலம்", "നീലച്ചിത്രം"
     };
 
     private static final String[] BLOCKED_DOMAINS = {

@@ -31,27 +31,36 @@ public final class IndianScamChecker {
                 .toLowerCase(Locale.ROOT);
         List<String> warnings = new ArrayList<>();
 
-        // Keep brand aliases and their official domain families together. Many
-        // Indian financial groups operate more than one legitimate hostname.
-        checkBrand(host, warnings, "uidai", "uidai.gov.in");
-        checkBrand(host, warnings, "aadhaar", "uidai.gov.in");
-        checkBrand(host, warnings, "sbi", "sbi.co.in", "onlinesbi.sbi");
-        checkBrand(host, warnings, "sbicard", "sbicard.com");
-        checkBrand(host, warnings, "sbilife", "sbilife.co.in");
-        checkBrand(host, warnings, "hdfcbank", "hdfcbank.com");
-        checkBrand(host, warnings, "hdfcsec", "hdfcsec.com");
-        checkBrand(host, warnings, "hdfclife", "hdfclife.com");
-        checkBrand(host, warnings, "icicibank", "icicibank.com");
-        checkBrand(host, warnings, "icicidirect", "icicidirect.com");
-        checkBrand(host, warnings, "iciciprulife", "iciciprulife.com");
-        checkBrand(host, warnings, "icicilombard", "icicilombard.com");
-        checkBrand(host, warnings, "axisbank", "axisbank.com");
-        checkBrand(host, warnings, "axismf", "axismf.com");
-        checkBrand(host, warnings, "npci", "npci.org.in");
-        checkBrand(host, warnings, "irctc", "irctc.co.in");
-        checkBrand(host, warnings, "incometax", "incometax.gov.in");
-        checkBrand(host, warnings, "passportindia", "passportindia.gov.in");
-        checkBrand(host, warnings, "gst", "gst.gov.in");
+        // Brand matching and the positive official-domain indicator share one registry.
+        checkBrand(host, warnings, "uidai");
+        checkBrand(host, warnings, "aadhaar");
+        checkBrand(host, warnings, "sbi");
+        checkBrand(host, warnings, "sbicard");
+        checkBrand(host, warnings, "sbilife");
+        checkBrand(host, warnings, "hdfc");
+        checkBrand(host, warnings, "hdfcbank");
+        checkBrand(host, warnings, "hdfcsec");
+        checkBrand(host, warnings, "hdfclife");
+        checkBrand(host, warnings, "icici");
+        checkBrand(host, warnings, "icicibank");
+        checkBrand(host, warnings, "icicidirect");
+        checkBrand(host, warnings, "iciciprulife");
+        checkBrand(host, warnings, "icicilombard");
+        checkBrand(host, warnings, "axis");
+        checkBrand(host, warnings, "axisbank");
+        checkBrand(host, warnings, "axismf");
+        checkBrand(host, warnings, "npci");
+        checkBrand(host, warnings, "irctc");
+        checkBrand(host, warnings, "incometax");
+        checkBrand(host, warnings, "passportindia");
+        checkBrand(host, warnings, "gst");
+        checkBrand(host, warnings, "digilocker");
+        checkBrand(host, warnings, "umang");
+        checkBrand(host, warnings, "epfo");
+        checkBrand(host, warnings, "parivahan");
+        checkBrand(host, warnings, "nps");
+        checkBrand(host, warnings, "diksha");
+        checkBrand(host, warnings, "swayam");
 
         int sensitive = countAny(full, "otp", "pin", "password", "kyc", "aadhaar",
                 "aadhar", "upi", "bank", "account", "wallet");
@@ -64,32 +73,10 @@ public final class IndianScamChecker {
         return Collections.unmodifiableList(warnings);
     }
 
-    private static void checkBrand(String host, List<String> warnings, String brand, String... officialDomains) {
-        if (!hasWholeHostLabelToken(host, brand)) return;
-
-        // Match an exact official domain or one of its DNS subdomains. The dot
-        // boundary prevents lookalikes such as "notuidai.gov.in.example" from
-        // being trusted as official.
-        for (String official : officialDomains) {
-            if (host.equals(official) || host.endsWith("." + official)) return;
-        }
+    private static void checkBrand(String host, List<String> warnings, String brand) {
+        if (!OfficialDomainRegistry.hostContainsBrandToken(host, brand)) return;
+        if (OfficialDomainRegistry.isOfficialDomainForBrand(host, brand)) return;
         warnings.add("The hostname mentions '" + brand + "' but does not match a recognized official domain for that service. Verify the address independently.");
-    }
-
-    /**
-     * Match a brand as a whole DNS label or a hyphen-delimited token inside a
-     * label, not as an arbitrary substring (for example, "axisbanking").
-     */
-    private static boolean hasWholeHostLabelToken(String host, String brand) {
-        for (String label : host.split("\\.")) {
-            if (label.equals(brand)
-                    || label.startsWith(brand + "-")
-                    || label.endsWith("-" + brand)
-                    || label.contains("-" + brand + "-")) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private static int countAny(String value, String... tokens) {

@@ -45,7 +45,13 @@ public final class PrivacyGuard {
             "ads-twitter.com",
             "analytics.twitter.com",
             "snap.licdn.com",
-            "ads.linkedin.com"
+            "ads.linkedin.com",
+            // India-relevant mobile/native/video advertising and attribution networks.
+            "inmobi.com",
+            "adgebra.co",
+            "vserv.com",
+            "silverpush.co",
+            "pokkt.com"
     )));
 
     public static boolean isHttpUrl(String value) {

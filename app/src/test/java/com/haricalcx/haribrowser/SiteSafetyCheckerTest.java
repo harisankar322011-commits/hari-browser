@@ -14,6 +14,22 @@ public class SiteSafetyCheckerTest {
     }
 
     @Test
+    public void curatedOfficialDomainMatchIsVisibleButIsNotASafetyVerdict() {
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://www.sbicard.com/");
+        String passed = String.join(" ", report.getPassedChecks());
+        assertTrue(passed.contains("curated official-domain list: SBI Card"));
+        assertTrue(passed.contains("not a guarantee"));
+        assertFalse(String.join(" ", report.getWarnings()).contains("recognized official domain"));
+    }
+
+    @Test
+    public void officialDomainIndicatorDoesNotAcceptHostnameSuffixLookalikes() {
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://uidai.gov.in.example/");
+        assertFalse(String.join(" ", report.getPassedChecks()).contains("curated official-domain list"));
+        assertTrue(String.join(" ", report.getWarnings()).contains("recognized official domain"));
+    }
+
+    @Test
     public void nonHttpsAddressRaisesWarning() {
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("http://example.com");
         assertTrue(report.hasWarnings());
