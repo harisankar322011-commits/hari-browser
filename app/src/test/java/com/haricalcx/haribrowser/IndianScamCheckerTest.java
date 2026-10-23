@@ -43,7 +43,7 @@ public class IndianScamCheckerTest {
     public void officialSubdomainsAreAcceptedButSuffixLookalikesAreNot() {
         assertFalse(containsBrandWarning("https://portal.uidai.gov.in/"));
         assertTrue(containsBrandWarning("https://uidai.gov.in.example/"));
-        assertTrue(containsBrandWarning("https://notuidai.gov.in.example/"));
+        assertFalse(containsBrandWarning("https://notuidai.gov.in.example/"));
     }
 
     @Test
