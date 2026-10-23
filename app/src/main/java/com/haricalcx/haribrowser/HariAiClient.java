@@ -100,7 +100,7 @@ final class HariAiClient {
      * text-generation IDs are accepted; image, audio, embedding and other model
      * families are intentionally excluded from this text-chat client.
      */
-    static List<String> parseAvailableFlashModels(String responseText) throws ClientException {
+    static List<String> parseAvailableFlashModels(String responseText) throws IOException {
         final JSONObject response;
         try {
             response = new JSONObject(responseText);
