@@ -133,9 +133,6 @@ Gradle writes APKs under `app/build/outputs/apk/`. A locally built APK should no
 
 The repository's GitHub Actions workflow also runs release-build checks, Android lint, Teen Protection unit tests, and source-level security regression checks. Passing these checks improves quality but cannot establish that the app is vulnerability-free.
 
-## F-Droid status
-
-A request for packaging has been opened in the [F-Droid Requests for Packaging tracker (#4588)](https://gitlab.com/fdroid/rfp/-/work_items/4588). This is a request—not confirmation that Hari Browser has been accepted or published in F-Droid. Any official listing and build still require independent review.
 
 ## Contributing and issue reports
 
