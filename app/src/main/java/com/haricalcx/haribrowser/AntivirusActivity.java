@@ -186,7 +186,7 @@ public final class AntivirusActivity extends ComponentActivity {
         resultText.setText(
                 "Ready to scan.\n\n" +
                 "Supported local checks:\n" +
-                "• SHA-256, selected format mismatches and the EICAR antivirus test signature.\n" +
+                "• SHA-256 checks, selected format mismatches and bounded archive-structure checks.\n" +
                 "• Streaming multi-indicator signature rules for PHP web-shell combinations, PowerShell download/execute chains, Android dropper capability combinations, cryptocurrency miners, ransomware-note phrases and obfuscated scripts.\n" +
                 "• Bounded ZIP-based archive, APK, JAR and Office Open XML entry inspection, including nested-archive limits.\n" +
                 "• Archive traversal markers, active/executable entries, APK package metadata and signer-certificate fingerprints.\n" +
