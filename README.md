@@ -32,7 +32,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 
 - DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
 - Address bar accepts a web address or search query. Optional voice search asks Android's selected speech-recognition service for text in the selected dashboard language; audio/transcript handling follows that service's own privacy policy.
-- Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader-style mode, adjustable text size, page sharing, and full-screen web video.
+- Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader-style mode, adjustable text size, page sharing, and full-screen web video. Reader-style mode uses responsive line spacing and system sans-serif fallback fonts to improve readability across Latin and Indic scripts; it changes page styling rather than extracting a clean article, so page-specific navigation and clutter may remain.
 - Optional **Read later** saves up to eight explicitly selected HTTPS pages as encrypted, text-only snapshots (up to 24,000 characters per page). It does not save images, live links, scripts, cookies, login sessions, or the full page layout; snapshots may be incomplete or out of date. Saving is disabled in Private mode, and saved pages can be removed individually or cleared.
 - QR-code generation, printing to PDF, bookmark import/export, and a directory of curated destinations covering education and Indian public services.
 - A home dashboard with quick actions, personal HTTPS shortcuts, offline wallpapers, themed colours, and local tools such as a calculator, unit converter, notes, password generator, JSON formatter, and text tools.
@@ -77,7 +77,7 @@ Hari AI is designed to support India-focused responses, including ₹/INR, lakh/
 
 ### Languages and Indian-friendly features
 
-The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, core navigation labels, voice-search prompts, and family-safety guide title also use the selected language where translations are available. Many settings dialogs and all website content may still be in English. Voice recognition is handled by Android's selected speech service and follows that service's privacy policy. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
+The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, core navigation labels, Settings menu, voice-search prompts, and family-safety guide title use the selected language where translations are available. Some confirmation dialogs and all website content may still be in English. Voice recognition is handled by Android's selected speech service and follows that service's privacy policy. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
 
 ## Security and privacy limits
 
