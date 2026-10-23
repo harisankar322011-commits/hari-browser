@@ -2196,7 +2196,8 @@ public class BrowserActivity extends ComponentActivity {
                 "• If a site warning appears, stop and ask a trusted adult before continuing. The official-site label means only that the hostname matches Hari Browser's curated list.\n\n" +
                 "• Teen Protection and tracker blocking are helpful but incomplete. They may miss harmful content or block a harmless result. App-level protection can be bypassed if someone clears app data or uninstalls the app; use Android family controls for device-wide supervision.\n\n" +
                 "• Hari Antivirus performs limited local file checks. It is not a complete antivirus and does not scan other apps. Keep Android and System WebView updated. Do not install the previously flagged Hari Browser 2.3.0 APK while its device-protection warning remains unresolved.\n\n" +
-                "• Hari AI sends the prompts you submit to the AI service configured in Settings. Voice search uses Android's selected speech-recognition service, which may process audio or transcripts according to that service's policy.";
+                "• Hari AI sends the prompts you submit to the AI service configured in Settings. Voice search uses Android's selected speech-recognition service, which may process audio or transcripts according to that service's policy.\n\n" +
+                "• Hari Browser does not provide its own DNS-over-HTTPS service. For encrypted DNS, review Android's system Private DNS setting and choose a provider you trust; DNS providers can see the domain lookups they resolve.";
         new AlertDialog.Builder(this)
                 .setTitle(ui("Family safety guide"))
                 .setMessage(message)
@@ -2222,7 +2223,8 @@ public class BrowserActivity extends ComponentActivity {
             tab.webView.evaluateJavascript(
                     "(function(){try{return document.body ? document.body.innerText.slice(0,24000) : '';}catch(e){return '';}})()",
                     encodedText -> {
-                        if (!pageUrl.equals(tab.url) || !pageUrl.equals(tab.webView.getUrl())) {
+                        if (tab.webView == null || !pageUrl.equals(tab.url)
+                                || !pageUrl.equals(tab.webView.getUrl())) {
                             showToast("The page changed before it could be saved. Please try again.");
                             return;
                         }
