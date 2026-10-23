@@ -9,6 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.nio.charset.StandardCharsets;
 import javax.net.ssl.HttpsURLConnection;
 
@@ -19,6 +25,8 @@ import javax.net.ssl.HttpsURLConnection;
 final class HariAiClient {
     private static final String API_BASE =
             "https://generativelanguage.googleapis.com/v1beta/models/";
+    private static final String API_MODELS_ENDPOINT =
+            "https://generativelanguage.googleapis.com/v1beta/models";
     private static final String[] MODEL_IDS = {
             "gemini-3.5-flash-lite",
             "gemini-3.1-flash-lite",
@@ -33,7 +41,28 @@ final class HariAiClient {
     static String generateReply(String apiKey, JSONArray contents) throws IOException {
         validateInput(apiKey, contents);
         ModelUnavailableException lastUnavailable = null;
+        Set<String> attempted = new HashSet<>();
         for (String modelId : MODEL_IDS) {
+            attempted.add(modelId);
+            try {
+                return generateReplyForModel(apiKey.trim(), contents, modelId);
+            } catch (ModelUnavailableException unavailable) {
+                lastUnavailable = unavailable;
+            }
+        }
+
+        // Model availability changes over time and can vary by API key/project.
+        // Only perform discovery after every known low-cost candidate returned 404.
+        final List<String> discovered;
+        try {
+            discovered = listAvailableFlashModels(apiKey.trim());
+        } catch (IOException discoveryError) {
+            throw new ClientException(
+                    "Hari AI could not access an available model. Check the key's API access in Google AI Studio, then try again.",
+                    lastUnavailable == null ? discoveryError : lastUnavailable);
+        }
+        for (String modelId : discovered) {
+            if (!attempted.add(modelId)) continue;
             try {
                 return generateReplyForModel(apiKey.trim(), contents, modelId);
             } catch (ModelUnavailableException unavailable) {
@@ -41,7 +70,7 @@ final class HariAiClient {
             }
         }
         throw new ClientException(
-                "Hari AI could not access an available model for this API key. Check the key's API access in Google AI Studio, then try again.",
+                "Hari AI could not access an available text-generation model for this API key. Check the key's API access in Google AI Studio, then try again.",
                 lastUnavailable);
     }
 
@@ -61,6 +90,87 @@ final class HariAiClient {
             throw new ClientException("Could not prepare the AI connection test.", error);
         }
         generateReply(apiKey, contents);
+    }
+
+    static String modelsEndpoint() {
+        return API_MODELS_ENDPOINT;
+    }
+
+    /**
+     * Parse models returned for the current API key. Only standard Gemini Flash
+     * text-generation IDs are accepted; image, audio, embedding and other model
+     * families are intentionally excluded from this text-chat client.
+     */
+    static List<String> parseAvailableFlashModels(String responseText) throws ClientException {
+        final JSONObject response;
+        try {
+            response = new JSONObject(responseText);
+        } catch (JSONException error) {
+            throw new ClientException("Hari AI returned an unreadable model list.", error);
+        }
+        JSONArray models = response.optJSONArray("models");
+        if (models == null) return Collections.emptyList();
+
+        List<String> available = new ArrayList<>();
+        for (int i = 0; i < models.length(); i++) {
+            JSONObject model = models.optJSONObject(i);
+            if (model == null) continue;
+            String name = model.optString("name", "");
+            if (!name.startsWith("models/")) continue;
+            String modelId = name.substring("models/".length());
+            if (!isTextFlashModelId(modelId)) continue;
+            JSONArray methods = model.optJSONArray("supportedGenerationMethods");
+            if (methods == null) continue;
+            boolean supportsGenerateContent = false;
+            for (int j = 0; j < methods.length(); j++) {
+                if ("generateContent".equals(methods.optString(j))) {
+                    supportsGenerateContent = true;
+                    break;
+                }
+            }
+            if (supportsGenerateContent && !available.contains(modelId)) available.add(modelId);
+        }
+        available.sort(Comparator.comparingInt(HariAiClient::modelPriority)
+                .thenComparing(String::compareTo));
+        return Collections.unmodifiableList(available);
+    }
+
+    private static boolean isTextFlashModelId(String modelId) {
+        return modelId != null
+                && modelId.matches("gemini-[0-9]+(\\\\.[0-9]+)*-flash(-lite)?");
+    }
+
+    private static int modelPriority(String modelId) {
+        if ("gemini-3.5-flash-lite".equals(modelId)) return 0;
+        if ("gemini-3.1-flash-lite".equals(modelId)) return 1;
+        if ("gemini-3.8-flash".equals(modelId)) return 2;
+        if ("gemini-3.6-flash".equals(modelId)) return 3;
+        if ("gemini-2.5-flash-lite".equals(modelId)) return 4;
+        if ("gemini-2.5-flash".equals(modelId)) return 5;
+        return 10;
+    }
+
+    private static List<String> listAvailableFlashModels(String apiKey) throws IOException {
+        HttpsURLConnection connection = null;
+        try {
+            connection = (HttpsURLConnection) new URL(modelsEndpoint()).openConnection();
+            connection.setRequestMethod("GET");
+            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
+            connection.setReadTimeout(READ_TIMEOUT_MS);
+            connection.setInstanceFollowRedirects(false);
+            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("x-goog-api-key", apiKey);
+            int status = connection.getResponseCode();
+            InputStream stream = status >= 200 && status < 300
+                    ? connection.getInputStream() : connection.getErrorStream();
+            String responseText = stream == null ? "" : readBounded(stream);
+            if (status < 200 || status >= 300) {
+                throw new ClientException(httpStatusMessage(status));
+            }
+            return parseAvailableFlashModels(responseText);
+        } finally {
+            if (connection != null) connection.disconnect();
+        }
     }
 
     static String endpointForModel(String modelId) {
