@@ -637,7 +637,8 @@ public class BrowserActivity extends ComponentActivity {
         WebView webView = tab.webView;
         WebSettings web = webView.getSettings();
         web.setJavaScriptEnabled(javascriptEnabled());
-        web.setBlockNetworkImage(!tab.home && (!imagesEnabled() || dataSaverEnabled()));
+        web.setBlockNetworkImage(PrivacyGuard.shouldBlockNetworkImages(
+                tab.home, imagesEnabled(), dataSaverEnabled()));
         web.setTextZoom(textZoom());
         web.setDomStorageEnabled(true);
         web.setAllowFileAccess(false);
@@ -2870,7 +2871,8 @@ public class BrowserActivity extends ComponentActivity {
             if (tab.webView != null) {
                 WebSettings web = tab.webView.getSettings();
                 web.setJavaScriptEnabled(tab.home || javascriptEnabled());
-                web.setBlockNetworkImage(!tab.home && !imagesEnabled());
+                web.setBlockNetworkImage(PrivacyGuard.shouldBlockNetworkImages(
+                        tab.home, imagesEnabled(), dataSaverEnabled()));
                 web.setTextZoom(textZoom());
                 web.setUserAgentString(desktopEnabled() ? privacyReducedUserAgent().replace(" Mobile", "") : privacyReducedUserAgent());
                 updateFingerprintProtection(tab);
