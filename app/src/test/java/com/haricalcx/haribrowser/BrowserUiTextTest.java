@@ -11,6 +11,17 @@ public class BrowserUiTextTest {
         assertEquals("जाएँ", BrowserUiText.translate("hi-IN", "GO"));
         assertEquals("செல்", BrowserUiText.translate("ta", "GO"));
         assertEquals("ಧ್ವನಿ ಹುಡುಕಾಟ", BrowserUiText.translate("kn", "Voice search"));
+        assertEquals("പരസ്യങ്ങളും ട്രാക്കറുകളും തടയുക",
+                BrowserUiText.translate("ml", "Block ads and trackers"));
+        assertEquals("विज्ञापन और ट्रैकर रोकें",
+                BrowserUiText.translate("hi", "Block ads and trackers"));
+        assertEquals("Bloquear anuncios y rastreadores",
+                BrowserUiText.translate("es", "Block ads and trackers"));
+        assertEquals("الإعدادات الخاصة", BrowserUiText.translate("ar", "Private settings"));
+        assertEquals("சேமித்த பக்கங்களைப் படி (உரை மட்டும்)",
+                BrowserUiText.translate("ta", "Read saved pages (offline text)"));
+        assertEquals("Guardar la página actual para leer sin conexión",
+                BrowserUiText.translate("es", "Save current page for offline reading"));
     }
 
     @Test
