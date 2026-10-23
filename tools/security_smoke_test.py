@@ -68,7 +68,7 @@ try:
     antivirus_ui = read("app/src/main/java/com/haricalcx/haribrowser/AntivirusActivity.java")
     # Build the known antivirus test marker from fragments so this CI guard does
     # not embed the contiguous marker in its own source.
-    test_marker = ("X5O!P%@AP[" + "4\\\\PZX54(P^)7CC)7}$" +
+    test_marker = ("X5O!P%@AP[" + "4\\PZX54(P^)7CC)7}$" +
                    "EICAR-" + "STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
     check("Production scanner excludes the standard AV test marker",
           test_marker not in download_scanner and
