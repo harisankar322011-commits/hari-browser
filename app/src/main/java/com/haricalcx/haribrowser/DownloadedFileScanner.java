@@ -3,7 +3,6 @@ package com.haricalcx.haribrowser;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
@@ -16,9 +15,6 @@ import java.util.Locale;
  */
 public final class DownloadedFileScanner {
     public static final long MAX_SCAN_BYTES = 100L * 1024L * 1024L;
-    private static final String EICAR_TEST_SIGNATURE =
-            "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
-
     private DownloadedFileScanner() {}
 
     public static final class Result {
@@ -35,7 +31,7 @@ public final class DownloadedFileScanner {
         }
 
         public boolean isSuspicious() {
-            return "SUSPICIOUS".equals(status) || "MALICIOUS_TEST_SIGNATURE".equals(status);
+            return "SUSPICIOUS".equals(status);
         }
 
         public boolean requiresReview() {
@@ -61,8 +57,6 @@ public final class DownloadedFileScanner {
         MalwareSignatureEngine.StreamMatcher signatureMatcher = MalwareSignatureEngine.newScanner();
         byte[] buffer = new byte[8192];
         long total = 0;
-        String overlap = "";
-        boolean eicarMatch = false;
         int count;
         while ((count = input.read(buffer)) != -1) {
             total += count;
@@ -74,11 +68,6 @@ public final class DownloadedFileScanner {
             if (header.size() < 64) {
                 header.write(buffer, 0, Math.min(count, 64 - header.size()));
             }
-            if (!eicarMatch) {
-                String chunk = overlap + new String(buffer, 0, count, StandardCharsets.ISO_8859_1);
-                eicarMatch = chunk.contains(EICAR_TEST_SIGNATURE);
-                overlap = chunk.substring(Math.max(0, chunk.length() - EICAR_TEST_SIGNATURE.length() - 8));
-            }
         }
 
         List<MalwareSignatureEngine.Finding> signatureFindings = signatureMatcher.finish();
@@ -88,11 +77,6 @@ public final class DownloadedFileScanner {
         String mime = mimeType == null ? "" : mimeType.toLowerCase(Locale.ROOT);
         StringBuilder findings = new StringBuilder();
         StringBuilder reviewFindings = new StringBuilder();
-
-        if (eicarMatch) {
-            add(findings, "Matched the EICAR antivirus test signature (a test pattern, not proof of a real infection)");
-            return new Result("MALICIOUS_TEST_SIGNATURE", findings.toString(), hash, total);
-        }
 
         if (hasMagic(bytes, 0x4d, 0x5a) && !endsWithAny(name, ".exe", ".dll", ".ocx")) {
             add(findings, "Executable (MZ/PE) content does not match the filename extension");
