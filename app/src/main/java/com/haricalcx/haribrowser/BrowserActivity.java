@@ -685,7 +685,7 @@ public class BrowserActivity extends ComponentActivity {
                     return true;
                 }
                 if ("http".equalsIgnoreCase(scheme)) {
-                    runOnUiThread(() -> showToast("Blocked insecure HTTP. Use an HTTPS version."));
+                    runOnUiThread(() -> showHttpsUpgradePrompt(tab, url));
                     return true;
                 }
                 if (!"https".equalsIgnoreCase(scheme) || uri.getHost() == null) {
@@ -1891,6 +1891,22 @@ public class BrowserActivity extends ComponentActivity {
                     .append("\n\n────────────────────\n\n");
         }
         return output.toString().trim();
+    }
+
+    private void showHttpsUpgradePrompt(Tab tab, String insecureUrl) {
+        String upgradedUrl = PrivacyGuard.httpsUpgradeUrl(insecureUrl);
+        if (upgradedUrl == null) {
+            showToast("Blocked insecure HTTP. This address could not be upgraded safely.");
+            return;
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Insecure HTTP link")
+                .setMessage("Hari Browser will not open this address over unencrypted HTTP. Try the HTTPS version instead? It may fail if the site does not support HTTPS. The upgraded address will still receive the normal site-safety check.")
+                .setPositiveButton("Try HTTPS", (dialog, which) ->
+                        showSiteSafetyCheck(tab, upgradedUrl))
+                .setNegativeButton("Cancel", (dialog, which) ->
+                        showToast("Insecure HTTP blocked."))
+                .show();
     }
 
     private void showSettings() {

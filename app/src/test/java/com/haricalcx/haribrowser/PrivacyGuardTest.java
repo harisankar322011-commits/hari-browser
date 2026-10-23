@@ -15,6 +15,23 @@ public class PrivacyGuardTest {
     }
 
     @Test
+    public void upgradesHttpSchemeWithoutChangingPathQueryOrFragment() {
+        assertEquals("https://municipality.example:8080/services?q=water%20bill#status",
+                PrivacyGuard.httpsUpgradeUrl(
+                        "http://municipality.example:8080/services?q=water%20bill#status"));
+        assertEquals("https://example.in/path",
+                PrivacyGuard.httpsUpgradeUrl("HTTP://example.in/path"));
+    }
+
+    @Test
+    public void refusesToUpgradeNonHttpOrMalformedAddresses() {
+        assertNull(PrivacyGuard.httpsUpgradeUrl("https://example.in/"));
+        assertNull(PrivacyGuard.httpsUpgradeUrl("javascript:alert(1)"));
+        assertNull(PrivacyGuard.httpsUpgradeUrl("http:///missing-host"));
+        assertNull(PrivacyGuard.httpsUpgradeUrl(null));
+    }
+
+    @Test
     public void trackerMatchingUsesDnsSuffixBoundaries() {
         assertTrue(PrivacyGuard.isTrackerHost("ads.example.inmobi.com"));
         assertFalse(PrivacyGuard.isTrackerHost("notinmobi.com.example"));
