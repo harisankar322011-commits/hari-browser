@@ -39,6 +39,7 @@ Hari Browser is an open-source browser built on **Android System WebView**. It c
 ### Privacy-conscious defaults
 
 - HTTP navigation is never opened in cleartext. When a user follows an HTTP link, Hari Browser can offer to try the same address over HTTPS; the HTTPS version may still fail and receives the normal site-safety preflight. Cleartext traffic remains disabled.
+- An HTTPS upgrade is not a safety certification. Review the destination address and any site-safety warning before entering credentials, OTPs, payment details, or identity information.
 - Android WebView Safe Browsing is enabled, certificate errors are not ignored, and mixed content is restricted.
 - Third-party cookies, webpage access to local files/content, automatic pop-ups, and geolocation are restricted or disabled.
 - Local ad/tracker host blocking offers best-effort protection; it is not a complete filter list.
