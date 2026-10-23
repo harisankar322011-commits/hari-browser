@@ -38,8 +38,8 @@ public class CryptographySecurityPolicyTest {
 
     @Test
     public void outputFilenameDoesNotContainPathOrControlCharacters() {
-        assertEquals("_.._notes_.txt",
-                CryptographySecurityPolicy.safeFileName("../notes?.txt".replace("/", "_")));
+        assertEquals(".._notes_.txt",
+                CryptographySecurityPolicy.safeFileName("../notes?.txt"));
         assertEquals("hari-output.bin", CryptographySecurityPolicy.safeFileName(".."));
         assertTrue(CryptographySecurityPolicy.safeFileName("a".repeat(250)).length() <= 180);
     }
