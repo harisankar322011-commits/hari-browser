@@ -17,10 +17,44 @@ public class IndianScamCheckerTest {
     public void recognizedOfficialDomainDoesNotTriggerBrandImpersonation() {
         assertFalse(String.join(" ", IndianScamChecker.inspect("https://onlinesbi.sbi/"))
                 .contains("recognized official domain"));
+        assertFalse(containsBrandWarning("https://sbi.co.in/"));
+    }
+
+    @Test
+    public void legitimateIndianFinancialGroupDomainsAreNotFlaggedAsSbiImpersonators() {
+        assertFalse(containsBrandWarning("https://www.sbicard.com/"));
+        assertFalse(containsBrandWarning("https://secure.sbicard.com/offers"));
+        assertFalse(containsBrandWarning("https://www.sbilife.co.in/"));
+        assertFalse(containsBrandWarning("https://secure.sbilife.co.in/policy"));
+        assertFalse(containsBrandWarning("https://www.hdfcsec.com/"));
+        assertFalse(containsBrandWarning("https://www.axismf.com/"));
+    }
+
+    @Test
+    public void hyphenDelimitedBrandLookalikesAreFlaggedButArbitrarySubstringsAreNot() {
+        assertTrue(containsBrandWarning("https://sbi-login.example/"));
+        assertTrue(containsBrandWarning("https://secure-sbicard-login.example/"));
+        assertTrue(containsBrandWarning("https://fake-uidai-verify.example/"));
+        assertFalse(containsBrandWarning("https://axisbanking.example/"));
+        assertFalse(containsBrandWarning("https://myuidaiportal.example/"));
+    }
+
+    @Test
+    public void officialSubdomainsAreAcceptedButSuffixLookalikesAreNot() {
+        assertFalse(containsBrandWarning("https://portal.uidai.gov.in/"));
+        assertTrue(containsBrandWarning("https://uidai.gov.in.example/"));
+        assertFalse(containsBrandWarning("https://notuidai.gov.in.example/"));
     }
 
     @Test
     public void unrelatedWebsiteDoesNotGetAnIndianBrandWarning() {
         assertTrue(IndianScamChecker.inspect("https://example.com/about").isEmpty());
+    }
+
+    private static boolean containsBrandWarning(String url) {
+        for (String warning : IndianScamChecker.inspect(url)) {
+            if (warning.contains("recognized official domain")) return true;
+        }
+        return false;
     }
 }
