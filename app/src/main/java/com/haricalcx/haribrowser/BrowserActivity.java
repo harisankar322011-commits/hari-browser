@@ -2793,7 +2793,7 @@ public class BrowserActivity extends ComponentActivity {
             if (tab.webView != null) {
                 WebSettings web = tab.webView.getSettings();
                 web.setJavaScriptEnabled(tab.home || javascriptEnabled());
-                web.setBlockNetworkImage(!tab.home && !imagesEnabled());
+                web.setBlockNetworkImage(DataSaverPolicy.shouldBlockNetworkImages(tab.home, imagesEnabled(), dataSaverEnabled()));
                 web.setTextZoom(textZoom());
                 web.setUserAgentString(desktopEnabled() ? privacyReducedUserAgent().replace(" Mobile", "") : privacyReducedUserAgent());
                 updateFingerprintProtection(tab);
