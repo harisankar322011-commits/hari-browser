@@ -143,6 +143,33 @@ public class TeenProtectionTest {
     }
 
     @Test
+    public void blocksAdultGamblingAndDangerousQueriesInMoreIndianScriptsAndHinglish() {
+        assertTrue(TeenProtection.containsBlockedSearchTerm("অশ্লীল ভিডিও"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("পর্ন ভিডিও"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("अश्लील व्हिडिओ"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("અશ્લીલ વીડિયો"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("ਅਸ਼ਲੀਲ ਵੀਡੀਓ"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("ଅଶ୍ଳୀଳ ଭିଡିଓ"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("ashleel video"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("gandi video"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("nangi tasveer"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("online satta"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("bomb kaise banaye"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("ଆତ୍ମହତ୍ୟା ଉପାୟ"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("બૉમ્બ કેવી રીતે બનાવવો"));
+        assertTrue(TeenProtection.containsBlockedSearchTerm("ਖੁਦਕੁਸ਼ੀ ਦੇ ਤਰੀਕੇ"));
+    }
+
+    @Test
+    public void allowsIndianLanguagePreventionAndRecoveryQueries() {
+        assertFalse(TeenProtection.containsBlockedSearchTerm("આપઘાત નિવારણ મદદ"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("আত্মহত্যা প্রতিরোধ সাহায্য"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("ଆତ୍ମହତ୍ୟା ରୋକଥାମ ସହାୟତା"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("आत्महत्या रोकथाम हेल्पलाइन"));
+        assertFalse(TeenProtection.containsBlockedSearchTerm("porn ki lat se chutkara"));
+    }
+
+    @Test
     public void parentPinUsesSaltedHashAndVerifiesCorrectly() throws Exception {
         String pin = "482613";
         String salt = TeenProtection.createPinSalt();
