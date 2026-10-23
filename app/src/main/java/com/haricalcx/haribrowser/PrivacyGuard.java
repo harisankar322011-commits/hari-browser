@@ -71,6 +71,25 @@ public final class PrivacyGuard {
         }
     }
 
+    /**
+     * Returns the same URL with only its scheme upgraded from HTTP to HTTPS.
+     * This does not open HTTP and does not establish that the HTTPS destination
+     * exists or is trustworthy; callers must still run the normal site preflight.
+     */
+    public static String httpsUpgradeUrl(String value) {
+        if (value == null) return null;
+        String candidate = value.trim();
+        try {
+            java.net.URI uri = new java.net.URI(candidate);
+            if (!"http".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+                return null;
+            }
+            return "https" + candidate.substring(uri.getScheme().length());
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     public static boolean isAllowedWebUrl(String value) {
         return isHttpsUrl(value);
     }
