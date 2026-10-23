@@ -31,6 +31,16 @@ public class PrivacyGuardTest {
         assertNull(PrivacyGuard.httpsUpgradeUrl(null));
     }
 
+
+    @Test
+    public void liteModeBlocksImagesOnWebPagesButNotTheHomeDashboard() {
+        assertFalse(PrivacyGuard.shouldBlockNetworkImages(true, true, true));
+        assertFalse(PrivacyGuard.shouldBlockNetworkImages(false, true, false));
+        assertTrue(PrivacyGuard.shouldBlockNetworkImages(false, true, true));
+        assertTrue(PrivacyGuard.shouldBlockNetworkImages(false, false, false));
+        assertTrue(PrivacyGuard.shouldBlockNetworkImages(false, false, true));
+    }
+
     @Test
     public void trackerMatchingUsesDnsSuffixBoundaries() {
         assertTrue(PrivacyGuard.isTrackerHost("ads.example.inmobi.com"));

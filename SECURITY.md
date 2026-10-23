@@ -28,4 +28,4 @@ This app uses the Android System WebView supplied by the device and is not a Chr
 
 Private browsing runs with a separate WebView data-directory suffix on supported Android versions and clears common cookies/site storage/cache on exit. It does not read, save, import, remove, or export standard-profile bookmarks, and its browser settings use a separate preference file. Cleanup remains best-effort: it does not provide network anonymity and cannot erase files deliberately downloaded, screenshots, operating-system or network logs, or every artifact maintained by WebView. Do not use this project as a substitute for a professionally audited browser for high-risk activities.
 
-The CI artifact is debug-signed and intended for testing/sideloading only; it is not a Play Store production release.
+The CI debug artifact is intended for validation and testing only. This family-use project does not target Google Play publishing; any APK installed on a family device still needs its signature, source, and exact artifact to be verified first.

@@ -94,6 +94,16 @@ public final class PrivacyGuard {
         return isHttpsUrl(value);
     }
 
+    /**
+     * Keeps bundled home-page images available while honoring normal image settings
+     * and Lite mode for web pages. Lite mode blocks network images only; it is not
+     * a compression proxy and does not measure data saved.
+     */
+    public static boolean shouldBlockNetworkImages(
+            boolean homePage, boolean imagesEnabled, boolean liteModeEnabled) {
+        return !homePage && (!imagesEnabled || liteModeEnabled);
+    }
+
     public static WebResourceResponse intercept(WebResourceRequest request, boolean blockingEnabled) {
         Uri uri = request.getUrl();
         String scheme = uri.getScheme();

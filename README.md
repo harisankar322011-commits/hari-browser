@@ -2,7 +2,7 @@
 
 **A privacy-focused Android browser with Indian-friendly tools and optional safety features.**
 
-Hari Browser is an open-source browser built on **Android System WebView**. It combines everyday browsing tools with privacy-conscious defaults, optional Teen Protection, local URL checks, file-inspection tools, and an optional Hari AI assistant.
+Hari Browser is an open-source Android browser built on **Android System WebView** for private family use. It combines everyday browsing tools with privacy-conscious defaults, optional Teen Protection, local URL checks, file-inspection tools, and an optional Hari AI assistant. This project is not being prepared for Google Play publishing; family sideloading still requires a verified, trusted APK.
 
 > [!IMPORTANT]
 > **Release caution:** A previously tested Hari Browser 2.3.0 APK was reported as triggering an Android device-protection warning: “malware detected.” The cause has not yet been established. This is neither proof that the APK is malicious nor evidence that the warning is a false positive. Treat that artifact as untrusted until it has been investigated; do not rely on a build or store check alone as proof that an APK is malware-free.
@@ -31,8 +31,9 @@ Hari Browser is an open-source browser built on **Android System WebView**. It c
 ### Browsing and everyday tools
 
 - DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
-- Address bar accepts a web address or a search query.
+- Address bar accepts a web address or search query. Optional voice search asks Android's selected speech-recognition service for text in the selected dashboard language; audio/transcript handling follows that service's own privacy policy.
 - Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader-style mode, adjustable text size, page sharing, and full-screen web video.
+- Optional **Read later** saves up to eight explicitly selected HTTPS pages as encrypted, text-only snapshots (up to 24,000 characters per page). It does not save images, live links, scripts, cookies, login sessions, or the full page layout; snapshots may be incomplete or out of date. Saving is disabled in Private mode, and saved pages can be removed individually or cleared.
 - QR-code generation, printing to PDF, bookmark import/export, and a directory of curated destinations covering education and Indian public services.
 - A home dashboard with quick actions, personal HTTPS shortcuts, offline wallpapers, themed colours, and local tools such as a calculator, unit converter, notes, password generator, JSON formatter, and text tools.
 
@@ -56,7 +57,7 @@ Optional URLhaus reputation checks are available after explicit user confirmatio
 
 ### Hari Antivirus and download checks
 
-Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker is intentionally kept out of production scanner bytecode to avoid triggering device-protection heuristics; this does not make the scanner a full antivirus engine.
+Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker was removed from production scanner bytecode as a precaution after a device-protection warning; Samsung has not confirmed the warning's cause, so this change alone does not establish that the alert is resolved. This does not make the scanner a full antivirus engine.
 
 Optional MalwareBazaar hash reputation can send a file's SHA-256 hash to the service when the user configures an Auth-Key. The file contents and filename are not uploaded for that lookup. Optional URLhaus checks share only the URL being checked. These online checks are off until configured or explicitly enabled, and private browsing does not send hashes or URLs for reputation checks.
 
@@ -76,11 +77,11 @@ Hari AI is designed to support India-focused responses, including ₹/INR, lakh/
 
 ### Languages and Indian-friendly features
 
-The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. Language support applies primarily to the home dashboard; it does not mean every webpage or every browser control is translated. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
+The home dashboard supports 14 language options: English (India), Malayalam, Hindi, Tamil, Telugu, Kannada, Bengali, Marathi, Gujarati, Punjabi, Urdu, Spanish, French, and Arabic. The address bar, core navigation labels, voice-search prompts, and family-safety guide title also use the selected language where translations are available. Many settings dialogs and all website content may still be in English. Voice recognition is handled by Android's selected speech service and follows that service's privacy policy. The start page also links to related Hari projects and the [@inspiring_creatives_minds Instagram account](https://www.instagram.com/inspiring_creatives_minds/).
 
 ## Security and privacy limits
 
-Hari Browser is designed to reduce some common risks, but it does not guarantee anonymity, prevent every tracking technique, or certify the safety of a website or file.
+Hari Browser is intended for family use and reduces some common risks, but it does not guarantee anonymity, prevent every tracking technique, or certify the safety of a website or file. Its local family-safety guide explains safe browsing habits, the limits of Teen Protection and file checks, and how external AI/voice services may process submitted content.
 
 - Websites and search providers still receive the requests needed to deliver content. External services receive data whenever you choose to use them—for example, when you use Hari AI, translate a page with Google Translate, or opt in to reputation checks.
 - Private mode helps separate browser data, but cannot erase downloads you explicitly save, screenshots, network/provider logs, or every trace outside the app's control. Exit cleanup is best-effort.
@@ -92,7 +93,7 @@ Hari Browser is designed to reduce some common risks, but it does not guarantee 
 
 Use only builds linked from the official [Hari Browser repository](https://github.com/harisankar322011-commits/hari-browser).
 
-The repository's release workflow is intended to publish a release APK artifact:
+The repository's release workflow can produce a build artifact for family testing/sideloading. This is not a Google Play publishing workflow. Because the previously tested APK triggered a device-protection warning, do not install it or assume a newly built APK is safe until the exact artifact has been investigated and verified.
 
 1. Open the repository's **Actions** tab.
 2. Open the latest successful **Build Hari Browser Release APK** workflow run on `main`.
@@ -109,11 +110,10 @@ A successful build, CI check, or third-party review does not by itself prove an 
 ### Requirements
 
 - JDK 17
-- Gradle 9.6.0
 - Android SDK Platform 36
-- Android Gradle Plugin 9.4.0 (declared by the project)
+- Android Gradle Plugin 9.4.1 (declared by the project)
 
-This repository currently does not include a Gradle wrapper, so install a compatible Gradle version separately.
+The checked-in Gradle wrapper selects Gradle 9.6.0 and verifies the distribution checksum, so a separately installed Gradle is not required.
 
 ### Commands
 
@@ -122,16 +122,16 @@ git clone https://github.com/harisankar322011-commits/hari-browser.git
 cd hari-browser
 
 # Compile a debug APK
-gradle :app:assembleDebug
+./gradlew :app:assembleDebug
 
 # Run JVM unit tests
-gradle :app:testDebugUnitTest
+./gradlew :app:testDebugUnitTest
 
 # Run release lint checks
-gradle :app:lintRelease
+./gradlew :app:lintRelease
 ```
 
-Gradle writes APKs under `app/build/outputs/apk/`. A locally built APK should not be assumed to be signed for distribution. Release signing requires a stable, privately stored signing key. Do not use a locally generated test key for public releases.
+Gradle writes APKs under `app/build/outputs/apk/`. A locally built APK should not be assumed to be signed for installation or for future updates. The family-use install candidate must be signed with the same stable, privately stored key on every update; never commit a keystore or signing password to source control. Do not install the previously flagged 2.3.0 APK while its device-protection warning remains unresolved.
 
 The repository's GitHub Actions workflow also runs release-build checks, Android lint, Teen Protection unit tests, and source-level security regression checks. Passing these checks improves quality but cannot establish that the app is vulnerability-free.
 
