@@ -1065,6 +1065,13 @@ public class BrowserActivity extends ComponentActivity {
         }
         message.append("\n\nLocal checks run on this device and review URL patterns only; they do not certify the website or inspect all page content. ");
         message.append("India-focused scam checks look for selected impersonation and OTP/KYC/payment wording in the URL only; false positives and missed scams are possible. ");
+        if (SensitiveInfoReminder.shouldRemind(url)) {
+            message.append("\n\nSENSITIVE INFORMATION REMINDER\n");
+            message.append("This address contains login, verification, OTP, KYC, or identity-related words. ");
+            message.append("This is a URL-text clue only, not a verdict that the website is unsafe or trustworthy. ");
+            message.append("Before entering Aadhaar details or account/financial information, verify the exact hostname independently. ");
+            message.append("Never share an OTP, bank PIN, password, or recovery code with a caller, message sender, or support agent.");
+        }
         message.append("Android WebView certificate validation and Safe Browsing remain active during connection.");
         if (reputation != null) {
             message.append("\n\nThis URL was sent to URLhaus because online URL reputation is enabled in normal browsing.");
