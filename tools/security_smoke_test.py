@@ -116,9 +116,13 @@ try:
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
     teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
     teen_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionTest.java")
+    browser_ui_text = read("app/src/main/java/com/haricalcx/haribrowser/BrowserUiText.java")
     check("Teen protection menu and protected navigation are wired",
-          '"Teen protection · "' in browser and "case 33:" in browser and
-          "protectSearchUrl(url)" in browser)
+          'ui("Teen protection")' in browser and '"Teen protection"' in browser_ui_text and
+          "case 33:" in browser and "protectSearchUrl(url)" in browser)
+    check("Teen protection label includes Indian-language translations",
+          'addExtras(all, "ml"' in browser_ui_text and '"ടീൻ സംരക്ഷണം"' in browser_ui_text and
+          'addExtras(all, "hi"' in browser_ui_text and '"किशोर सुरक्षा"' in browser_ui_text)
     check("Teen protection filters restricted URLs in main-frame requests",
           "request.isForMainFrame()" in browser and
           "TeenProtection.isBlockedUrl(requestUri.toString())" in browser)
