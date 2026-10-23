@@ -1989,7 +1989,7 @@ public class BrowserActivity extends ComponentActivity {
                 ui("Choose home page language"),
                 ui("Choose browser accent colour"),
                 (fingerprintProtectionEnabled() ? "✓ " : "○ ") + ui("Maximum anti-fingerprinting shield"),
-                ui("About Hari Browser - What's new in 2.3"),
+                ui("About Hari Browser - What's new in 2.4"),
                 ui("Hari AI · API settings"),
                 ui("Teen protection") + " · " + (teenProtectionEnabled() ? "ON" : "OFF"),
                 ui("Security & privacy scan"),
@@ -2511,7 +2511,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showAboutDialog() {
         String message =
-                "Version 2.3.0\n\n" +
+                "Version 2.4.0\n\n" +
                 "A refreshed start page with clearer spacing, adaptive cards and improved phone/tablet layouts.\n\n" +
                 "- Home page available in ten Indian languages plus English, Spanish, French and Arabic\n" +
                 "- Search-engine choice now persists from the home screen\n" +
@@ -2524,7 +2524,7 @@ public class BrowserActivity extends ComponentActivity {
                 "- HTTPS-only navigation, Safe Browsing, encrypted bookmarks and private browsing remain available\n\n" +
                 "Privacy note: tracker blocking and Teen Protection are best-effort. Some search providers control their own filtering, and websites or your selected search provider still receive the requests needed to load services.";
         new AlertDialog.Builder(this)
-                .setTitle("Hari Browser 2.3")
+                .setTitle("Hari Browser 2.4")
                 .setMessage(message)
                 .setNeutralButton("Privacy & security", (dialog, which) -> showPrivacyInfo())
                 .setPositiveButton("Done", null)
