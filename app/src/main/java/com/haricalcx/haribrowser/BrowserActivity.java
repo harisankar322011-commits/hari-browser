@@ -1987,8 +1987,8 @@ public class BrowserActivity extends ComponentActivity {
                 ui("Teen protection") + " · " + (teenProtectionEnabled() ? "ON" : "OFF"),
                 ui("Security & privacy scan"),
                 ui("Site permission controls"),
-                (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
-                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
+                (privateMode ? ui("Clear browsing data on exit (automatic in private mode)") :
+                        (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + ui("Clear browsing data on browser exit")),
                 ui("Hari Antivirus · scan a file and manage quarantine"),
                 (dataSaverEnabled() ? "✓ " : "○ ") + ui("Lite mode · block images and known trackers"),
                 ui("Family safety guide"),
@@ -1996,7 +1996,7 @@ public class BrowserActivity extends ComponentActivity {
                 ui("Read saved pages (offline text)")
         };
         new AlertDialog.Builder(this)
-                .setTitle(privateMode ? "Private settings" : "Settings")
+                .setTitle(privateMode ? ui("Private settings") : ui("Settings"))
                 .setItems(options, (dialog, which) -> {
                     switch (which) {
                         case 0:
@@ -3051,10 +3051,17 @@ public class BrowserActivity extends ComponentActivity {
         if (tab == null || tab.webView == null) return;
         String js = "(function(){var old=document.getElementById('hari-reader-style');" +
                 "if(old)old.remove();var s=document.createElement('style');s.id='hari-reader-style';" +
-                "s.textContent='body{max-width:780px!important;margin:24px auto!important;padding:18px!important;" +
-                "font-family:Georgia,serif!important;font-size:20px!important;line-height:1.8!important;" +
-                "background:#fff!important;color:#172033!important}img,video,iframe,nav,aside,footer,header," +
-                "[role=banner],[role=navigation],.ad,.ads,.advertisement{max-width:100%!important}' ;" +
+                "s.textContent='html{background:#fff!important;color:#172033!important}' +" +
+                "'body{box-sizing:border-box!important;width:auto!important;max-width:780px!important;" +
+                "margin:0 auto!important;padding:clamp(16px,4vw,28px)!important;" +
+                "font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif!important;" +
+                "font-size:19px!important;line-height:1.8!important;overflow-wrap:break-word!important;" +
+                "word-break:normal!important;background:#fff!important;color:#172033!important}' +" +
+                "'body *{font-family:inherit!important;line-height:inherit!important}' +" +
+                "'p,li,blockquote,pre,td,th{margin-top:.75em!important;margin-bottom:.75em!important}' +" +
+                "'img,video,iframe{max-width:100%!important;height:auto!important}' +" +
+                "'nav,aside,footer,[role=navigation],.advertisement,.advert,.ads,.ad-slot,.social-share," +
+                ".cookie-banner,.newsletter-signup{max-width:100%!important}' ;" +
                 "document.head.appendChild(s);})();";
         tab.webView.evaluateJavascript(js, null);
     }
