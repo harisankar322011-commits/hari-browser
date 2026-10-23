@@ -2,7 +2,6 @@ package com.haricalcx.haribrowser;
 
 import java.net.URI;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
@@ -32,12 +31,22 @@ public final class IndianScamChecker {
                 .toLowerCase(Locale.ROOT);
         List<String> warnings = new ArrayList<>();
 
+        // Keep brand aliases and their official domain families together. Many
+        // Indian financial groups operate more than one legitimate hostname.
         checkBrand(host, warnings, "uidai", "uidai.gov.in");
         checkBrand(host, warnings, "aadhaar", "uidai.gov.in");
         checkBrand(host, warnings, "sbi", "sbi.co.in", "onlinesbi.sbi");
+        checkBrand(host, warnings, "sbicard", "sbicard.com");
+        checkBrand(host, warnings, "sbilife", "sbilife.co.in");
         checkBrand(host, warnings, "hdfcbank", "hdfcbank.com");
+        checkBrand(host, warnings, "hdfcsec", "hdfcsec.com");
+        checkBrand(host, warnings, "hdfclife", "hdfclife.com");
         checkBrand(host, warnings, "icicibank", "icicibank.com");
+        checkBrand(host, warnings, "icicidirect", "icicidirect.com");
+        checkBrand(host, warnings, "iciciprulife", "iciciprulife.com");
+        checkBrand(host, warnings, "icicilombard", "icicilombard.com");
         checkBrand(host, warnings, "axisbank", "axisbank.com");
+        checkBrand(host, warnings, "axismf", "axismf.com");
         checkBrand(host, warnings, "npci", "npci.org.in");
         checkBrand(host, warnings, "irctc", "irctc.co.in");
         checkBrand(host, warnings, "incometax", "incometax.gov.in");
@@ -56,20 +65,31 @@ public final class IndianScamChecker {
     }
 
     private static void checkBrand(String host, List<String> warnings, String brand, String... officialDomains) {
-        // Avoid treating an arbitrary substring such as "largest" as a GST brand mention.
-        if ("gst".equals(brand)) {
-            boolean tokenFound = false;
-            for (String label : host.split("[.-]")) {
-                if ("gst".equals(label)) { tokenFound = true; break; }
-            }
-            if (!tokenFound) return;
-        } else if (!host.contains(brand)) {
-            return;
-        }
+        if (!hasWholeHostLabelToken(host, brand)) return;
+
+        // Match an exact official domain or one of its DNS subdomains. The dot
+        // boundary prevents lookalikes such as "notuidai.gov.in.example" from
+        // being trusted as official.
         for (String official : officialDomains) {
             if (host.equals(official) || host.endsWith("." + official)) return;
         }
-        warnings.add("The hostname mentions '" + brand + "' but does not end in a recognized official domain for that service. Verify the address independently.");
+        warnings.add("The hostname mentions '" + brand + "' but does not match a recognized official domain for that service. Verify the address independently.");
+    }
+
+    /**
+     * Match a brand as a whole DNS label or a hyphen-delimited token inside a
+     * label, not as an arbitrary substring (for example, "axisbanking").
+     */
+    private static boolean hasWholeHostLabelToken(String host, String brand) {
+        for (String label : host.split("\\.")) {
+            if (label.equals(brand)
+                    || label.startsWith(brand + "-")
+                    || label.endsWith("-" + brand)
+                    || label.contains("-" + brand + "-")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int countAny(String value, String... tokens) {
