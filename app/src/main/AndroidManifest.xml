@@ -37,6 +37,11 @@
             android:label="Hari Antivirus" />
 
         <activity
+            android:name=".CryptographyActivity"
+            android:exported="false"
+            android:label="HARI Cryptography" />
+
+        <activity
             android:name=".PrivateActivity"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:exported="false"

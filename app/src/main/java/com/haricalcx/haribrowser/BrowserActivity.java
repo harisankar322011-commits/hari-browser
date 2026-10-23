@@ -1108,6 +1108,9 @@ public class BrowserActivity extends ComponentActivity {
             case "share":
                 sharePage();
                 break;
+            case "cryptography":
+                startActivity(new Intent(BrowserActivity.this, CryptographyActivity.class));
+                break;
             case "security":
                 showSiteSecurity();
                 break;

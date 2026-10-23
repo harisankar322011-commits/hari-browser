@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<title>HARI Browser — Cryptography</title>
+<style>
+:root{color-scheme:dark;--bg:#0d2326;--panel:#143034;--line:#25484d;--text:#e9efe8;--muted:#a5bbb7;--gold:#d2a64a;--danger:#ff9b8e;--ok:#a6e3b1}
+:root.light{color-scheme:light;--bg:#f3f6f2;--panel:#fff;--line:#d2ded8;--text:#183034;--muted:#5d7470;--gold:#b07a13;--danger:#b3261e;--ok:#16743b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:20px 16px 12px;border-bottom:1px solid var(--line)}.head,main{max-width:900px;margin:auto}.brand{font-weight:800;letter-spacing:.08em;font-size:1.05rem}.brand span{color:var(--gold)}h1{font-size:1.55rem;margin:.3rem 0}p{color:var(--muted);margin:.4rem 0 1rem}.top{display:flex;justify-content:space-between;gap:12px;align-items:center}
+main{padding:18px 16px 42px}.notice{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:12px 14px;margin-bottom:16px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}button,.tab{font:inherit;font-weight:650;border:1px solid var(--line);border-radius:8px;padding:10px 13px;background:var(--gold);color:#201a0c;cursor:pointer}.tab{background:var(--panel);color:var(--text)}.tab[aria-selected=true]{background:var(--gold);color:#201a0c;border-color:var(--gold)}button.secondary{background:transparent;color:var(--text)}button:disabled{opacity:.55;cursor:not-allowed}
+.panel{display:none;border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:16px}.panel.active{display:block}label{display:block;font-weight:650;margin:12px 0 5px}input,textarea,select{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--text);padding:12px;font:inherit}textarea{min-height:130px;resize:vertical;overflow-wrap:anywhere}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.status{min-height:1.5em;color:var(--ok);margin-top:10px;overflow-wrap:anywhere}.status.error{color:var(--danger)}.small{font-size:.9rem;color:var(--muted)}.output{margin-top:12px}.filebox{border:1px dashed var(--line);border-radius:10px;padding:12px}.footer{margin-top:18px;font-size:.85rem;color:var(--muted)}:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media(max-width:600px){.row{grid-template-columns:1fr}.top{align-items:flex-start}.panel{padding:12px}button,.tab{padding:10px}}
+</style>
+</head>
+<body>
+<header><div class="head">
+<div class="top"><div class="brand">HARI <span>BROWSER</span></div><button class="secondary" id="themeBtn" type="button">Light theme</button></div>
+<h1>Cryptography Tools</h1><p>Local encryption for text and files, including exported bookmark/history backups.</p>
+</div></header>
+<main>
+<div class="notice"><strong>Privacy by design:</strong> processing happens in this page; it does not upload data. Use a strong, unique password and keep a backup. Losing the password means the data may be unrecoverable.
+<div class="small">This tool does not encrypt all browser traffic or automatically protect HARI Browser's live databases. It requires Web Crypto support in a secure context.</div></div>
+<div class="tabs" role="tablist" aria-label="Cryptography tools">
+<button class="tab" role="tab" aria-selected="true" data-tab="textPanel">Text</button>
+<button class="tab" role="tab" aria-selected="false" data-tab="filePanel">Files & backups</button>
+</div>
+<section id="textPanel" class="panel active" role="tabpanel">
+<h2>Text encryption</h2>
+<p>Encrypt private notes, snippets, or text. Output is a versioned HARI encrypted container.</p>
+<label for="password">Password</label><input id="password" type="password" autocomplete="new-password" placeholder="Use a long, unique password">
+<div class="actions"><button type="button" id="togglePass" class="secondary">Show password</button><button type="button" id="genPass" class="secondary">Generate password</button></div>
+<label for="plain">Text to encrypt / encrypted container to decrypt</label><textarea id="plain" spellcheck="false" autocomplete="off" placeholder="Enter text, or paste an HARI encrypted container here"></textarea>
+<div class="actions"><button id="encryptText" type="button">Encrypt text</button><button id="decryptText" type="button" class="secondary">Decrypt text</button><button id="clearText" type="button" class="secondary">Clear</button></div>
+<div id="textStatus" class="status" role="status" aria-live="polite"></div>
+<label for="textOutput">Result</label><textarea id="textOutput" readonly spellcheck="false" placeholder="Encrypted container or decrypted text appears here"></textarea>
+<div class="actions"><button id="copyText" type="button" class="secondary">Copy result</button><button id="downloadText" type="button" class="secondary">Download result</button></div>
+</section>
+<section id="filePanel" class="panel" role="tabpanel">
+<h2>Files and encrypted backups</h2>
+<p>Use this for documents or exported bookmark/history backup files. Export the data from the browser first; this page cannot access live browser databases by itself.</p>
+<label for="filePassword">Password</label><input id="filePassword" type="password" autocomplete="new-password" placeholder="Use a long, unique password">
+<div class="actions"><button id="genFilePass" type="button" class="secondary">Generate password</button><button id="toggleFilePass" type="button" class="secondary">Show password</button></div>
+<label for="fileInput">Choose a file to encrypt, or an HARI encrypted file to decrypt</label>
+<div class="filebox"><input id="fileInput" type="file"><div class="small" id="fileInfo">Maximum supported file size: 8 MiB. Larger files need a reviewed streaming-encryption implementation.</div></div>
+<div class="actions"><button id="encryptFile" type="button">Encrypt file</button><button id="decryptFile" type="button" class="secondary">Decrypt file</button><button id="clearFile" type="button" class="secondary">Clear</button></div>
+<div id="fileStatus" class="status" role="status" aria-live="polite"></div>
+<div class="footer">Format: versioned JSON envelope containing algorithm, PBKDF2 iteration count, random salt, random AES-GCM IV, original filename metadata, and authenticated ciphertext. Metadata is authenticated during encryption/decryption.</div>
+</section>
+<div class="footer">Security note: this page uses the browser's Web Crypto API (PBKDF2-HMAC-SHA-256 and AES-256-GCM). This is a practical utility, not a security certification. Avoid using it on a shared or compromised device.</div>
+</main>
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const MAX_BYTES = 8 * 1024 * 1024;
+const MAX_CONTAINER_BYTES = 12 * 1024 * 1024;
+const MAX_BRIDGE_BASE64_CHARS = 16 * 1024 * 1024;
+const ITERATIONS = 310000;
+const te = new TextEncoder();
+const td = new TextDecoder('utf-8', {fatal:true});
+function setStatus(id, message, bad=false){const el=$(id);el.textContent=message;el.classList.toggle('error',bad)}
+function ensureCrypto(){if(!globalThis.crypto?.subtle || !globalThis.crypto?.getRandomValues) throw new Error('Web Crypto is unavailable in this view. Open in a supported secure context (HTTPS or localhost) or integrate with a secure Android WebView context.')}
+function b64(bytes){let s='';for(let i=0;i<bytes.length;i+=0x8000)s+=String.fromCharCode(...bytes.subarray(i,i+0x8000));return btoa(s)}
+function unb64(s){if(typeof s!=='string'||s.length>MAX_BYTES*2)throw new Error('Invalid or oversized encrypted data.');const bin=atob(s);const out=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);return out}
+function rand(n){ensureCrypto();return crypto.getRandomValues(new Uint8Array(n))}
+function makePassword(){const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%*-_=+';let out='';while(out.length<24){for(const b of rand(48)){if(b<Math.floor(256/chars.length)*chars.length)out+=chars[b%chars.length];if(out.length===24)break}}return out}
+async function derive(password,salt,iterations){if(!password)throw new Error('Enter a password.');if(password.length<12)throw new Error('Use a password with at least 12 characters.');const material=await crypto.subtle.importKey('raw',te.encode(password.normalize('NFKC')),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+function bytesToJson(bytes){return td.decode(bytes)}
+async function encryptBytes(bytes,password,name,mime){ensureCrypto();if(bytes.byteLength>MAX_BYTES)throw new Error('Input is larger than the 8 MiB limit.');const salt=rand(16),iv=rand(12);const meta={format:'HARI-CRYPT',version:1,algorithm:'AES-256-GCM',kdf:'PBKDF2-HMAC-SHA-256',iterations:ITERATIONS,salt:b64(salt),iv:b64(iv),name:String(name||'data.bin').slice(0,240),mime:String(mime||'application/octet-stream').slice(0,120)};const key=await derive(password,salt,ITERATIONS);const aad=te.encode(JSON.stringify(meta));const cipher=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv,additionalData:aad,tagLength:128},key,bytes));return te.encode(JSON.stringify({...meta,ciphertext:b64(cipher)}))}
+async function decryptBytes(container,password){ensureCrypto();if(container.byteLength>MAX_CONTAINER_BYTES)throw new Error('Encrypted input exceeds the 12 MiB container limit.');let obj;try{obj=JSON.parse(bytesToJson(container))}catch{throw new Error('This is not a valid HARI encrypted container.')}if(!obj||obj.format!=='HARI-CRYPT'||obj.version!==1||obj.algorithm!=='AES-256-GCM'||obj.kdf!=='PBKDF2-HMAC-SHA-256')throw new Error('Unsupported encrypted file format.');if(!Number.isInteger(obj.iterations)||obj.iterations<100000||obj.iterations>1000000)throw new Error('Invalid key-derivation parameters.');const meta={format:obj.format,version:obj.version,algorithm:obj.algorithm,kdf:obj.kdf,iterations:obj.iterations,salt:obj.salt,iv:obj.iv,name:obj.name,mime:obj.mime};const salt=unb64(obj.salt),iv=unb64(obj.iv),cipher=unb64(obj.ciphertext);if(salt.length!==16||iv.length!==12||cipher.length<16||cipher.length>MAX_BYTES+16)throw new Error('Invalid or oversized encrypted container.');const key=await derive(password,salt,obj.iterations);try{const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv,additionalData:te.encode(JSON.stringify(meta)),tagLength:128},key,cipher);return {bytes:new Uint8Array(plain),name:safeName(obj.name||'decrypted.bin'),mime:typeof obj.mime==='string'?obj.mime:'application/octet-stream'}}catch{throw new Error('Decryption failed: wrong password or modified/corrupted data.')} }
+function safeName(name){return String(name).replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_').slice(0,180)||'download.bin'}
+function download(bytes,filename,type='application/octet-stream',statusId='fileStatus'){
+ if(window.HariCryptoBridge && typeof window.HariCryptoBridge.saveFileBase64==='function'){
+  const encoded=b64(bytes);
+  if(encoded.length>MAX_BRIDGE_BASE64_CHARS)throw new Error('Output is too large for the Android save bridge. Use an output below the 8 MiB input limit.');
+  setStatus(statusId,'Choose a save location in Android to save the output.');
+  window.HariCryptoBridge.saveFileBase64(encoded,safeName(filename),String(type||'application/octet-stream'),statusId);
+  return true;
+ }
+ const blob=new Blob([bytes],{type});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=safeName(filename);document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);return false
+}
+window.hariCryptoSaveCompleted=(success,message,statusId)=>{
+ const target=statusId==='textStatus'?'textStatus':'fileStatus';
+ setStatus(target,String(message|| (success?'File saved.':'Save failed.')),!success);
+};
+function bytesFromBase64(s){return unb64(s)}
+function setBusy(buttons,busy){buttons.forEach(b=>b.disabled=busy)}
+async function withBusy(buttons,statusId,fn){setBusy(buttons,true);setStatus(statusId,'Working…');try{await fn()}catch(e){setStatus(statusId,e?.message||'Operation failed.',true)}finally{setBusy(buttons,false)}}
+$('themeBtn').onclick=()=>{const light=document.documentElement.classList.toggle('light');$('themeBtn').textContent=light?'Dark theme':'Light theme'};
+document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab))});
+$('togglePass').onclick=()=>{const i=$('password');i.type=i.type==='password'?'text':'password';$('togglePass').textContent=i.type==='password'?'Show password':'Hide password'};
+$('toggleFilePass').onclick=()=>{const i=$('filePassword');i.type=i.type==='password'?'text':'password';$('toggleFilePass').textContent=i.type==='password'?'Show password':'Hide password'};
+$('genPass').onclick=()=>{$('password').value=makePassword();$('password').type='text';$('togglePass').textContent='Hide password';setStatus('textStatus','Generated a new password. Save it safely; it cannot be recovered.')};
+$('genFilePass').onclick=()=>{$('filePassword').value=makePassword();$('filePassword').type='text';$('toggleFilePass').textContent='Hide password';setStatus('fileStatus','Generated a new password. Save it safely; it cannot be recovered.')};
+$('encryptText').onclick=()=>withBusy([$ ('encryptText'),$('decryptText')],'textStatus',async()=>{const text=$('plain').value;if(!text)throw new Error('Enter text to encrypt.');const out=await encryptBytes(te.encode(text),$('password').value,'text.txt','text/plain;charset=utf-8');$('textOutput').value=bytesToJson(out);setStatus('textStatus','Text encrypted. Keep the password and encrypted container safe.')});
+$('decryptText').onclick=()=>withBusy([$ ('encryptText'),$('decryptText')],'textStatus',async()=>{const text=$('plain').value.trim();if(!text)throw new Error('Paste an encrypted HARI container.');const result=await decryptBytes(te.encode(text),$('password').value);$('textOutput').value=td.decode(result.bytes);setStatus('textStatus','Decryption successful.')});
+$('clearText').onclick=()=>{['password','plain','textOutput'].forEach(id=>$(id).value='');setStatus('textStatus','Fields cleared. This cannot guarantee erasure from memory or clipboard history.')};
+$('copyText').onclick=async()=>{try{await navigator.clipboard.writeText($('textOutput').value);setStatus('textStatus','Copied to clipboard. Clipboard contents may remain available to the device.')}catch{setStatus('textStatus','Clipboard access is unavailable; select and copy the result manually.',true)}};
+$('downloadText').onclick=()=>{if(!$('textOutput').value){setStatus('textStatus','There is no result to download.',true);return}if(!download(te.encode($('textOutput').value),'hari-encrypted-text.json','application/json','textStatus'))setStatus('textStatus','Download prepared.');};
+$('fileInput').onchange=()=>{const f=$('fileInput').files[0];$('fileInfo').textContent=f?`${f.name} — ${f.size.toLocaleString()} bytes. Encrypt files up to 8 MiB; decrypt HARI containers up to 12 MiB.`:'Maximum supported file size: 8 MiB.'};
+$('encryptFile').onclick=()=>withBusy([$ ('encryptFile'),$('decryptFile')],'fileStatus',async()=>{const f=$('fileInput').files[0];if(!f)throw new Error('Choose a file first.');if(f.size>MAX_BYTES)throw new Error('File is larger than the 8 MiB limit.');const bytes=new Uint8Array(await f.arrayBuffer());const enc=await encryptBytes(bytes,$('filePassword').value,f.name,f.type);const nativeSave=download(enc,f.name+'.hari-crypt','application/json','fileStatus');if(!nativeSave)setStatus('fileStatus','Encrypted file download prepared. Keep the password separately.')});
+$('decryptFile').onclick=()=>withBusy([$ ('encryptFile'),$('decryptFile')],'fileStatus',async()=>{const f=$('fileInput').files[0];if(!f)throw new Error('Choose an encrypted .hari-crypt file first.');if(f.size>MAX_CONTAINER_BYTES)throw new Error('Encrypted file is larger than the supported limit (12 MiB).');const result=await decryptBytes(new Uint8Array(await f.arrayBuffer()),$('filePassword').value);const nativeSave=download(result.bytes,result.name,result.mime,'fileStatus');if(!nativeSave)setStatus('fileStatus','Decrypted file download prepared.')});
+$('clearFile').onclick=()=>{ $('filePassword').value='';$('fileInput').value='';$('fileInfo').textContent='Maximum supported file size: 8 MiB. Larger files need a reviewed streaming-encryption implementation.';setStatus('fileStatus','Fields cleared. This cannot guarantee erasure from memory.')};
+document.addEventListener('visibilitychange',()=>{if(document.hidden){$('password').value='';$('filePassword').value='';$('plain').value='';$('textOutput').value='';setStatus('textStatus','Sensitive fields cleared when page became hidden.');setStatus('fileStatus','Password fields cleared when page became hidden.')}});
+</script>
+</body></html>

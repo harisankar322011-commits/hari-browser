@@ -21,6 +21,13 @@ Hari Browser is an open-source browser built on **Android System WebView**. It c
 
 ## Features
 
+### Local cryptography tool
+
+- Encrypt and decrypt text and user-selected files locally using Web Crypto: AES-256-GCM with PBKDF2-HMAC-SHA-256 (310,000 iterations in the current format).
+- Export encrypted output through Android's system save-location picker; file input is limited to 8 MiB and encrypted containers to 12 MiB to bound memory use.
+- The tool can encrypt files that the user has already exported from bookmarks or history. It does **not** automatically encrypt HARI Browser's live databases, saved passwords, or browser traffic.
+- The cryptography screen uses a dedicated WebViewAssetLoader origin, blocks non-local navigation/resources, and exposes only a bounded save-file bridge to the bundled page.
+
 ### Browsing and everyday tools
 
 - DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
