@@ -243,7 +243,13 @@ final class TeenProtection {
             key = "kp"; value = "1";
         } else if ("search.brave.com".equals(host)) {
             key = "safesearch"; value = "strict";
+        } else if (isYahooSearchHost(host)) {
+            // Yahoo's documented strict SafeSearch URL flag.
+            key = "vm"; value = "r";
         } else {
+            // These providers are phrase-filtered locally, but their strict
+            // preference is account/cookie or provider-specific and is not
+            // safely enforceable through a verified URL parameter here.
             return url;
         }
 
@@ -301,9 +307,38 @@ final class TeenProtection {
 
     private static String queryKeyForHost(String host) {
         if (isGoogleHost(host) || isBingHost(host) || isDuckDuckGoHost(host)
-                || "search.brave.com".equals(host)) return "q";
+                || "search.brave.com".equals(host)
+                || isEcosiaHost(host) || isMojeekHost(host) || isQwantHost(host)) return "q";
         if (isStartpageHost(host)) return "query";
+        if (isYahooSearchHost(host)) return "p";
+        if (isYandexHost(host)) return "text";
+        if (isBaiduHost(host)) return "wd";
         return null;
+    }
+
+    private static boolean isYahooSearchHost(String host) {
+        return host.equals("search.yahoo.com");
+    }
+
+    private static boolean isEcosiaHost(String host) {
+        return host.equals("ecosia.org") || host.endsWith(".ecosia.org");
+    }
+
+    private static boolean isMojeekHost(String host) {
+        return host.equals("mojeek.com") || host.endsWith(".mojeek.com");
+    }
+
+    private static boolean isQwantHost(String host) {
+        return host.equals("qwant.com") || host.endsWith(".qwant.com");
+    }
+
+    private static boolean isYandexHost(String host) {
+        return host.equals("yandex.com") || host.endsWith(".yandex.com")
+                || host.equals("yandex.ru") || host.endsWith(".yandex.ru");
+    }
+
+    private static boolean isBaiduHost(String host) {
+        return host.equals("baidu.com") || host.endsWith(".baidu.com");
     }
 
     private static boolean isGoogleHost(String host) {
