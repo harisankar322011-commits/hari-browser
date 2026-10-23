@@ -1,0 +1,92 @@
+name: Bug report
+description: Report a reproducible Hari Browser problem with enough detail to investigate.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please do not include API keys, passwords, private browsing history, personal identifiers, or sensitive screenshots. For suspected security vulnerabilities, follow the private reporting instructions in SECURITY.md instead of posting exploit details publicly.
+  - type: input
+    id: app-version
+    attributes:
+      label: Hari Browser version
+      description: Include the version name and version code if visible.
+      placeholder: "2.3.0 (7)"
+    validations:
+      required: true
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      placeholder: "Android 13"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device make and model
+      placeholder: "Samsung Galaxy ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: install-source
+    attributes:
+      label: Where did you get this build?
+      options:
+        - Google Play
+        - GitHub Actions debug artifact
+        - GitHub Actions release artifact
+        - Locally built APK
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the problem and where you noticed it.
+      placeholder: A short, clear description.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: List the exact steps, including a sample URL if safe to share.
+      placeholder: |
+        1. Open Hari Browser
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: What happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots (optional)
+      description: Redact personal data, tokens, API keys, URLs containing private query parameters, and account details before sharing.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed secrets and personal information from this report.
+          required: true
