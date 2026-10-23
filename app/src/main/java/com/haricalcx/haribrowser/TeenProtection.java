@@ -224,6 +224,7 @@ final class TeenProtection {
         if (uri == null || uri.getHost() == null) return null;
         String host = uri.getHost().toLowerCase(Locale.ROOT);
         String key = queryKeyForHost(host);
+        if (key == null) key = genericSearchQueryKey(uri.getPath());
         if (key == null || uri.getRawQuery() == null) return null;
         for (String parameter : uri.getRawQuery().split("&")) {
             int split = parameter.indexOf('=');
@@ -325,6 +326,20 @@ final class TeenProtection {
         } catch (GeneralSecurityException | IllegalArgumentException ignored) {
             return false;
         }
+    }
+
+    /**
+     * For unrecognized providers, apply the local phrase filter only on paths that
+     * clearly represent search results. This intentionally does not rewrite
+     * SafeSearch settings for arbitrary sites.
+     */
+    private static String genericSearchQueryKey(String path) {
+        if (path == null) return null;
+        String normalizedPath = path.toLowerCase(Locale.ROOT);
+        if (!normalizedPath.matches("(^|.*/)(search|results|search-results|searchresults|find|web-search|websearch)(/|\\\\.[^/]*|$)")) {
+            return null;
+        }
+        return "q";
     }
 
     private static String queryKeyForHost(String host) {
