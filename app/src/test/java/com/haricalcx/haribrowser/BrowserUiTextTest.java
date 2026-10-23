@@ -10,7 +10,7 @@ public class BrowserUiTextTest {
         assertEquals("പോകുക", BrowserUiText.translate("ml", "GO"));
         assertEquals("जाएँ", BrowserUiText.translate("hi-IN", "GO"));
         assertEquals("செல்", BrowserUiText.translate("ta", "GO"));
-        assertEquals("ವಾಯ್ಸ್", BrowserUiText.translate("kn", "Voice search"));
+        assertEquals("ಧ್ವನಿ ಹುಡುಕಾಟ", BrowserUiText.translate("kn", "Voice search"));
     }
 
     @Test
