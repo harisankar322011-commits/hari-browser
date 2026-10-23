@@ -577,10 +577,20 @@ public class BrowserActivity extends ComponentActivity {
         if (tab != null && securityStatus != null) {
             String message = privateMode ? "Private • history not saved" :
                     (tab.home ? "Ready • HTTPS-only browsing" : "HTTPS • " + safeHost(tab.url));
+            String officialService = tab.home || tab.url == null ? null :
+                    OfficialDomainRegistry.serviceForHost(safeHost(tab.url));
+            if (officialService != null) {
+                message += " • Listed official: " + officialService;
+            }
             message += fingerprintProtectionActive(tab) ? " • FP shield ON" :
                     (fingerprintProtectionEnabled() ? " • FP shield unavailable" : " • FP shield OFF");
             securityStatus.setText(message);
-            securityStatus.setContentDescription(message + ". Tap for site security details.");
+            securityStatus.setTextColor(officialService != null ? Color.rgb(0, 105, 94) : MUTED);
+            String qualification = officialService != null
+                    ? " This is a curated domain-list match, not a guarantee that the page or transaction is safe."
+                    : "";
+            securityStatus.setContentDescription(message + "." + qualification
+                    + " Tap for site security details.");
         }
     }
 
