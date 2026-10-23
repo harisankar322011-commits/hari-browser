@@ -14,7 +14,7 @@ import java.util.zip.ZipInputStream;
 /**
  * Bounded, local-first file inspection for Hari Browser.
  *
- * Checks include SHA-256, existing local format/EICAR checks, ZIP/APK/JAR/OOXML
+ * Checks include SHA-256, local format checks, ZIP/APK/JAR/OOXML
  * archive entry inspection, archive path traversal markers, resource limits,
  * and suspicious active-content entries. This intentionally does not claim to
  * replace a native AV engine with a maintained malware-signature database.
@@ -25,9 +25,6 @@ public final class AntivirusEngine {
     private static final int MAX_NESTED_ARCHIVE_CAPTURE = 8 * 1024 * 1024;
     private static final int MAX_ARCHIVE_DEPTH = 2;
     private static final long MAX_ENTRY_BYTES = 50L * 1024L * 1024L;
-    private static final String EICAR =
-            "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
-
     public interface StreamSource {
         InputStream open() throws IOException;
     }
@@ -48,7 +45,7 @@ public final class AntivirusEngine {
         }
 
         public boolean isSuspicious() {
-            return "SUSPICIOUS".equals(status) || "MALICIOUS_TEST_SIGNATURE".equals(status);
+            return "SUSPICIOUS".equals(status);
         }
 
         public boolean requiresReview() {
@@ -61,7 +58,6 @@ public final class AntivirusEngine {
         long expanded;
         boolean incomplete;
         boolean suspicious;
-        boolean testSignature;
         boolean signatureReviewRequired;
         boolean signatureMatchesTruncated;
         int signatureMatchesReported;
@@ -128,9 +124,7 @@ public final class AntivirusEngine {
         if (budget.signatureMatchesTruncated) details.append("\nAdditional archive signature findings were omitted from the report to keep it readable.");
 
         String status;
-        if (budget.testSignature || "MALICIOUS_TEST_SIGNATURE".equals(basic.status)) {
-            status = "MALICIOUS_TEST_SIGNATURE";
-        } else if (basic.isSuspicious() || budget.suspicious) {
+        if (basic.isSuspicious() || budget.suspicious) {
             status = "SUSPICIOUS";
         } else if (budget.incomplete || "SCAN_INCOMPLETE".equals(basic.status)) {
             status = "SCAN_INCOMPLETE";
@@ -186,7 +180,6 @@ public final class AntivirusEngine {
                 ByteArrayOutputStream nested = nestedCandidate ? new ByteArrayOutputStream() : null;
                 boolean nestedTooLarge = false;
                 long entryBytes = 0;
-                String overlap = "";
                 MalwareSignatureEngine.StreamMatcher signatureMatcher = MalwareSignatureEngine.newScanner();
                 int count;
                 while ((count = zip.read(buffer)) != -1) {
@@ -198,12 +191,6 @@ public final class AntivirusEngine {
                         return;
                     }
                     signatureMatcher.update(buffer, count);
-                    String chunk = overlap + new String(buffer, 0, count, java.nio.charset.StandardCharsets.ISO_8859_1);
-                    if (chunk.contains(EICAR)) {
-                        budget.testSignature = true;
-                        add(budget.findings, "The EICAR antivirus test signature was found in an archive entry (test pattern, not proof of a real infection).");
-                    }
-                    overlap = chunk.substring(Math.max(0, chunk.length() - EICAR.length() - 8));
                     if (nested != null && !nestedTooLarge) {
                         if ((long) nested.size() + count <= MAX_NESTED_ARCHIVE_CAPTURE) {
                             nested.write(buffer, 0, count);
