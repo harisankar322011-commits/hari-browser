@@ -42,6 +42,7 @@ Hari Browser is an open-source browser built on **Android System WebView**. It c
 - Android WebView Safe Browsing is enabled, certificate errors are not ignored, and mixed content is restricted.
 - Third-party cookies, webpage access to local files/content, automatic pop-ups, and geolocation are restricted or disabled.
 - Local ad/tracker host blocking offers best-effort protection; it is not a complete filter list.
+- Optional **Lite mode** blocks website images and the locally listed tracker hosts to reduce page requests on metered or slow connections. It does not measure exact bytes saved, block every third-party resource, or guarantee lower data use on every site; disable it when a site needs images.
 - Private browsing uses a separate WebView process/profile on supported Android versions, hides normal-profile bookmarks, and uses separate browser preferences. Common site data is cleared on exit on a best-effort basis.
 - Bookmarks and optional browsing history are encrypted using an Android Keystore-backed key.
 - No account is required for normal browsing. The app does not include advertising or analytics SDKs.
