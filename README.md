@@ -51,7 +51,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 
 ### Site-safety checks
 
-Hari Browser can review a destination before opening it. On-device URL heuristics flag selected suspicious patterns, including embedded credentials, punycode hostnames, IP-literal hosts, unusual HTTPS ports, long query strings, and some combinations associated with Indian banking or government-service impersonation scams.
+Hari Browser can review a destination before opening it. On-device URL heuristics flag selected suspicious patterns, including embedded credentials, punycode hostnames, IP-literal hosts, unusual HTTPS ports, long query strings, and some combinations associated with Indian banking or government-service impersonation scams. A separate non-blocking reminder appears when the URL contains login, OTP, KYC, Aadhaar, identity, or verification terms. It inspects the URL only—not page content—and prompts the user to verify the hostname; it is not a verdict that the site is malicious or trustworthy.
 
 Optional URLhaus reputation checks are available after explicit user confirmation, or through a separate opt-in for automatic checks. URLs are not sent for reputation checks from private browsing. URL-based heuristics and reputation services can miss threats, report false positives, or be unavailable. A warning-free result does **not** certify a website as safe.
 
