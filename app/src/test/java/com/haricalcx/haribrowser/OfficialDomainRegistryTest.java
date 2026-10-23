@@ -10,8 +10,7 @@ public class OfficialDomainRegistryTest {
     public void recognizesCuratedGovernmentAndPublicServiceDomains() {
         assertEquals("UIDAI / Aadhaar",
                 OfficialDomainRegistry.serviceForHost("www.uidai.gov.in"));
-        assertEquals("DigiLocker",
-                OfficialDomainRegistry.serviceForHost("digitallocker.gov.in"));
+        assertNull(OfficialDomainRegistry.serviceForHost("digitallocker.gov.in"));
         assertEquals("Parivahan",
                 OfficialDomainRegistry.serviceForHost("mparivahan.parivahan.gov.in"));
         assertEquals("DIKSHA",
@@ -24,6 +23,7 @@ public class OfficialDomainRegistryTest {
     public void recognizesDistinctLegitimateFinancialGroupDomains() {
         assertEquals("SBI Card", OfficialDomainRegistry.serviceForHost("www.sbicard.com"));
         assertEquals("SBI Life", OfficialDomainRegistry.serviceForHost("secure.sbilife.co.in"));
+        assertNull(OfficialDomainRegistry.serviceForHost("sbi-life.com"));
         assertEquals("HDFC Securities", OfficialDomainRegistry.serviceForHost("www.hdfcsec.com"));
         assertEquals("Axis Mutual Fund", OfficialDomainRegistry.serviceForHost("www.axismf.com"));
     }
@@ -41,7 +41,7 @@ public class OfficialDomainRegistryTest {
     public void matchesOnlyTheBrandThatOwnsTheListedDomain() {
         assertTrue(OfficialDomainRegistry.isOfficialDomainForBrand("www.sbicard.com", "sbicard"));
         assertFalse(OfficialDomainRegistry.isOfficialDomainForBrand("www.sbicard.com", "sbi"));
-        assertTrue(OfficialDomainRegistry.isOfficialDomainForBrand("www.sbi-life.com", "sbi"));
+        assertFalse(OfficialDomainRegistry.isOfficialDomainForBrand("www.sbi-life.com", "sbi"));
         assertTrue(OfficialDomainRegistry.isOfficialDomainForBrand("www.hdfcsec.com", "hdfcsec"));
         assertFalse(OfficialDomainRegistry.isOfficialDomainForBrand("hdfcsec.com.example", "hdfcsec"));
     }

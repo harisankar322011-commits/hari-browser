@@ -33,7 +33,6 @@ public final class OfficialDomainRegistry {
     private static final List<Entry> ENTRIES = Collections.unmodifiableList(Arrays.asList(
             new Entry("uidai.gov.in", "UIDAI / Aadhaar", "uidai", "aadhaar"),
             new Entry("digilocker.gov.in", "DigiLocker", "digilocker"),
-            new Entry("digitallocker.gov.in", "DigiLocker", "digilocker"),
             new Entry("umang.gov.in", "UMANG", "umang"),
             new Entry("incometax.gov.in", "Income Tax Department", "incometax"),
             new Entry("incometaxindia.gov.in", "Income Tax Department", "incometax"),
@@ -48,7 +47,6 @@ public final class OfficialDomainRegistry {
             new Entry("onlinesbi.sbi", "SBI", "sbi", "onlinesbi"),
             new Entry("sbicard.com", "SBI Card", "sbicard"),
             new Entry("sbilife.co.in", "SBI Life", "sbilife"),
-            new Entry("sbi-life.com", "SBI Life", "sbi", "sbilife"),
             new Entry("hdfcbank.com", "HDFC Bank", "hdfc", "hdfcbank"),
             new Entry("hdfcsec.com", "HDFC Securities", "hdfcsec"),
             new Entry("hdfclife.com", "HDFC Life", "hdfclife"),

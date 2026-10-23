@@ -25,6 +25,7 @@ public class IndianScamCheckerTest {
         assertFalse(containsBrandWarning("https://www.sbicard.com/"));
         assertFalse(containsBrandWarning("https://secure.sbicard.com/offers"));
         assertFalse(containsBrandWarning("https://www.sbilife.co.in/"));
+        assertTrue(containsBrandWarning("https://digitallocker.gov.in/"));
         assertFalse(containsBrandWarning("https://secure.sbilife.co.in/policy"));
         assertFalse(containsBrandWarning("https://www.hdfcsec.com/"));
         assertFalse(containsBrandWarning("https://www.axismf.com/"));
@@ -48,7 +49,7 @@ public class IndianScamCheckerTest {
 
     @Test
     public void recognizedFinancialGroupAliasesAreNotFalsePositives() {
-        assertFalse(containsBrandWarning("https://www.sbi-life.com/"));
+        assertTrue(containsBrandWarning("https://www.sbi-life.com/"));
         assertFalse(containsBrandWarning("https://www.hdfcsec.com/"));
         assertFalse(containsBrandWarning("https://www.icicidirect.com/"));
         assertFalse(containsBrandWarning("https://www.axismf.com/"));
