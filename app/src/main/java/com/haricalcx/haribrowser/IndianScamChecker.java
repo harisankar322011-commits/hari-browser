@@ -55,6 +55,7 @@ public final class IndianScamChecker {
         checkBrand(host, warnings, "passportindia");
         checkBrand(host, warnings, "gst");
         checkBrand(host, warnings, "digilocker");
+        checkBrand(host, warnings, "digitallocker");
         checkBrand(host, warnings, "umang");
         checkBrand(host, warnings, "epfo");
         checkBrand(host, warnings, "parivahan");
