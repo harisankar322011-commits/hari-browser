@@ -138,7 +138,7 @@ final class HariAiClient {
 
     private static boolean isTextFlashModelId(String modelId) {
         return modelId != null
-                && modelId.matches("gemini-[0-9]+(\\\\.[0-9]+)*-flash(-lite)?");
+                && modelId.matches("gemini-[0-9]+([.][0-9]+)*-flash(-lite)?");
     }
 
     private static int modelPriority(String modelId) {
