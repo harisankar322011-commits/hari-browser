@@ -2222,6 +2222,10 @@ public class BrowserActivity extends ComponentActivity {
             tab.webView.evaluateJavascript(
                     "(function(){try{return document.body ? document.body.innerText.slice(0,24000) : '';}catch(e){return '';}})()",
                     encodedText -> {
+                        if (!pageUrl.equals(tab.url) || !pageUrl.equals(tab.webView.getUrl())) {
+                            showToast("The page changed before it could be saved. Please try again.");
+                            return;
+                        }
                         String body = OfflineReading.decodeJavascriptString(encodedText);
                         if (body.isEmpty()) {
                             showToast("No readable page text was available to save.");
