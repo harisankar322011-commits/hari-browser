@@ -19,14 +19,15 @@ public class DownloadedFileScannerTest {
     }
 
     @Test
-    public void eicarTestSignatureIsIdentifiedAsATestPattern() throws Exception {
+    public void legacyTestPatternDoesNotProduceAMalwareVerdict() throws Exception {
         byte[] sample = ("prefix " +
                 "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
                 .getBytes(StandardCharsets.US_ASCII);
         DownloadedFileScanner.Result result = DownloadedFileScanner.scan(
                 new ByteArrayInputStream(sample), "sample.txt", "text/plain", sample.length);
-        assertEquals("MALICIOUS_TEST_SIGNATURE", result.status);
-        assertTrue(result.details.contains("EICAR antivirus test signature"));
+        assertEquals("BASIC_CHECKS_ONLY", result.status);
+        assertFalse(result.isSuspicious());
+        assertTrue(result.details.contains("does not mean the file is virus-free"));
     }
 
     @Test
