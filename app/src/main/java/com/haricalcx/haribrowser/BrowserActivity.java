@@ -162,6 +162,7 @@ public class BrowserActivity extends ComponentActivity {
         return true;
     }
     private boolean imagesEnabled() { return settings.getBoolean("images_enabled", true); }
+    private boolean dataSaverEnabled() { return settings.getBoolean("data_saver_enabled", false); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
         // Preserve the current WebView engine version while removing model/build identifiers.
@@ -598,7 +599,7 @@ public class BrowserActivity extends ComponentActivity {
         WebView webView = tab.webView;
         WebSettings web = webView.getSettings();
         web.setJavaScriptEnabled(javascriptEnabled());
-        web.setBlockNetworkImage(!tab.home && !imagesEnabled());
+        web.setBlockNetworkImage(DataSaverPolicy.shouldBlockNetworkImages(tab.home, imagesEnabled(), dataSaverEnabled()));
         web.setTextZoom(textZoom());
         web.setDomStorageEnabled(true);
         web.setAllowFileAccess(false);
@@ -933,7 +934,7 @@ public class BrowserActivity extends ComponentActivity {
         tab.home = false;
         tab.readerMode = false;
         tab.webView.getSettings().setJavaScriptEnabled(javascriptEnabled());
-        tab.webView.getSettings().setBlockNetworkImage(!imagesEnabled());
+        tab.webView.getSettings().setBlockNetworkImage(DataSaverPolicy.shouldBlockNetworkImages(tab.home, imagesEnabled(), dataSaverEnabled()));
         tab.url = url;
         tab.webView.loadUrl(url);
         updateTabControls();
@@ -1932,7 +1933,8 @@ public class BrowserActivity extends ComponentActivity {
                 "Site permission controls",
                 (privateMode ? "Clear browsing data on exit (automatic in private mode)" :
                         (settings.getBoolean("clear_data_on_exit", false) ? "✓ " : "○ ") + "Clear browsing data on browser exit"),
-                "Hari Antivirus · scan a file and manage quarantine"
+                "Hari Antivirus · scan a file and manage quarantine",
+                (dataSaverEnabled() ? "✓ " : "○ ") + "Data Saver · block webpage images"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? "Private settings" : "Settings")
@@ -2098,6 +2100,15 @@ public class BrowserActivity extends ComponentActivity {
                             Intent antivirusIntent = new Intent(BrowserActivity.this, AntivirusActivity.class);
                             antivirusIntent.putExtra("private_mode", privateMode);
                             startActivity(antivirusIntent);
+                            break;
+                        case 38:
+                            boolean nextDataSaver = !dataSaverEnabled();
+                            settings.edit().putBoolean("data_saver_enabled", nextDataSaver).apply();
+                            reconfigureWebViews();
+                            updateTabControls();
+                            showToast(nextDataSaver
+                                    ? "Data Saver enabled. Webpage images are blocked to reduce data use; scripts, video and other requests may still use data."
+                                    : "Data Saver disabled. Website images follow the separate image setting.");
                             break;
                     }
                 })
@@ -2632,6 +2643,7 @@ public class BrowserActivity extends ComponentActivity {
                         (fingerprintProtectionEnabled() ? "unsupported by this WebView" : "disabled")) + "\n" +
                 "Reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers.\n" +
                 "Images: " + (imagesEnabled() ? "enabled" : "blocked") + "\n" +
+                "Data Saver: " + DataSaverPolicy.description(dataSaverEnabled()) + "\n" +
                 "Browser mode: " + (privateMode ? "private" : "standard") + "\n\n" +
                 "HTTPS protects the connection in transit; it does not prove a website is trustworthy or prevent the site itself from tracking you.";
         new AlertDialog.Builder(this).setTitle("Site security").setMessage(message)
