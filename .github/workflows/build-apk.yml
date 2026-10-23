@@ -75,6 +75,19 @@ jobs:
             exit 1
           fi
           unzip -tq "$apk"
+          # Inspect every DEX to prevent the known antivirus test marker from being shipped.
+          mapfile -t dex_entries < <(unzip -Z1 "$apk" | grep -E '^classes[0-9]*\.dex$')
+          test "${#dex_entries[@]}" -gt 0 || { echo "::error::No DEX files found in APK."; exit 1; }
+          dex_tmp="$RUNNER_TEMP/hari-browser-dex.tmp"
+          for dex_entry in "${dex_entries[@]}"; do
+            unzip -p "$apk" "$dex_entry" > "$dex_tmp"
+            if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+              rm -f "$dex_tmp"
+              echo "::error::APK still embeds the standard AV test pattern in $dex_entry."
+              exit 1
+            fi
+          done
+          rm -f "$dex_tmp"
           bytes="$(stat -c '%s' "$apk")"
           echo "Release APK size: $bytes bytes ($((bytes / 1048576)) MiB)"
           if [ "$bytes" -le 10485760 ]; then
@@ -104,6 +117,19 @@ jobs:
             echo "::error::Test APK must be debuggable (reported: $debuggable)."; exit 1;
           }
           unzip -tq "$apk"
+          # Inspect every DEX to prevent the known antivirus test marker from being shipped.
+          mapfile -t dex_entries < <(unzip -Z1 "$apk" | grep -E '^classes[0-9]*\.dex$')
+          test "${#dex_entries[@]}" -gt 0 || { echo "::error::No DEX files found in APK."; exit 1; }
+          dex_tmp="$RUNNER_TEMP/hari-browser-dex.tmp"
+          for dex_entry in "${dex_entries[@]}"; do
+            unzip -p "$apk" "$dex_entry" > "$dex_tmp"
+            if grep -aFq 'X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*' "$dex_tmp"; then
+              rm -f "$dex_tmp"
+              echo "::error::APK still embeds the standard AV test pattern in $dex_entry."
+              exit 1
+            fi
+          done
+          rm -f "$dex_tmp"
           echo "Installable debug APK validated for device testing."
 
       - name: Upload installable debug APK for pull-request testing
@@ -117,7 +143,7 @@ jobs:
           retention-days: 7
 
       # Stable release signing uses the four protected HARI_RELEASE_* repository secrets.
-      # A marked one-time build may create a temporary key; it is never saved or uploaded.
+      # Missing signing secrets must never fall back to a temporary release key.
       - name: Sign or stage the release APK
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         shell: bash
@@ -143,24 +169,6 @@ jobs:
               --out "dist/HariBrowser-2.3.0.apk" "$unsigned"
             "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose "dist/HariBrowser-2.3.0.apk"
             echo "### Release signing: signed with the configured stable key" >> "$GITHUB_STEP_SUMMARY"
-            publish_apk="dist/HariBrowser-2.3.0.apk"
-          elif [[ "$(git log -1 --format=%s)" == *"[one-time-release-sign]"* ]]; then
-            keystore="$RUNNER_TEMP/hari-browser-one-time-release.p12"
-            temporary_password="$(openssl rand -hex 32)"
-            keytool -genkeypair -noprompt \
-              -keystore "$keystore" -storetype PKCS12 \
-              -storepass "$temporary_password" -keypass "$temporary_password" \
-              -alias hari-browser-one-time \
-              -keyalg RSA -keysize 3072 -validity 10000 \
-              -dname "CN=Hari Browser One-Time Release, O=Hari Browser, C=IN"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
-              --ks "$keystore" --ks-key-alias hari-browser-one-time \
-              --ks-pass "pass:$temporary_password" --key-pass "pass:$temporary_password" \
-              --out "dist/HariBrowser-2.3.0.apk" "$unsigned"
-            "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "dist/HariBrowser-2.3.0.apk"
-            rm -f "$keystore"
-            echo "### Release signing: one-time signed APK" >> "$GITHUB_STEP_SUMMARY"
-            echo "This key is intentionally discarded after this build. Future APKs will need a configured stable signing key; until then, Android may require uninstalling this version before installing another, which can erase browser data." >> "$GITHUB_STEP_SUMMARY"
             publish_apk="dist/HariBrowser-2.3.0.apk"
           else
             cp "$unsigned" "dist/HariBrowser-2.3.0-unsigned.apk"

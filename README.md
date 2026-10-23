@@ -54,7 +54,7 @@ Optional URLhaus reputation checks are available after explicit user confirmatio
 
 ### Hari Antivirus and download checks
 
-Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, the EICAR test pattern, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine.
+Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker is intentionally kept out of production scanner bytecode to avoid triggering device-protection heuristics; this does not make the scanner a full antivirus engine.
 
 Optional MalwareBazaar hash reputation can send a file's SHA-256 hash to the service when the user configures an Auth-Key. The file contents and filename are not uploaded for that lookup. Optional URLhaus checks share only the URL being checked. These online checks are off until configured or explicitly enabled, and private browsing does not send hashes or URLs for reputation checks.
 
@@ -98,7 +98,7 @@ The repository's release workflow is intended to publish a release APK artifact:
 4. Check the APK filename and signing status before installation. An APK named `*-unsigned.apk` is not ready to install.
 5. Do not install or redistribute the previously flagged 2.3.0 APK until the Android device-protection alert has been investigated.
 
-For releases intended to be updated in place, maintainers must sign every version with the same private release key. A temporary one-time signing key is unsuitable for ongoing releases: future versions signed with a different key will not install as updates over the earlier app. Never commit a keystore or signing passwords to source control.
+For releases intended to be updated in place, maintainers must sign every version with the same private release key. CI must never generate a disposable key; without the stable signing secrets it should publish only an unsigned validation artifact that cannot be installed. Never commit a keystore or signing passwords to source control.
 
 A successful build, CI check, or third-party review does not by itself prove an APK is malware-free. Verify the release artifact, signature, and source before installing it.
 

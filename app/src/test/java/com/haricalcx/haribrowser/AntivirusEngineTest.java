@@ -37,12 +37,12 @@ public class AntivirusEngineTest {
     }
 
     @Test
-    public void eicarInsideZipIsFound() throws Exception {
-        byte[] eicar = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
+    public void legacyTestPatternInsideZipDoesNotProduceAMalwareVerdict() throws Exception {
+        byte[] sample = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*"
                 .getBytes(StandardCharsets.US_ASCII);
-        AntivirusEngine.Result result = scan(zip("sample.txt", eicar), "sample.zip");
-        assertEquals("MALICIOUS_TEST_SIGNATURE", result.status);
-        assertTrue(result.details.contains("EICAR antivirus test signature"));
+        AntivirusEngine.Result result = scan(zip("sample.txt", sample), "sample.zip");
+        assertEquals("BASIC_CHECKS_ONLY", result.status);
+        assertTrue(result.details.contains("small offline multi-indicator rule set"));
     }
 
     @Test

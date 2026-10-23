@@ -65,6 +65,17 @@ try:
     signature_tests = read("app/src/test/java/com/haricalcx/haribrowser/MalwareSignatureEngineTest.java")
     download_scanner = read("app/src/main/java/com/haricalcx/haribrowser/DownloadedFileScanner.java")
     antivirus_engine = read("app/src/main/java/com/haricalcx/haribrowser/AntivirusEngine.java")
+    antivirus_ui = read("app/src/main/java/com/haricalcx/haribrowser/AntivirusActivity.java")
+    # Build the known antivirus test marker from fragments so this CI guard does
+    # not embed the contiguous marker in its own source.
+    test_marker = ("X5O!P%@AP[" + "4\\PZX54(P^)7CC)7}$" +
+                   "EICAR-" + "STANDARD-ANTIVIRUS-TEST-FILE!$H+H*")
+    check("Production scanner excludes the standard AV test marker",
+          test_marker not in download_scanner and
+          test_marker not in antivirus_engine and
+          test_marker not in antivirus_ui and
+          "MALICIOUS_TEST_SIGNATURE" not in download_scanner and
+          "MALICIOUS_TEST_SIGNATURE" not in antivirus_engine)
     check("Offline multi-indicator malware signature engine is wired into stream scanning",
           "Aho-Corasick" in signature_engine and
           "MalwareSignatureEngine.newScanner()" in download_scanner and
@@ -307,6 +318,13 @@ try:
     check("Release signing is conditional on protected signing secrets",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
           'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow)
+    check("CI never creates and discards a temporary release key",
+          "[one-time-release-sign]" not in build_workflow and
+          "hari-browser-one-time-release" not in build_workflow and
+          "keytool -genkeypair" not in build_workflow)
+    check("Missing stable signer produces only an unsigned validation artifact",
+          "dist/HariBrowser-2.3.0-unsigned.apk" in build_workflow and
+          "cannot be installed until signed with a stable release key" in build_workflow)
     secret_scan_workflow = read(".github/workflows/secret-scan.yml")
     check("Secret scanner uses complete Git history", "fetch-depth: 0" in secret_scan_workflow)
     check("Secret scanner does not persist checkout credentials",
