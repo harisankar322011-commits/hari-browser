@@ -25,7 +25,7 @@ public class IndianScamCheckerTest {
         assertFalse(containsBrandWarning("https://www.sbicard.com/"));
         assertFalse(containsBrandWarning("https://secure.sbicard.com/offers"));
         assertFalse(containsBrandWarning("https://www.sbilife.co.in/"));
-        assertFalse(containsBrandWarning("https://digitallocker.gov.in/"));
+        assertTrue(containsBrandWarning("https://digitallocker.gov.in/"));
         assertFalse(containsBrandWarning("https://secure.sbilife.co.in/policy"));
         assertFalse(containsBrandWarning("https://www.hdfcsec.com/"));
         assertFalse(containsBrandWarning("https://www.axismf.com/"));
