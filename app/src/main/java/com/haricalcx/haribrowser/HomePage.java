@@ -717,6 +717,7 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
   <div class="section-head"><h2>Built-in toolbox</h2><span class="mini">Works locally, no account</span></div>
   <p class="mini">Start with eight everyday tools. Expand the full toolbox only when needed. Tools run locally; do not store passwords or secrets in notes.</p>
   <div id="toolGrid" class="tool-grid"></div>
+  <div class="card"><h3>🔐 HARI Cryptography</h3><p>Encrypt and decrypt private text, files, and exported bookmark/history backups on this device. This tool does not encrypt live browser data or browsing traffic.</p><a class="action" style="margin-top:9px" href="https://hari-browser-home.invalid/action/cryptography">Open cryptography tool ↗</a></div>
   <div class="row" style="justify-content:center;margin-top:12px"><button class="btn" id="toggleTools" type="button" aria-expanded="false">Show all 34 tools</button></div>
   <div class="card"><h3>Browser actions</h3><p>Reader-style view, desktop mode, page translation, in-page find, QR, print to PDF, theme and data cleanup are available through native browser controls.</p><a class="action" style="margin-top:9px" href="https://hari-browser-home.invalid/action/settings">Open full browser settings ↗</a></div>
 </section>
