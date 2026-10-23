@@ -13,7 +13,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 | --- | --- |
 | Platform | Android |
 | Application ID | `com.haricalcx.haribrowser` |
-| Current source version | 2.3.0 (version code 7) |
+| Current source version | 2.4.0 (version code 8) |
 | Minimum Android version | Android 9 (API 28) |
 | Target / compile SDK | API 36 |
 | Runtime | Android System WebView |
@@ -96,8 +96,8 @@ Use only builds linked from the official [Hari Browser repository](https://githu
 The repository's release workflow can produce a build artifact for family testing/sideloading. This is not a Google Play publishing workflow. Because the previously tested APK triggered a device-protection warning, do not install it or assume a newly built APK is safe until the exact artifact has been investigated and verified.
 
 1. Open the repository's **Actions** tab.
-2. Open the latest successful **Build Hari Browser Release APK** workflow run on `main`.
-3. Download the `hari-browser-2.3.0-release-apk` artifact and read the artifact's notes.
+2. Open the latest successful **Build Hari Browser Release APK** workflow run on `main` after the 2.4.0 change has merged.
+3. Download the `hari-browser-2.4.0-release-apk` artifact and read the artifact's notes.
 4. Check the APK filename and signing status before installation. An APK named `*-unsigned.apk` is not ready to install.
 5. Do not install or redistribute the previously flagged 2.3.0 APK until the Android device-protection alert has been investigated.
 
