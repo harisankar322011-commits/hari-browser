@@ -2338,22 +2338,21 @@ public class BrowserActivity extends ComponentActivity {
             if (isFinishing() || isDestroyed()) return;
             userscriptCache = new ArrayList<>(UserscriptManager.decode(serialized));
             userscriptsLoaded = true;
-            boolean reloadPages = false;
             for (Tab tab : tabs) {
                 if (tab.webView == null) continue;
                 updateUserscripts(tab);
+                // Refresh only when an enabled rule actually applies to this restored HTTPS page.
+                boolean scriptApplies = false;
                 if (!tab.home && tab.url != null && PrivacyGuard.isHttpsUrl(tab.url)) {
-                    reloadPages = true;
-                }
-            }
-            // A document-start handler added after a restored page began loading will
-            // apply on the next load. The one-time refresh makes the startup cache effective.
-            if (reloadPages && !isFinishing() && !isDestroyed()) {
-                for (Tab tab : tabs) {
-                    if (tab.webView != null && !tab.home && tab.url != null
-                            && PrivacyGuard.isHttpsUrl(tab.url)) {
-                        tab.webView.reload();
+                    for (UserscriptManager.Script script : userscriptCache) {
+                        if (script.enabled && script.matchesUrl(tab.url)) {
+                            scriptApplies = true;
+                            break;
+                        }
                     }
+                }
+                if (scriptApplies && !isFinishing() && !isDestroyed()) {
+                    tab.webView.reload();
                 }
             }
         });
