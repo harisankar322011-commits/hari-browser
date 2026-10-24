@@ -79,4 +79,41 @@ public class OfflineReadingTest {
         assertEquals("https://example.com/keep", result.getJSONObject(0).getString("url"));
         assertEquals(0, OfflineReading.parse("not-json").length());
     }
+    @Test
+    public void customLimitsBoundSnapshotCountAndCapturedText() throws Exception {
+        String saved = "[]";
+        for (int i = 0; i < 5; i++) {
+            saved = OfflineReading.addOrReplace(saved, "Page " + i,
+                    "https://example.com/custom/" + i, "0123456789", i, 2, 4).toString();
+        }
+
+        JSONArray result = OfflineReading.parse(saved, 2, 4);
+        assertEquals(2, result.length());
+        assertEquals("Page 4", result.getJSONObject(0).getString("title"));
+        assertEquals("0123", result.getJSONObject(0).getString("body"));
+    }
+
+    @Test
+    public void configurableLimitsCannotExceedHardSafetyCeilings() {
+        String huge = "z".repeat(OfflineReading.MAX_ALLOWED_BODY_CHARS + 100);
+        assertEquals(OfflineReading.MAX_ALLOWED_BODY_CHARS,
+                OfflineReading.limitText(huge, OfflineReading.MAX_ALLOWED_BODY_CHARS + 1000).length());
+
+        assertEquals(OfflineReading.MAX_ALLOWED_SAVED_PAGES,
+                OfflineReading.parse(createManyPages(OfflineReading.MAX_ALLOWED_SAVED_PAGES + 3),
+                        OfflineReading.MAX_ALLOWED_SAVED_PAGES + 100,
+                        OfflineReading.MAX_ALLOWED_BODY_CHARS + 1000).length());
+    }
+
+    private String createManyPages(int count) {
+        String serialized = "[]";
+        for (int i = 0; i < count; i++) {
+            serialized = OfflineReading.addOrReplace(serialized, "Page " + i,
+                    "https://example.com/many/" + i, "Text", i,
+                    OfflineReading.MAX_ALLOWED_SAVED_PAGES,
+                    OfflineReading.MAX_ALLOWED_BODY_CHARS).toString();
+        }
+        return serialized;
+    }
+
 }

@@ -2350,7 +2350,8 @@ public class BrowserActivity extends ComponentActivity {
                 ui("Save current page for offline reading"),
                 ui("Read saved pages (offline text)"),
                 ui("External userscripts · manage/import scripts"),
-                "Import custom tracker hosts list"
+                "Import custom tracker hosts list",
+                offlineReadingLimitsLabel()
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? ui("Private settings") : ui("Settings"))
@@ -2566,6 +2567,9 @@ public class BrowserActivity extends ComponentActivity {
                                         }).show();
                             }
                             break;
+                        case 44:
+                            showOfflineReadingLimits();
+                            break;
                     }
                 })
                 .setNegativeButton("Close", null)
@@ -2591,6 +2595,70 @@ public class BrowserActivity extends ComponentActivity {
                 .show();
     }
 
+    private int offlineReadingMaxPages() {
+        int requested;
+        try {
+            requested = settings.getInt("offline_read_max_pages", OfflineReading.MAX_SAVED_PAGES);
+        } catch (ClassCastException invalidPreference) {
+            requested = OfflineReading.MAX_SAVED_PAGES;
+        }
+        return Math.max(1, Math.min(OfflineReading.MAX_ALLOWED_SAVED_PAGES, requested));
+    }
+
+    private int offlineReadingMaxBodyChars() {
+        int requested;
+        try {
+            requested = settings.getInt("offline_read_max_body_chars", OfflineReading.MAX_BODY_CHARS);
+        } catch (ClassCastException invalidPreference) {
+            requested = OfflineReading.MAX_BODY_CHARS;
+        }
+        return Math.max(OfflineReading.MIN_PREFERRED_BODY_CHARS,
+                Math.min(OfflineReading.MAX_ALLOWED_BODY_CHARS, requested));
+    }
+
+    private String offlineReadingLimitsLabel() {
+        return "Offline reading limits · " + offlineReadingMaxPages() + " pages / " +
+                String.format(Locale.ROOT, "%,d", offlineReadingMaxBodyChars()) + " chars";
+    }
+
+    private void showOfflineReadingLimits() {
+        if (privateMode) {
+            showToast("Offline reading limits are configured in normal browsing; Private mode does not save offline pages.");
+            return;
+        }
+        int maxPages = offlineReadingMaxPages();
+        int maxChars = offlineReadingMaxBodyChars();
+        String[] pageChoices = {"4 pages", "8 pages", "12 pages"};
+        String[] charChoices = {"8,000 characters", "24,000 characters", "32,000 characters"};
+        new AlertDialog.Builder(this)
+                .setTitle("Offline reading limits")
+                .setMessage("Current limit: " + maxPages + " saved pages, up to " +
+                        String.format(Locale.ROOT, "%,d", maxChars) +
+                        " characters per page. Saved copies are text-only. Hard maximums are 12 pages and 32,000 characters per page.")
+                .setItems(pageChoices, (dialog, which) -> {
+                    int[] values = {4, 8, 12};
+                    settings.edit().putInt("offline_read_max_pages", values[which]).apply();
+                    showOfflineReadingLimits();
+                })
+                .setNeutralButton("Per-page text cap", (dialog, which) ->
+                        new AlertDialog.Builder(this)
+                                .setTitle("Maximum text per saved page")
+                                .setItems(charChoices, (choiceDialog, choice) -> {
+                                    int[] values = {8000, 24000, 32000};
+                                    settings.edit().putInt("offline_read_max_body_chars", values[choice]).apply();
+                                    showOfflineReadingLimits();
+                                })
+                                .setNegativeButton("Cancel", null)
+                                .show())
+                .setPositiveButton("Reset defaults", (dialog, which) -> {
+                    settings.edit().remove("offline_read_max_pages")
+                            .remove("offline_read_max_body_chars").apply();
+                    showToast("Offline reading limits reset to 8 pages / 24,000 characters.");
+                })
+                .setNegativeButton("Done", null)
+                .show();
+    }
+
     private void saveCurrentPageForOfflineReading() {
         if (privateMode) {
             showToast("Offline reading is disabled in Private mode so private pages are not persisted.");
@@ -2604,16 +2672,17 @@ public class BrowserActivity extends ComponentActivity {
         final String pageUrl = tab.url;
         final String pageTitle = tab.title == null || tab.title.trim().isEmpty()
                 ? safeHost(pageUrl) : tab.title.trim();
+        final int maxBodyChars = offlineReadingMaxBodyChars();
         try {
             tab.webView.evaluateJavascript(
-                    "(function(){try{return document.body ? document.body.innerText.slice(0,24000) : '';}catch(e){return '';}})()",
+                    "(function(){try{return document.body ? document.body.innerText.slice(0," + maxBodyChars + ") : '';}catch(e){return '';}})()",
                     encodedText -> {
                         if (tab.webView == null || !pageUrl.equals(tab.url)
                                 || !pageUrl.equals(tab.webView.getUrl())) {
                             showToast("The page changed before it could be saved. Please try again.");
                             return;
                         }
-                        String body = OfflineReading.decodeJavascriptString(encodedText);
+                        String body = OfflineReading.decodeJavascriptString(encodedText, maxBodyChars);
                         if (body.isEmpty()) {
                             showToast("No readable page text was available to save.");
                             return;
@@ -2622,7 +2691,8 @@ public class BrowserActivity extends ComponentActivity {
                         final JSONArray updated;
                         try {
                             updated = OfflineReading.addOrReplace(existing, pageTitle,
-                                    pageUrl, body, System.currentTimeMillis());
+                                    pageUrl, body, System.currentTimeMillis(),
+                                    offlineReadingMaxPages(), maxBodyChars);
                         } catch (IllegalArgumentException invalidPage) {
                             showToast("This address or page could not be saved safely.");
                             return;
@@ -2645,7 +2715,7 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Saved pages are available only in normal browsing, not Private mode.");
             return;
         }
-        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"));
+        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"), offlineReadingMaxPages(), offlineReadingMaxBodyChars());
         if (saved.length() == 0) {
             new AlertDialog.Builder(this).setTitle("Saved pages")
                     .setMessage("No offline reading snapshots yet. Open an HTTPS page and choose 'Save current page for offline reading'.")
@@ -2682,7 +2752,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void showSavedPage(String pageUrl) {
         if (pageUrl == null || pageUrl.isEmpty()) return;
-        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"));
+        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"), offlineReadingMaxPages(), offlineReadingMaxBodyChars());
         JSONObject selected = null;
         for (int i = 0; i < saved.length(); i++) {
             JSONObject item = saved.optJSONObject(i);
@@ -2713,7 +2783,7 @@ public class BrowserActivity extends ComponentActivity {
                 .setNeutralButton("Remove saved page", (dialog, which) -> {
                     String current = secureStore.get(KEY_READ_LATER, "[]");
                     secureStore.put(KEY_READ_LATER,
-                            OfflineReading.removeByUrl(current, pageUrl).toString());
+                            OfflineReading.removeByUrl(current, pageUrl, offlineReadingMaxPages(), offlineReadingMaxBodyChars()).toString());
                     showToast("Offline snapshot removed.");
                 })
                 .show();
