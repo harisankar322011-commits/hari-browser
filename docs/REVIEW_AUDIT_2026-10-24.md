@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-The supplied review inspected commit \`71ac678\` (2.4.0 / versionCode 8). The current source baseline for this implementation batch is main commit \`d208dbaa7379923d5a783b4137541a08160535b6\`, after the changes described below.
+The supplied review inspected commit \`71ac678\` (2.4.0 / versionCode 8). The current source baseline for this implementation batch is main commit \`74ba6f5c5e5518b5d15faad84afb72b6198c3dd0\`, including the merged safe external-link changes from PR #52.
 
 The previously reported Android device-protection warning remains an **unresolved release blocker**. Passing source checks and CI builds does not prove the old APK was safe or the warning was a false positive. A freshly built APK still requires signature/hash verification, independent scanning and careful device testing. Never bypass the warning. The CI pipeline can produce an unsigned validation artifact if the stable release signer is not configured.
 
