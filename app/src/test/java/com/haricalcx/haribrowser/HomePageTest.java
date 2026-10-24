@@ -65,6 +65,25 @@ public final class HomePageTest {
     }
 
     @Test
+    public void curatedDirectoryRejectsMalformedHttpsAuthoritiesAndEmbeddedCredentials() throws Exception {
+        String json = HomePage.directoryJson(
+                "Search|Valid|https://example.com/path?q=1\n" +
+                "Search|No host|https:///path\n" +
+                "Search|Bad port|https://example.com:abc/\n" +
+                "Search|Out of range port|https://example.com:99999/\n" +
+                "Search|Zero port|https://example.com:0/\n" +
+                "Search|Empty port|https://example.com:/\n" +
+                "Search|Credentials|https://user:secret@example.com/\n" +
+                "Search|No scheme host|https://\n");
+        org.json.JSONArray entries = new org.json.JSONArray(json);
+
+        assertEquals(1, entries.length());
+        assertEquals("Valid", entries.getJSONObject(0).getString("name"));
+        assertEquals("https://example.com/path?q=1", entries.getJSONObject(0).getString("url"));
+        assertFalse(json.contains("secret"));
+    }
+
+    @Test
     public void siteSecurityDetailsRemainAvailableSeparately() throws Exception {
         String html = renderHome("[]");
 

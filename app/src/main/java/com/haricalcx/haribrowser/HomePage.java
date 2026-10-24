@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -125,19 +126,38 @@ final class HomePage {
     /** Parse only well-formed HTTPS entries and encode them safely for an inline script value. */
     static String directoryJson(String source) {
         JSONArray directory = new JSONArray();
-        String normalized = source == null ? "" : source.trim();
+        String normalized = source == null ? "" : source;
         if (!normalized.isEmpty()) {
             for (String row : normalized.split("\\R")) {
                 String[] parts = row.split("\\|", 3);
-                if (parts.length != 3 || !parts[2].startsWith("https://")) continue;
-                if (parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) continue;
+                if (parts.length != 3 || parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) {
+                    continue;
+                }
+
+                String category = parts[0].trim();
+                String name = parts[1].trim();
+                String url = parts[2].trim();
                 try {
+                    URI parsed = new URI(url);
+                    String authority = parsed.getRawAuthority();
+                    int port = parsed.getPort();
+                    if (!"https".equalsIgnoreCase(parsed.getScheme())
+                            || parsed.getHost() == null || parsed.getHost().trim().isEmpty()
+                            || parsed.getUserInfo() != null
+                            || authority == null || authority.trim().isEmpty()
+                            || authority.endsWith(":")
+                            || (port != -1 && (port < 1 || port > 65535))) {
+                        continue;
+                    }
+
                     JSONObject item = new JSONObject();
-                    item.put("category", parts[0]);
-                    item.put("name", parts[1]);
-                    item.put("url", parts[2]);
+                    item.put("category", category);
+                    item.put("name", name);
+                    item.put("url", url);
                     directory.put(item);
-                } catch (JSONException ignored) {}
+                } catch (Exception invalidHttpsUrl) {
+                    // Directory data is bundled, but still reject malformed URLs defensively.
+                }
             }
         }
         return forScript(directory.toString());

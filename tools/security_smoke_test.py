@@ -176,13 +176,16 @@ try:
     check("Private mode cannot modify Teen Protection or its parent PIN",
           "if (privateMode)" in browser[browser.find("private void handleTeenProtectionMenu()"):
                                           browser.find("private void showTeenProtectionSetupDialog()")])
-    check("Home directory data is an offline asset with bounded HTTPS parsing",
+    check("Home directory data is a bounded offline asset with strict HTTPS URL parsing",
           '"home_directory.txt"' in home_page and
           "readDirectoryAsset" in home_page and
           "directoryJson(directorySource)" in home_page and
           "HomePage.render(this," in browser and
           'if (total > 65536)' in home_page and
-          'parts[2].startsWith("https://")' in home_page)
+          "new URI(url)" in home_page and
+          "parsed.getUserInfo() != null" in home_page and
+          'authority.endsWith(":")' in home_page and
+          "port < 1" in home_page and "port > 65535" in home_page)
     check("India public services directory includes verified official portals",
           "India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/" in home_directory and
           "India services|UIDAI — Aadhaar|https://uidai.gov.in/" in home_directory and
