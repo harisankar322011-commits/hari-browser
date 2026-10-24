@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-The supplied review inspected commit \`71ac678\` (2.4.0 / versionCode 8). The current source baseline for this implementation batch is main commit \`74ba6f5c5e5518b5d15faad84afb72b6198c3dd0\`, including the merged safe external-link changes from PR #52.
+The supplied review inspected commit `71ac678` (2.4.0 / versionCode 8). This ledger was reconciled against current main commit `4461b8ff60a11ea82c5c93707e6b6007324854cf`. PRs #52 and #55 are merged; the tab-session implementation is present in that main revision.
 
 The previously reported Android device-protection warning remains an **unresolved release blocker**. Passing source checks and CI builds does not prove the old APK was safe or the warning was a false positive. A freshly built APK still requires signature/hash verification, independent scanning and careful device testing. Never bypass the warning. The CI pipeline can produce an unsigned validation artifact if the stable release signer is not configured.
 
@@ -19,7 +19,7 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 | Move encrypted storage and JSON work off UI thread | **PARTIAL / OPEN.** \`SecureStore\` uses AES-GCM/Keystore and fails closed, but callers still perform synchronous read/write work. | Add a lifecycle-safe executor, serialized writes and UI callbacks; test concurrency/error handling. |
 | Importable ad/tracker host lists | **IMPLEMENTED — PR #47, CI passed.** Bounded hosts-format parser/import/remove control, DNS suffix matching and built-in list retained. It does not interpret full Adblock/EasyList syntax. | Device-test performance and false positives; consider a reviewed filter subset separately. |
 | Readability-based article extraction | **NOT IMPLEMENTED.** Reader mode remains CSS restyling rather than article extraction. | Bundle a reviewed, licensed Readability implementation; test hostile HTML, multi-language pages and attribution. |
-| Persist tabs after process death | **IN PROGRESS — PR #55.** Bounded HTTPS-only session codec and integration use the existing encrypted `SecureStore`; private tabs are excluded and clear-data-on-exit removes the snapshot. | Require CI to pass and manually test cold-start restore, external-link launch, private-session isolation and clear-data-on-exit. This feature is not merged until PR #55 passes. |
+| Persist tabs after process death | **IMPLEMENTED — PR #55 merged.** Bounded HTTPS-only session codec and integration use the encrypted `SecureStore`; private tabs are excluded and clear-data-on-exit removes the snapshot. | Manually verify cold-start restore, external-link launch, private-session isolation and clear-data-on-exit on an Android device. |
 | Open supported non-HTTPS schemes externally | **IMPLEMENTED — PR #52 merged.** Strict validation and explicit confirmation for `mailto:` and `tel:`; arbitrary schemes remain blocked. CI passed for debug/release builds, unit tests/lint, CodeQL, secret scanning and dependency review. | Device-test mail/dialer handlers and missing-app behavior. |
 | Per-site anti-fingerprinting control | **IMPLEMENTED — PR #48, CI passed.** Exact-host exception, explicit confirmation, 128-host cap, visible status and private-session cleanup. The page-script reductions are disabled for that hostname only; reduced network User-Agent and other browser protections remain. | Check compatibility behavior across supported Android System WebView versions; this is not a promise of anonymity. |
 | Configurable offline-reading page/text cap | **IMPLEMENTED — PR #49, CI passed.** User choices 4/8/12 pages and 8k/24k/32k characters; hard ceilings 12 pages / 32k characters and existing defaults remain 8 / 24k. | Manually verify capture/display at each setting and ensure changing limits does not unexpectedly lose unrelated saved pages. |
@@ -50,13 +50,21 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 - `file:`, `intent:`, `market:`, `javascript:`, `data:`, `content:` and other non-allowlisted schemes remain blocked.
 - Focused unit tests and static smoke checks passed with debug/release builds, CodeQL, secret scanning and dependency review. Device testing of actual mail/dialer handlers remains outstanding.
 
+## Merged changes — encrypted tab-session restore (PR #55)
+
+- Stores a bounded snapshot of up to 20 normal-mode tabs through the encrypted Android Keystore-backed `SecureStore`.
+- Restores only safe HTTPS URLs (and home-tab placeholders); restored URLs still flow through normal navigation/site-safety checks.
+- Never writes private-mode tabs to normal-mode storage; the clear-data-on-exit setting clears the snapshot.
+- Adds focused JVM tests for URL validation, malformed/oversized data, tab bounds and selected-index clamping.
+- CI merge is confirmed. Manual device verification of cold-start restoration and cleanup remains outstanding; this change does not resolve the separate device-protection warning.
+
 ## Recommended next implementation order
 
 1. Resolve and document the Android device-protection warning using a newly built, scanned and consistently signed artifact.
 2. Add behavioral Android tests around URL interception, WebView lifecycle, private cleanup and tabs.
-3. Persist standard-mode tabs safely; then move encrypted-store calls off the UI thread.
-4. Implement Readability-based reader extraction and verify per-site fingerprint controls on real WebView versions.
-5. Complete localization and improve bookmarks.
+3. Move encrypted-store and JSON work off the UI thread in small, serialized, lifecycle-safe batches.
+4. Implement Readability-based reader extraction with a reviewed license and hostile-page tests.
+5. Complete localization, then add bookmark organization with backward-compatible migration tests.
 6. Split `BrowserActivity` and `HomePage` gradually.
 
 No item is complete merely because it appears in a dashboard or documentation, and no APK should be described as release-ready until the old device-protection issue is investigated.
