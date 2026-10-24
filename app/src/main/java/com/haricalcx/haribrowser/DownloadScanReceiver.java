@@ -124,12 +124,23 @@ public final class DownloadScanReceiver extends BroadcastReceiver {
         String report = "File: " + safeName + "\nResult: " + status + "\n" +
                 "Details: " + details + "\n" +
                 (hash == null || hash.isEmpty() ? "SHA-256: unavailable" : "SHA-256: " + hash);
+        String history = prefs.getString("download_scan_history", "[]");
+        String updatedHistory;
+        try {
+            updatedHistory = DownloadScanHistory.append(history, id, safeName, status, details,
+                    hash, System.currentTimeMillis()).toString();
+        } catch (RuntimeException invalidHistory) {
+            // Preserve the current report even if an old/corrupt history preference cannot be parsed.
+            updatedHistory = DownloadScanHistory.append("[]", id, safeName, status, details,
+                    hash, System.currentTimeMillis()).toString();
+        }
         prefs.edit()
                 .putString("last_download_scan_status", status)
                 .putString("last_download_scan_filename", safeName)
                 .putString("last_download_scan", report)
                 .putString("last_download_scan_sha256", hash == null ? "" : hash)
                 .putLong("last_download_scan_id", id)
+                .putString("download_scan_history", updatedHistory)
                 .apply();
     }
 }
