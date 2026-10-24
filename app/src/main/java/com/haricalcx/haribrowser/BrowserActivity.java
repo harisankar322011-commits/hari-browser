@@ -136,10 +136,6 @@ public class BrowserActivity extends ComponentActivity {
     private static ArrayList<String> pendingThemeRestoreUrls;
     private static int pendingThemeRestoreIndex;
     private static boolean pendingThemeRestorePrivateMode;
-    // Session-only approvals avoid repeated prompts for a URL the user already reviewed.
-    private static final java.util.Set<String> APPROVED_SITE_URLS =
-            java.util.Collections.synchronizedSet(new java.util.HashSet<>());
-
     // Opt-in online URL reputation results remain in memory only and never enter browser history.
     private final Set<String> pendingUrlhausChecks = Collections.synchronizedSet(new HashSet<>());
     private final Map<String, UrlhausReputation.Result> urlhausSessionResults =
@@ -1039,7 +1035,7 @@ public class BrowserActivity extends ComponentActivity {
                 return;
             }
         }
-        if (APPROVED_SITE_URLS.contains(url)) {
+        if (SessionApprovalCache.contains(url)) {
             loadAfterSiteSafetyCheck(tab, url);
             return;
         }
@@ -1110,7 +1106,7 @@ public class BrowserActivity extends ComponentActivity {
                         showToast("The navigation changed. Please retry the address if you still want to open it.");
                         return;
                     }
-                    APPROVED_SITE_URLS.add(url);
+                    SessionApprovalCache.approve(url);
                     loadAfterSiteSafetyCheck(tab, url);
                 })
                 .show();
