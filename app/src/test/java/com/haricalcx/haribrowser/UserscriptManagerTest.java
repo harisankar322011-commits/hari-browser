@@ -44,11 +44,13 @@ public final class UserscriptManagerTest {
         assertTrue(script.matchesUrl("https://example.org/"));
         assertTrue(script.matchesUrl("https://news.example.org/story"));
         assertFalse(script.matchesUrl("http://news.example.org/story"));
+        assertFalse(script.matchesUrl("https://news.example.org:8443/story"));
         assertFalse(script.matchesUrl("https://notexample.org/story"));
 
         List<String> origins = UserscriptManager.allowedOrigins(script);
-        assertEquals(1, origins.size());
+        assertEquals(2, origins.size());
         assertEquals("https://*.example.org", origins.get(0));
+        assertEquals("https://example.org", origins.get(1));
     }
 
     @Test
