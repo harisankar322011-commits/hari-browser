@@ -4005,23 +4005,10 @@ public class BrowserActivity extends ComponentActivity {
         filename = filename.replaceAll("[^a-zA-Z0-9._() -]", "_");
         if (filename.trim().isEmpty() || filename.equals(".") || filename.equals("..")) filename = "download";
         final String safeFilename = filename;
-        String type = mimeType == null ? "" : mimeType.toLowerCase(Locale.ROOT);
-        boolean potentiallyExecutable = type.contains("apk") || type.contains("x-msdownload")
-                || type.contains("x-executable") || type.contains("x-dosexec")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".apk")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".exe")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".msi")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".bat")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".cmd")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".sh")
-                || safeFilename.toLowerCase(Locale.ROOT).endsWith(".jar");
-        String warning = potentiallyExecutable
-                ? "\\n\\nWarning: this file may install or run software. Hari Browser will not automatically execute it. Only keep it if you trust the source."
-                : "";
+        boolean potentiallyExecutable = DownloadSafetyPolicy.looksExecutable(safeFilename, mimeType);
         new AlertDialog.Builder(this)
                 .setTitle("Download file")
-                .setMessage("Save " + safeFilename + " to Downloads?" + warning
-                        + "\\n\\nAfter download, Hari Browser can check the file type and calculate a checksum. This is not a malware verdict.")
+                .setMessage(DownloadSafetyPolicy.confirmationMessage(safeFilename, potentiallyExecutable))
                 .setNegativeButton("Cancel", null)
                 .setNeutralButton("File safety info", (d, w) -> showToast("File checks detect some risky types only; they cannot prove a file is malware-free."))
                 .setPositiveButton("Download", (d, w) -> startDownload(url, safeFilename, mimeType))
