@@ -1447,8 +1447,12 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private JSONArray readArray(String key) {
+        return parseArray(secureStore.get(key, "[]"));
+    }
+
+    private JSONArray parseArray(String serialized) {
         try {
-            return new JSONArray(secureStore.get(key, "[]"));
+            return new JSONArray(serialized == null ? "[]" : serialized);
         } catch (Exception ignored) {
             return new JSONArray();
         }
@@ -1492,8 +1496,10 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Saved bookmarks are unavailable in private browsing.");
             return;
         }
-        JSONArray array = readArray(KEY_BOOKMARKS);
-        showSavedItems(array, "Bookmarks", true);
+        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            showSavedItems(parseArray(serialized), "Bookmarks", true);
+        });
     }
 
     private void showHistory() {
@@ -1510,7 +1516,10 @@ public class BrowserActivity extends ComponentActivity {
                     .show();
             return;
         }
-        showSavedItems(readArray(KEY_HISTORY), "Recent history", false);
+        secureStore.getAsync(KEY_HISTORY, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode || !historyEnabled()) return;
+            showSavedItems(parseArray(serialized), "Recent history", false);
+        });
     }
 
     private void showSavedItems(JSONArray array, String title, boolean bookmarks) {
@@ -3721,6 +3730,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void applyReaderStyles(Tab tab) {
         if (tab == null || tab.webView == null) return;
+        // Extraction is local and text-only. It does not add a JS bridge or load remote assets.
         tab.webView.evaluateJavascript(ReaderModeStyles.documentStyleScript(), null);
     }
 
