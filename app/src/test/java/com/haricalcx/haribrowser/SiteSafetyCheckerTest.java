@@ -104,4 +104,13 @@ public class SiteSafetyCheckerTest {
 
         assertTrue(warnings.contains("mixes Latin with Cyrillic or Greek"));
     }
+
+    @Test
+    public void unicodeHostnameDoesNotHideNonstandardPort() {
+        String lookalikeHost = "\\u0440\\u0430ypal.example";
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(
+                "https://" + lookalikeHost + ":8443/login");
+
+        assertTrue(String.join(" ", report.getWarnings()).contains("non-standard HTTPS port (8443)"));
+    }
 }
