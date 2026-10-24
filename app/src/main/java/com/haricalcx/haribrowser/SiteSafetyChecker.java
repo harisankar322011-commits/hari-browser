@@ -135,9 +135,11 @@ public final class SiteSafetyChecker {
                     warnings.add("The hostname has many subdomains. Check the registered domain carefully.");
                 }
 
-                int port = uri.getPort();
+                int port = effectivePort(uri);
                 if (port == -1 || port == 443) {
                     passed.add("No unusual HTTPS port");
+                } else if (port < 0) {
+                    warnings.add("The URL has a malformed or out-of-range port.");
                 } else {
                     warnings.add("The URL uses a non-standard HTTPS port (" + port + ").");
                 }
@@ -182,6 +184,40 @@ public final class SiteSafetyChecker {
             return null;
         }
         return authority.isEmpty() ? null : authority;
+    }
+
+    private static int effectivePort(URI uri) {
+        int parsedPort = uri.getPort();
+        if (parsedPort >= 0) return parsedPort;
+
+        // URI#getPort() may be -1 when the hostname contains Unicode characters.
+        String authority = uri.getRawAuthority();
+        if (authority == null || authority.isEmpty()) return -1;
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) authority = authority.substring(at + 1);
+
+        String portText;
+        if (authority.startsWith("[")) {
+            int closingBracket = authority.indexOf(']');
+            if (closingBracket < 0) return -2;
+            if (closingBracket == authority.length() - 1) return -1;
+            if (authority.charAt(closingBracket + 1) != ':') return -2;
+            portText = authority.substring(closingBracket + 2);
+        } else {
+            int firstColon = authority.indexOf(':');
+            int lastColon = authority.lastIndexOf(':');
+            if (firstColon < 0) return -1;
+            if (firstColon != lastColon) return -2;
+            portText = authority.substring(lastColon + 1);
+        }
+
+        if (portText.isEmpty() || !portText.chars().allMatch(Character::isDigit)) return -2;
+        try {
+            int port = Integer.parseInt(portText);
+            return port >= 0 && port <= 65535 ? port : -2;
+        } catch (NumberFormatException invalidPort) {
+            return -2;
+        }
     }
 
     private static boolean containsNonAscii(String value) {
