@@ -3724,7 +3724,8 @@ public class BrowserActivity extends ComponentActivity {
                 settings.edit().putBoolean("private_session_active", false)
                         .remove("last_download_scan").remove("last_download_scan_status")
                         .remove("last_download_scan_filename").remove("last_download_scan_sha256")
-                        .remove("last_download_scan_id").remove("last_suspicious_download_id")
+                        .remove("last_download_scan_id").remove("download_scan_history")
+                        .remove("last_suspicious_download_id")
                         .remove("last_suspicious_download_filename").apply();
             }
             SharedPreferences registry = getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE);
