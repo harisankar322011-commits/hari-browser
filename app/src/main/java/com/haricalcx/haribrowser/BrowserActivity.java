@@ -3241,25 +3241,30 @@ public class BrowserActivity extends ComponentActivity {
             protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run, hash -> {
                 boolean verified = TeenProtection.verifyPin(candidate, salt, hash);
                 getMainExecutor().execute(() -> {
-                    if (!isTeenPinDialogActive(dialog)) return;
                     if (!verified) {
+                        // Record failures even if the user dismissed the dialog while PBKDF2
+                        // was running; otherwise repeatedly cancelling could evade the lockout.
                         int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
-                        if (failures >= 5) {
+                        boolean locked = failures >= 5;
+                        if (locked) {
                             protectionSettings.edit()
                                     .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
                                     .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY,
                                             System.currentTimeMillis() + 60_000L)
                                     .apply();
-                            input.setError("Too many attempts. Try again in 60 seconds.");
                         } else {
                             protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
-                            input.setError("Incorrect PIN. Attempts left: " + (5 - failures) + ".");
                         }
+                        if (!isTeenPinDialogActive(dialog)) return;
+                        input.setError(locked ? "Too many attempts. Try again in 60 seconds."
+                                : "Incorrect PIN. Attempts left: " + (5 - failures) + ".");
                         callback.accept(false);
                         return;
                     }
+
                     protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
                             .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                    if (!isTeenPinDialogActive(dialog)) return;
                     callback.accept(true);
                 });
             });
