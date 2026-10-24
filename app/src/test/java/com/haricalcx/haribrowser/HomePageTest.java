@@ -71,6 +71,8 @@ public final class HomePageTest {
                 "Search|No host|https:///path\n" +
                 "Search|Bad port|https://example.com:abc/\n" +
                 "Search|Out of range port|https://example.com:99999/\n" +
+                "Search|Zero port|https://example.com:0/\n" +
+                "Search|Empty port|https://example.com:/\n" +
                 "Search|Credentials|https://user:secret@example.com/\n" +
                 "Search|No scheme host|https://\n");
         org.json.JSONArray entries = new org.json.JSONArray(json);
