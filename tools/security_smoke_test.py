@@ -284,6 +284,11 @@ try:
         body = method_body(browser, signature)
         check(name, "if (privateMode)" in body and "return;" in body)
 
+    check("Offline reading persistence runs through async encrypted storage",
+          "secureStore.updateAsync(KEY_READ_LATER" in browser and
+          "readOfflinePagesAsync" in browser and
+          "secureStore.get(KEY_READ_LATER" not in browser and
+          "secureStore.put(KEY_READ_LATER" not in browser)
     check("Encrypted store uses AES-GCM", 'Cipher.getInstance("AES/GCM/NoPadding")' in secure_store)
     check("Encryption key stored in Android Keystore", 'KeyStore.getInstance("AndroidKeyStore")' in secure_store)
     check("Fresh randomized encryption IV required", ".setRandomizedEncryptionRequired(true)" in secure_store)
