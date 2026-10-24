@@ -3334,23 +3334,44 @@ public class BrowserActivity extends ComponentActivity {
                 confirmInput.setError("The PINs do not match.");
                 return;
             }
+            Button enableButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            Button cancelButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
             try {
                 String salt = TeenProtection.createPinSalt();
                 String hash = TeenProtection.hashPin(pin, salt);
-                protectionStore.put(TeenProtection.PIN_SALT_KEY, salt);
-                protectionStore.put(TeenProtection.PIN_HASH_KEY, hash);
-                String savedSalt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
-                String savedHash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
-                if (!TeenProtection.verifyPin(pin, savedSalt, savedHash)) {
-                    showToast("Could not securely save the parent PIN. Protection was not enabled.");
-                    return;
-                }
-                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
-                        .remove(TeenProtection.PIN_FAILURES_KEY)
-                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
-                dialog.dismiss();
-                showToast("Teen Protection enabled.");
+                enableButton.setEnabled(false);
+                cancelButton.setEnabled(false);
+                dialog.setCancelable(false);
+
+                // Ordered removal + writes + read-back all run on SecureStore's serial queue.
+                // Clear old disabled credentials first, so a failed write cannot accidentally
+                // validate against a previous PIN record.
+                protectionStore.removeAsync(TeenProtection.PIN_SALT_KEY);
+                protectionStore.removeAsync(TeenProtection.PIN_HASH_KEY);
+                protectionStore.putAsync(TeenProtection.PIN_SALT_KEY, salt);
+                protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash);
+                protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", getMainExecutor(), savedSalt -> {
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", getMainExecutor(), savedHash -> {
+                        if (!isTeenPinDialogActive(dialog)) return;
+                        if (!TeenProtection.verifyPin(pin, savedSalt, savedHash)) {
+                            dialog.setCancelable(true);
+                            enableButton.setEnabled(true);
+                            cancelButton.setEnabled(true);
+                            showToast("Could not securely save the parent PIN. Protection was not enabled.");
+                            return;
+                        }
+                        protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
+                                .remove(TeenProtection.PIN_FAILURES_KEY)
+                                .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                        dialog.dismiss();
+                        showToast("Teen Protection enabled.");
+                    });
+                });
             } catch (Exception ignoredError) {
+                dialog.setCancelable(true);
+                enableButton.setEnabled(true);
+                cancelButton.setEnabled(true);
                 showToast("Could not configure Teen Protection. Try again.");
             }
         }));
