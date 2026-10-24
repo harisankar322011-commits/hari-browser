@@ -3394,19 +3394,28 @@ public class BrowserActivity extends ComponentActivity {
                 .setPositiveButton("Continue", null)
                 .setNegativeButton("Keep enabled", null)
                 .create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (!verifyTeenProtectionPin(pinInput.getText().toString(), pinInput)) return;
-            new AlertDialog.Builder(this)
-                    .setTitle("Disable Teen Protection?")
-                    .setMessage("Restricted search terms will no longer be blocked and strict SafeSearch will no longer be added by Hari Browser.")
-                    .setNegativeButton("Keep enabled", null)
-                    .setPositiveButton("Disable", (confirmation, which) -> {
-                        protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, false).apply();
-                        showToast("Teen Protection disabled.");
-                    })
-                    .show();
-            dialog.dismiss();
-        }));
+        dialog.setOnShowListener(ignored -> {
+            Button continueButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            continueButton.setOnClickListener(v -> {
+                continueButton.setEnabled(false);
+                verifyTeenProtectionPin(pinInput.getText().toString(), pinInput, dialog, verified -> {
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    continueButton.setEnabled(true);
+                    if (!verified) return;
+
+                    dialog.dismiss();
+                    new AlertDialog.Builder(this)
+                            .setTitle("Disable Teen Protection?")
+                            .setMessage("Restricted search terms will no longer be blocked and strict SafeSearch will no longer be added by Hari Browser.")
+                            .setNegativeButton("Keep enabled", null)
+                            .setPositiveButton("Disable", (confirmation, which) -> {
+                                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, false).apply();
+                                showToast("Teen Protection disabled.");
+                            })
+                            .show();
+                });
+            });
+        });
         dialog.show();
     }
 
