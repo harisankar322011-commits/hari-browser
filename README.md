@@ -5,7 +5,7 @@
 Hari Browser is an open-source Android browser built on **Android System WebView** for private family use. It combines everyday browsing tools with privacy-conscious defaults, optional Teen Protection, local URL checks, file-inspection tools, and an optional Hari AI assistant. This project is not being prepared for Google Play publishing; family sideloading still requires a verified, trusted APK.
 
 > [!IMPORTANT]
-> **Release caution:** A previously tested Hari Browser 2.3.0 APK was reported as triggering an Android device-protection warning: “malware detected.” The cause has not yet been established. This is neither proof that the APK is malicious nor evidence that the warning is a false positive. Treat that artifact as untrusted until it has been investigated; do not rely on a build or store check alone as proof that an APK is malware-free.
+> **Release caution:** The previously tested `HariBrowser-2.3.0(2).apk` was reported as triggering Android device protection (“malware detected”). Static inspection found the standard EICAR antivirus test marker in that APK's compiled code; source history confirms that the production marker was later removed and CI now rejects it in compiled DEX files. This is a strong likely explanation for that specific warning, but it does not prove the marker was the only cause or establish that every future build is safe. The newer CI validation artifact was unsigned, so it is not a release candidate. Review [the inspection evidence](docs/REVIEW_AUDIT_2026-10-24.md) and [stable signing instructions](docs/RELEASE_SIGNING.md); scan the exact APK you intend to install and do not bypass an Android protection warning.
 
 ## At a glance
 
@@ -116,7 +116,7 @@ The repository's release workflow can produce a build artifact for family testin
 4. Check the APK filename and signing status before installation. An APK named `*-unsigned.apk` is not ready to install.
 5. Do not install or redistribute the previously flagged 2.3.0 APK until the Android device-protection alert has been investigated.
 
-For releases intended to be updated in place, maintainers must sign every version with the same private release key. CI must never generate a disposable key; without the stable signing secrets it should publish only an unsigned validation artifact that cannot be installed. Never commit a keystore or signing passwords to source control.
+For releases intended to be updated in place, maintainers must sign every version with the same private release key. CI must never generate a disposable key; without the stable signing secrets it should publish only an unsigned validation artifact that cannot be installed. Never commit a keystore or signing passwords to source control. CI also pins the expected signing certificate SHA-256 fingerprint; see [release signing setup](docs/RELEASE_SIGNING.md) before configuring the five protected Actions secrets.
 
 A successful build, CI check, or third-party review does not by itself prove an APK is malware-free. Verify the release artifact, signature, and source before installing it.
 
