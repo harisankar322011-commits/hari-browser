@@ -98,8 +98,13 @@ final class OfflineReading {
     }
 
     static JSONArray removeByUrl(String serialized, String url) {
+        return removeByUrl(serialized, url, MAX_SAVED_PAGES, MAX_BODY_CHARS);
+    }
+
+    static JSONArray removeByUrl(String serialized, String url, int requestedPages,
+                                 int requestedBodyChars) {
         JSONArray result = new JSONArray();
-        JSONArray saved = parse(serialized);
+        JSONArray saved = parse(serialized, requestedPages, requestedBodyChars);
         for (int i = 0; i < saved.length(); i++) {
             JSONObject item = saved.optJSONObject(i);
             if (item == null || item.optString("url", "").equals(url)) continue;
