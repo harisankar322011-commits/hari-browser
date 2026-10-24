@@ -2182,7 +2182,7 @@ public class BrowserActivity extends ComponentActivity {
         String address = firstAddress;
         for (int redirects = 0; redirects <= 3; redirects++) {
             java.net.URL url = new java.net.URL(address);
-            if (!"https".equalsIgnoreCase(url.getProtocol()) || url.getUserInfo() != null) {
+            if (!"https".equalsIgnoreCase(url.getProtocol()) || url.toURI().getUserInfo() != null) {
                 throw new IOException("Userscript URLs and redirects must use HTTPS without embedded credentials.");
             }
             java.net.HttpURLConnection connection =
