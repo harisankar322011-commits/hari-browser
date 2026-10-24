@@ -232,6 +232,8 @@ public class BrowserActivity extends ComponentActivity {
         String url = HOME_URL;
         boolean home = true;
         boolean readerMode = false;
+        boolean readerExtractionInProgress = false;
+        String readerExtractionUrl;
         long navigationAttempt = 0L;
         ScriptHandler fingerprintScriptHandler;
         final ArrayList<ScriptHandler> userscriptHandlers = new ArrayList<>();
@@ -1313,13 +1315,7 @@ public class BrowserActivity extends ComponentActivity {
                 showPrivacyInfo();
                 break;
             case "reader":
-                if (currentTab() != null && !currentTab().home) {
-                    currentTab().readerMode = !currentTab().readerMode;
-                    if (currentTab().readerMode) applyReaderStyles(currentTab());
-                    else currentTab().webView.reload();
-                } else {
-                    showToast("Open a webpage first.");
-                }
+                openReaderArticle(currentTab());
                 break;
             case "desktop":
                 settings.edit().putBoolean("desktop_mode", !desktopEnabled()).apply();
@@ -2427,7 +2423,7 @@ public class BrowserActivity extends ComponentActivity {
                 (desktopEnabled() ? "✓ " : "○ ") + ui("Desktop website mode"),
                 (cookiesEnabled() ? "✓ " : "○ ") + ui("Allow first-party cookies"),
                 (historyEnabled() ? "✓ " : "○ ") + ui("Save browsing history"),
-                (currentTab() != null && currentTab().readerMode ? "✓ " : "○ ") + ui("Toggle reader-style view"),
+                ui("Extract article (Reader mode)"),
                 ui("Clear cookies, cache, site storage and history"),
                 ui("Open downloads"),
                 ui("Bookmarks"),
@@ -2505,14 +2501,7 @@ public class BrowserActivity extends ComponentActivity {
                             }
                             break;
                         case 5:
-                            Tab tab = currentTab();
-                            if (tab != null && !tab.home) {
-                                tab.readerMode = !tab.readerMode;
-                                if (tab.readerMode) applyReaderStyles(tab);
-                                else tab.webView.reload();
-                            } else {
-                                showToast("Open a webpage first.");
-                            }
+                            openReaderArticle(currentTab());
                             break;
                         case 6:
                             confirmClearData();
@@ -3716,6 +3705,82 @@ public class BrowserActivity extends ComponentActivity {
                     Collections.singleton("*"));
         } catch (RuntimeException ignored) {
             // Fail safely: a protection failure must not prevent ordinary browsing.
+        }
+    }
+
+    private void openReaderArticle(Tab tab) {
+        if (tab == null || tab.home || tab.webView == null || !PrivacyGuard.isHttpsUrl(tab.url)) {
+            showToast("Open an HTTPS article first.");
+            return;
+        }
+        if (!tab.webView.getSettings().getJavaScriptEnabled()) {
+            showToast("Article extraction requires JavaScript to be enabled for this page. Hari Browser did not change your setting.");
+            return;
+        }
+        if (tab.readerExtractionInProgress) {
+            showToast("Article extraction is already running.");
+            return;
+        }
+
+        final String requestedUrl = tab.url;
+        tab.readerExtractionInProgress = true;
+        tab.readerExtractionUrl = requestedUrl;
+        showToast("Extracting article text locally…");
+
+        // Read the pinned local parser off the UI thread; no parser code is fetched from the network.
+        new Thread(() -> {
+            final String parser;
+            try {
+                parser = ReaderArticleExtractor.loadLibrary(getAssets());
+            } catch (IOException error) {
+                runOnUiThread(() -> {
+                    finishReaderExtraction(tab, requestedUrl);
+                    if (!isFinishing()) showToast("The bundled article reader could not be loaded.");
+                });
+                return;
+            }
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed() || tab.webView == null
+                        || !requestedUrl.equals(tab.url)
+                        || !requestedUrl.equals(tab.readerExtractionUrl)) {
+                    finishReaderExtraction(tab, requestedUrl);
+                    return;
+                }
+                final String script;
+                try {
+                    script = ReaderArticleExtractor.buildExtractionScript(parser);
+                } catch (IllegalArgumentException error) {
+                    finishReaderExtraction(tab, requestedUrl);
+                    showToast("The article reader could not be prepared.");
+                    return;
+                }
+                tab.webView.evaluateJavascript(script, encodedResult -> {
+                    finishReaderExtraction(tab, requestedUrl);
+                    if (isFinishing() || isDestroyed() || tab.webView == null
+                            || !requestedUrl.equals(tab.url)) return;
+                    ReaderArticleExtractor.Article article =
+                            ReaderArticleExtractor.parseJavaScriptResult(encodedResult);
+                    if (article == null || !requestedUrl.equals(article.url)) {
+                        showToast("Couldn't extract a readable article from this page.");
+                        return;
+                    }
+                    Intent intent = new Intent(BrowserActivity.this, ReaderArticleActivity.class);
+                    intent.putExtra(ReaderArticleActivity.EXTRA_TITLE, article.title);
+                    intent.putExtra(ReaderArticleActivity.EXTRA_BYLINE, article.byline);
+                    intent.putExtra(ReaderArticleActivity.EXTRA_TEXT, article.text);
+                    intent.putExtra(ReaderArticleActivity.EXTRA_URL, article.url);
+                    intent.putExtra(ReaderArticleActivity.EXTRA_LANGUAGE, article.language);
+                    intent.putExtra(ReaderArticleActivity.EXTRA_DIRECTION, article.direction);
+                    startActivity(intent);
+                });
+            });
+        }, "HariBrowser-ReaderLoad").start();
+    }
+
+    private void finishReaderExtraction(Tab tab, String requestedUrl) {
+        if (tab != null && requestedUrl != null && requestedUrl.equals(tab.readerExtractionUrl)) {
+            tab.readerExtractionInProgress = false;
+            tab.readerExtractionUrl = null;
         }
     }
 
