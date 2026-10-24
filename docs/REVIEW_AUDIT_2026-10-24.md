@@ -20,7 +20,7 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 | Importable ad/tracker host lists | **IMPLEMENTED — PR #47, CI passed.** Bounded hosts-format parser/import/remove control, DNS suffix matching and built-in list retained. It does not interpret full Adblock/EasyList syntax. | Device-test performance and false positives; consider a reviewed filter subset separately. |
 | Readability-based article extraction | **NOT IMPLEMENTED.** Reader mode remains CSS restyling rather than article extraction. | Bundle a reviewed, licensed Readability implementation; test hostile HTML, multi-language pages and attribution. |
 | Persist tabs after process death | **NOT IMPLEMENTED.** Existing restore path is for theme recreation, not durable cold-start restoration. | Save a bounded HTTPS-only standard-mode session in encrypted storage, restore only through normal safety checks, and never save private tabs in standard storage. |
-| Open supported non-HTTPS schemes externally | **IN PROGRESS — feature branch.** Strict validation and explicit confirmation for \`mailto:\` and \`tel:\` are implemented with focused tests; arbitrary schemes remain blocked. CI/PR review pending. | Pass CI, review exact launch flow and device-test mail/dialer handlers before merge. |
+| Open supported non-HTTPS schemes externally | **IMPLEMENTED — PR #52 merged.** Strict validation and explicit confirmation for `mailto:` and `tel:`; arbitrary schemes remain blocked. CI passed for debug/release builds, unit tests/lint, CodeQL, secret scanning and dependency review. | Device-test mail/dialer handlers and missing-app behavior. |
 | Per-site anti-fingerprinting control | **IMPLEMENTED — PR #48, CI passed.** Exact-host exception, explicit confirmation, 128-host cap, visible status and private-session cleanup. The page-script reductions are disabled for that hostname only; reduced network User-Agent and other browser protections remain. | Check compatibility behavior across supported Android System WebView versions; this is not a promise of anonymity. |
 | Configurable offline-reading page/text cap | **IMPLEMENTED — PR #49, CI passed.** User choices 4/8/12 pages and 8k/24k/32k characters; hard ceilings 12 pages / 32k characters and existing defaults remain 8 / 24k. | Manually verify capture/display at each setting and ensure changing limits does not unexpectedly lose unrelated saved pages. |
 | In-app download scan history | **IMPLEMENTED — PR #47, CI passed.** Bounded, sanitized history of last 20 scan reports, local details and clear action; private-mode report history is cleared on session exit. | Verify display and private cleanup on device; limited heuristics must never be presented as proof that a file is malware-free. |
@@ -29,7 +29,7 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 | Complete localization through Android resources | **PARTIAL.** Home page and \`BrowserUiText\` cover many languages, but runtime dialogs, toasts and security labels still contain English literals. | Migrate in batches to Android string resources; verify Malayalam and fallback coverage. |
 | Instrumented/Robolectric behavior tests | **PARTIAL.** JVM unit tests and static smoke tests exist; static checks cannot prove full runtime behavior. | Add Android behavioral tests for navigation interception, WebView lifecycle, settings toggles, downloads, private cleanup and tab restore. |
 | Bound session approval cache | **IMPLEMENTED — PR #47, CI passed.** Synchronized insertion-ordered cache capped at 256 URLs with eviction tests. | Keep the bound and tests. |
-| Display selected Hari AI model | **PARTIAL.** Model IDs are in a named list and fallback discovery exists; user-facing result details do not clearly expose which model answered. | Surface the resolved model and test failure/fallback behavior. Avoid a live API test unless explicitly configured by the owner. |
+| Display selected Hari AI model | **IMPLEMENTED IN THIS PR.** HariAiClient returns both response text and the actual model ID; the chat status shows `Ready · Model: <id>` without inserting model metadata into the conversation sent back to the API. Focused JVM tests cover attribution data. | Verify fallback-model attribution with a configured API key only after owner approval; do not send live API requests automatically. |
 | Version 8 changelog | **IMPLEMENTED — PR #47.** Changelog added. | Keep it aligned with actual release contents. |
 | Third-party ZXing notice | **IMPLEMENTED — PR #47.** \`NOTICE\` records ZXing Core 3.5.4 and Apache-2.0. | Recheck licenses on dependency updates and consider a complete transitive license inventory. |
 | Restore prior HTTPS URL after renderer crash | **IMPLEMENTED — PR #47, CI passed.** Recreates the WebView and restores prior HTTPS URL rather than always returning home. | Exercise renderer recovery and normal safety prompts on-device. |
@@ -41,25 +41,22 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 - **PR #49 — offline reading limits:** configurable page/text caps with hard ceilings; capture/read/remove paths honor selected preferences; focused JVM tests. CI passed before merge.
 - **PR #51 — additional search providers:** Ecosia, Mojeek and Qwant; central URL generator and query encoding; Teen Protection checks for new providers; honest SafeSearch limitation text; static smoke test updated to validate the centralized URL helper. CI passed before merge.
 
-## Current feature branch: safe external links
+## Merged changes — safe external links (PR #52)
 
-Branch: \`feature/safe-external-links\` (PR not opened yet).
-
-- \`ExternalLinkPolicy\` classifies normal web/search input, HTTPS, HTTP, validated mailto/tel links and blocked schemes.
-- \`mailto:\` is reduced to a validated recipient only. Query/subject/body metadata is not forwarded, and encoded CR/LF is rejected to guard against header injection.
-- \`tel:\` is reduced to a normalized number; malformed or decorated targets are rejected. Confirmation launches \`ACTION_DIAL\`, never \`ACTION_CALL\`, so the browser does not place a call.
+- `ExternalLinkPolicy` classifies normal web/search input, HTTPS, HTTP, validated mailto/tel links and blocked schemes.
+- `mailto:` is reduced to a validated recipient only. Query/subject/body metadata is not forwarded, and encoded CR/LF is rejected to guard against header injection.
+- `tel:` is reduced to a normalized number; malformed or decorated targets are rejected. Confirmation launches `ACTION_DIAL`, never `ACTION_CALL`, so the browser does not place a call.
 - The user must explicitly confirm opening the email app or dialer. Missing handlers are handled.
-- \`file:\`, \`intent:\`, \`market:\`, \`javascript:\`, \`data:\`, \`content:\` and other non-allowlisted schemes remain blocked.
-- Focused unit tests and static smoke checks were added; final CI is still required.
+- `file:`, `intent:`, `market:`, `javascript:`, `data:`, `content:` and other non-allowlisted schemes remain blocked.
+- Focused unit tests and static smoke checks passed with debug/release builds, CodeQL, secret scanning and dependency review. Device testing of actual mail/dialer handlers remains outstanding.
 
 ## Recommended next implementation order
 
 1. Resolve and document the Android device-protection warning using a newly built, scanned and consistently signed artifact.
-2. Complete the safe external-link PR only after all CI checks pass.
-3. Add behavioral Android tests around URL interception, WebView lifecycle, private cleanup and tabs.
-4. Persist standard-mode tabs safely; then move encrypted-store calls off the UI thread.
-5. Implement Readability-based reader extraction and verify per-site fingerprint controls on real WebView versions.
-6. Complete localization, surface selected AI model, and improve bookmarks.
-7. Split \`BrowserActivity\` and \`HomePage\` gradually.
+2. Add behavioral Android tests around URL interception, WebView lifecycle, private cleanup and tabs.
+3. Persist standard-mode tabs safely; then move encrypted-store calls off the UI thread.
+4. Implement Readability-based reader extraction and verify per-site fingerprint controls on real WebView versions.
+5. Complete localization and improve bookmarks.
+6. Split `BrowserActivity` and `HomePage` gradually.
 
 No item is complete merely because it appears in a dashboard or documentation, and no APK should be described as release-ready until the old device-protection issue is investigated.
