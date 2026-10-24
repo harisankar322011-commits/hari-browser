@@ -13,12 +13,21 @@ import java.net.URI;
 final class OfflineReading {
     static final int MAX_SAVED_PAGES = 8;
     static final int MAX_BODY_CHARS = 24000;
+    static final int MAX_ALLOWED_SAVED_PAGES = 12;
+    static final int MAX_ALLOWED_BODY_CHARS = 32000;
+    static final int MIN_PREFERRED_BODY_CHARS = 8000;
     private static final int MAX_TITLE_CHARS = 180;
     private static final int MAX_URL_CHARS = 4096;
 
     private OfflineReading() {}
 
     static JSONArray parse(String serialized) {
+        return parse(serialized, MAX_SAVED_PAGES, MAX_BODY_CHARS);
+    }
+
+    static JSONArray parse(String serialized, int requestedPages, int requestedBodyChars) {
+        int maxPages = clampPages(requestedPages);
+        int maxBodyChars = clampBodyChars(requestedBodyChars);
         JSONArray cleaned = new JSONArray();
         final JSONArray source;
         try {
@@ -27,11 +36,11 @@ final class OfflineReading {
             return cleaned;
         }
 
-        for (int i = 0; i < source.length() && cleaned.length() < MAX_SAVED_PAGES; i++) {
+        for (int i = 0; i < source.length() && cleaned.length() < maxPages; i++) {
             JSONObject item = source.optJSONObject(i);
             if (item == null) continue;
             String url = item.optString("url", "");
-            String body = limitText(item.optString("body", ""));
+            String body = limitText(item.optString("body", ""), maxBodyChars);
             if (!isSafeHttpsUrl(url) || body.isEmpty()) continue;
             try {
                 JSONObject safe = new JSONObject();
@@ -49,8 +58,17 @@ final class OfflineReading {
 
     static JSONArray addOrReplace(String serialized, String title, String url,
                                   String body, long savedAt) {
+        return addOrReplace(serialized, title, url, body, savedAt,
+                MAX_SAVED_PAGES, MAX_BODY_CHARS);
+    }
+
+    static JSONArray addOrReplace(String serialized, String title, String url,
+                                  String body, long savedAt, int requestedPages,
+                                  int requestedBodyChars) {
+        int maxPages = clampPages(requestedPages);
+        int maxBodyChars = clampBodyChars(requestedBodyChars);
         String cleanUrl = url == null ? "" : url.trim();
-        String cleanBody = limitText(body);
+        String cleanBody = limitText(body, maxBodyChars);
         if (!isSafeHttpsUrl(cleanUrl)) {
             throw new IllegalArgumentException("Only valid HTTPS pages can be saved.");
         }
@@ -67,8 +85,8 @@ final class OfflineReading {
             newest.put("savedAt", Math.max(0L, savedAt));
             result.put(newest);
 
-            JSONArray previous = parse(serialized);
-            for (int i = 0; i < previous.length() && result.length() < MAX_SAVED_PAGES; i++) {
+            JSONArray previous = parse(serialized, maxPages, maxBodyChars);
+            for (int i = 0; i < previous.length() && result.length() < maxPages; i++) {
                 JSONObject item = previous.optJSONObject(i);
                 if (item == null || cleanUrl.equals(item.optString("url", ""))) continue;
                 result.put(item);
@@ -91,10 +109,15 @@ final class OfflineReading {
     }
 
     static String limitText(String text) {
+        return limitText(text, MAX_BODY_CHARS);
+    }
+
+    static String limitText(String text, int requestedBodyChars) {
         if (text == null) return "";
         String normalized = text.trim();
-        if (normalized.length() > MAX_BODY_CHARS) {
-            normalized = normalized.substring(0, MAX_BODY_CHARS);
+        int maxBodyChars = clampBodyChars(requestedBodyChars);
+        if (normalized.length() > maxBodyChars) {
+            normalized = normalized.substring(0, maxBodyChars);
         }
         // Avoid ending on an unpaired high surrogate if the limit splits a pair.
         if (!normalized.isEmpty() && Character.isHighSurrogate(normalized.charAt(normalized.length() - 1))) {
@@ -104,16 +127,28 @@ final class OfflineReading {
     }
 
     static String decodeJavascriptString(String encodedValue) {
+        return decodeJavascriptString(encodedValue, MAX_BODY_CHARS);
+    }
+
+    static String decodeJavascriptString(String encodedValue, int requestedBodyChars) {
         if (encodedValue == null || encodedValue.trim().isEmpty() || "null".equals(encodedValue.trim())) {
             return "";
         }
         try {
             JSONArray wrapper = new JSONArray("[" + encodedValue + "]");
             Object value = wrapper.opt(0);
-            return value instanceof String ? limitText((String) value) : "";
+            return value instanceof String ? limitText((String) value, requestedBodyChars) : "";
         } catch (JSONException malformed) {
             return "";
         }
+    }
+
+    private static int clampPages(int requested) {
+        return Math.max(1, Math.min(MAX_ALLOWED_SAVED_PAGES, requested));
+    }
+
+    private static int clampBodyChars(int requested) {
+        return Math.max(1, Math.min(MAX_ALLOWED_BODY_CHARS, requested));
     }
 
     private static String limitTitle(String title) {
