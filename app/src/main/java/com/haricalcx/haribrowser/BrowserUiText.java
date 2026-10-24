@@ -83,6 +83,14 @@ final class BrowserUiText {
         "Enter a valid folder name."
     };
 
+    private static final String[] SECURITY_KEYS = {
+        "Save %s to Downloads?",
+        "Warning: this file may install or run software. Hari Browser will not automatically execute it. Only keep it if you trust the source.",
+        "After download, Hari Browser can check the file type and calculate a checksum. This is not a malware verdict.",
+        "File safety info",
+        "File checks detect some risky types only; they cannot prove a file is malware-free."
+    };
+
     private static final Map<String, Map<String, String>> TEXT;
 
     static {
@@ -580,6 +588,85 @@ final class BrowserUiText {
             "لم يتم العثور على الإشارة أو لم يتغير المجلد.",
             "أدخل اسم مجلد صالحًا.");
 
+        addSecurity(all, "ml",
+            "%s ഡൗൺലോഡ്സ് ഫോൾഡറിൽ സേവ് ചെയ്യണോ?",
+            "മുന്നറിയിപ്പ്: ഈ ഫയൽ സോഫ്റ്റ്‌വെയർ ഇൻസ്റ്റാൾ ചെയ്യുകയോ പ്രവർത്തിപ്പിക്കുകയോ ചെയ്യാം. Hari Browser ഇത് സ്വയം പ്രവർത്തിപ്പിക്കില്ല. ഉറവിടത്തെ വിശ്വസിക്കുന്നുവെങ്കിൽ മാത്രം സൂക്ഷിക്കുക.",
+            "ഡൗൺലോഡിന് ശേഷം, Hari Browser ഫയൽ തരം പരിശോധിക്കാനും ചെക്ക്സം കണക്കാക്കാനും കഴിയും. ഇത് മാൽവെയർ സംബന്ധിച്ച അന്തിമ വിധിയല്ല.",
+            "ഫയൽ സുരക്ഷാ വിവരം",
+            "ഫയൽ പരിശോധനകൾ ചില അപകടസാധ്യതയുള്ള തരങ്ങൾ മാത്രം കണ്ടെത്തുന്നു; ഫയലിൽ മാൽവെയർ ഇല്ലെന്ന് ഉറപ്പാക്കാൻ കഴിയില്ല.");
+        addSecurity(all, "hi",
+            "क्या %s को डाउनलोड फ़ोल्डर में सहेजना है?",
+            "चेतावनी: यह फ़ाइल सॉफ़्टवेयर इंस्टॉल या चला सकती है। Hari Browser इसे अपने-आप नहीं चलाएगा। केवल विश्वसनीय स्रोत की फ़ाइल रखें।",
+            "डाउनलोड के बाद, Hari Browser फ़ाइल का प्रकार जाँच सकता है और चेकसम निकाल सकता है। यह मैलवेयर का निर्णय नहीं है।",
+            "फ़ाइल सुरक्षा जानकारी",
+            "फ़ाइल जाँच केवल कुछ जोखिमपूर्ण प्रकारों का पता लगाती है; यह साबित नहीं कर सकती कि फ़ाइल में मैलवेयर नहीं है।");
+        addSecurity(all, "ta",
+            "%s ஐ பதிவிறக்கங்கள் கோப்புறையில் சேமிக்கவா?",
+            "எச்சரிக்கை: இந்தக் கோப்பு மென்பொருளை நிறுவவோ இயக்கவோ செய்யலாம். Hari Browser இதைத் தானாக இயக்காது. மூலத்தை நம்பினால் மட்டுமே வைத்திருக்கவும்.",
+            "பதிவிறக்கத்திற்குப் பிறகு, Hari Browser கோப்பு வகையைச் சரிபார்த்து செக்சம் கணக்கிடலாம். இது தீம்பொருள் குறித்த இறுதி முடிவு அல்ல.",
+            "கோப்பு பாதுகாப்புத் தகவல்",
+            "கோப்புச் சோதனைகள் சில ஆபத்தான வகைகளை மட்டுமே கண்டறியும்; கோப்பில் தீம்பொருள் இல்லை என்பதை உறுதிப்படுத்த முடியாது.");
+        addSecurity(all, "te",
+            "%s ని డౌన్‌లోడ్‌ల ఫోల్డర్‌లో సేవ్ చేయాలా?",
+            "హెచ్చరిక: ఈ ఫైల్ సాఫ్ట్‌వేర్‌ను ఇన్‌స్టాల్ చేయవచ్చు లేదా నడపవచ్చు. Hari Browser దీన్ని స్వయంగా నడపదు. మూలాన్ని నమ్మితేనే ఉంచండి.",
+            "డౌన్‌లోడ్ తర్వాత, Hari Browser ఫైల్ రకాన్ని తనిఖీ చేసి చెక్సమ్ లెక్కించగలదు. ఇది మాల్వేర్ ఉందనే తుది నిర్ణయం కాదు.",
+            "ఫైల్ భద్రత సమాచారం",
+            "ఫైల్ తనిఖీలు కొన్ని ప్రమాదకర రకాలను మాత్రమే గుర్తిస్తాయి; ఫైల్‌లో మాల్వేర్ లేదని నిరూపించలేవు.");
+        addSecurity(all, "kn",
+            "%s ಅನ್ನು ಡೌನ್‌ಲೋಡ್‌ಗಳ ಫೋಲ್ಡರ್‌ನಲ್ಲಿ ಉಳಿಸಬೇಕೇ?",
+            "ಎಚ್ಚರಿಕೆ: ಈ ಫೈಲ್ ಸಾಫ್ಟ್‌ವೇರ್ ಅನ್ನು ಸ್ಥಾಪಿಸಬಹುದು ಅಥವಾ ಚಾಲನೆ ಮಾಡಬಹುದು. Hari Browser ಇದನ್ನು ಸ್ವಯಂಚಾಲಿತವಾಗಿ ಚಾಲನೆ ಮಾಡುವುದಿಲ್ಲ. ಮೂಲವನ್ನು ನಂಬಿದರೆ ಮಾತ್ರ ಉಳಿಸಿ.",
+            "ಡೌನ್‌ಲೋಡ್ ನಂತರ, Hari Browser ಫೈಲ್ ಪ್ರಕಾರವನ್ನು ಪರಿಶೀಲಿಸಿ ಚೆಕ್ಸಮ್ ಲೆಕ್ಕಿಸಬಹುದು. ಇದು ಮಾಲ್‌ವೇರ್ ಕುರಿತು ಅಂತಿಮ ತೀರ್ಪಲ್ಲ.",
+            "ಫೈಲ್ ಸುರಕ್ಷತಾ ಮಾಹಿತಿ",
+            "ಫೈಲ್ ಪರಿಶೀಲನೆಗಳು ಕೆಲವು ಅಪಾಯಕಾರಿ ಪ್ರಕಾರಗಳನ್ನು ಮಾತ್ರ ಗುರುತಿಸುತ್ತವೆ; ಫೈಲ್‌ನಲ್ಲಿ ಮಾಲ್‌ವೇರ್ ಇಲ್ಲವೆಂದು ಖಚಿತಪಡಿಸಲು ಸಾಧ್ಯವಿಲ್ಲ.");
+        addSecurity(all, "bn",
+            "%s ডাউনলোড ফোল্ডারে সংরক্ষণ করবেন?",
+            "সতর্কতা: এই ফাইল সফ্টওয়্যার ইনস্টল বা চালাতে পারে। Hari Browser এটি স্বয়ংক্রিয়ভাবে চালাবে না। উৎসে বিশ্বাস থাকলেই রাখুন।",
+            "ডাউনলোডের পরে Hari Browser ফাইলের ধরন পরীক্ষা করে চেকসম গণনা করতে পারে। এটি ম্যালওয়্যার সম্পর্কে চূড়ান্ত সিদ্ধান্ত নয়।",
+            "ফাইল নিরাপত্তার তথ্য",
+            "ফাইল পরীক্ষা শুধু কিছু ঝুঁকিপূর্ণ ধরন শনাক্ত করে; ফাইলে ম্যালওয়্যার নেই তা নিশ্চিত করতে পারে না।");
+        addSecurity(all, "mr",
+            "%s डाउनलोड फोल्डरमध्ये जतन करायची आहे का?",
+            "चेतावणी: ही फाइल सॉफ्टवेअर स्थापित करू शकते किंवा चालवू शकते. Hari Browser ती आपोआप चालवणार नाही. स्रोतावर विश्वास असल्यासच ती ठेवा.",
+            "डाउनलोडनंतर Hari Browser फाइलचा प्रकार तपासू शकतो आणि चेकसम मोजू शकतो. हा मालवेअरबद्दलचा अंतिम निष्कर्ष नाही.",
+            "फाइल सुरक्षा माहिती",
+            "फाइल तपासण्या केवळ काही धोकादायक प्रकार ओळखतात; फाइलमध्ये मालवेअर नाही हे सिद्ध करू शकत नाहीत.");
+        addSecurity(all, "gu",
+            "%s ને ડાઉનલોડ્સ ફોલ્ડરમાં સાચવવી છે?",
+            "ચેતવણી: આ ફાઇલ સૉફ્ટવેર ઇન્સ્ટોલ અથવા ચલાવી શકે છે. Hari Browser તેને આપમેળે ચલાવશે નહીં. સ્ત્રોત પર વિશ્વાસ હોય ત્યારે જ તેને રાખો.",
+            "ડાઉનલોડ પછી Hari Browser ફાઇલનો પ્રકાર તપાસી શકે છે અને ચેકસમ ગણાવી શકે છે. આ મૉલવેર અંગેનો અંતિમ નિર્ણય નથી.",
+            "ફાઇલ સુરક્ષા માહિતી",
+            "ફાઇલની તપાસ માત્ર કેટલાક જોખમી પ્રકારો ઓળખે છે; ફાઇલમાં મૉલવેર નથી તેની ખાતરી આપી શકતી નથી.");
+        addSecurity(all, "pa",
+            "%s ਨੂੰ ਡਾਊਨਲੋਡ ਫੋਲਡਰ ਵਿੱਚ ਸੰਭਾਲਣਾ ਹੈ?",
+            "ਚੇਤਾਵਨੀ: ਇਹ ਫ਼ਾਈਲ ਸੌਫਟਵੇਅਰ ਇੰਸਟਾਲ ਜਾਂ ਚਲਾ ਸਕਦੀ ਹੈ। Hari Browser ਇਸਨੂੰ ਆਪਣੇ ਆਪ ਨਹੀਂ ਚਲਾਏਗਾ। ਸਰੋਤ 'ਤੇ ਭਰੋਸਾ ਹੋਵੇ ਤਾਂ ਹੀ ਰੱਖੋ।",
+            "ਡਾਊਨਲੋਡ ਤੋਂ ਬਾਅਦ Hari Browser ਫ਼ਾਈਲ ਦੀ ਕਿਸਮ ਜਾਂਚ ਸਕਦਾ ਹੈ ਅਤੇ ਚੈਕਸਮ ਕੱਢ ਸਕਦਾ ਹੈ। ਇਹ ਮਾਲਵੇਅਰ ਬਾਰੇ ਅੰਤਿਮ ਫ਼ੈਸਲਾ ਨਹੀਂ ਹੈ।",
+            "ਫ਼ਾਈਲ ਸੁਰੱਖਿਆ ਜਾਣਕਾਰੀ",
+            "ਫ਼ਾਈਲ ਜਾਂਚ ਸਿਰਫ਼ ਕੁਝ ਜੋਖ਼ਮ ਵਾਲੀਆਂ ਕਿਸਮਾਂ ਪਛਾਣਦੀ ਹੈ; ਇਹ ਸਾਬਤ ਨਹੀਂ ਕਰ ਸਕਦੀ ਕਿ ਫ਼ਾਈਲ ਵਿੱਚ ਮਾਲਵੇਅਰ ਨਹੀਂ ਹੈ।");
+        addSecurity(all, "ur",
+            "کیا %s کو ڈاؤن لوڈز فولڈر میں محفوظ کریں؟",
+            "تنبیہ: یہ فائل سافٹ ویئر انسٹال یا چلا سکتی ہے۔ Hari Browser اسے خودکار طور پر نہیں چلائے گا۔ اسے صرف اسی صورت رکھیں جب آپ ماخذ پر بھروسا کرتے ہوں۔",
+            "ڈاؤن لوڈ کے بعد Hari Browser فائل کی قسم چیک اور چیک سم حساب کر سکتا ہے۔ یہ میل ویئر کے بارے میں حتمی فیصلہ نہیں ہے۔",
+            "فائل کی حفاظت کی معلومات",
+            "فائل کی جانچ صرف کچھ خطرناک اقسام کی شناخت کرتی ہے؛ یہ ثابت نہیں کر سکتی کہ فائل میل ویئر سے پاک ہے۔");
+        addSecurity(all, "es",
+            "¿Guardar %s en Descargas?",
+            "Advertencia: este archivo podría instalar o ejecutar software. Hari Browser no lo ejecutará automáticamente. Consérvelo solo si confía en la fuente.",
+            "Después de descargarlo, Hari Browser puede comprobar el tipo de archivo y calcular una suma de verificación. Esto no es un veredicto de malware.",
+            "Información de seguridad del archivo",
+            "Las comprobaciones solo detectan algunos tipos de riesgo; no pueden demostrar que un archivo esté libre de malware.");
+        addSecurity(all, "fr",
+            "Enregistrer %s dans Téléchargements ?",
+            "Avertissement : ce fichier peut installer ou exécuter un logiciel. Hari Browser ne l’exécutera pas automatiquement. Gardez-le uniquement si vous faites confiance à sa source.",
+            "Après le téléchargement, Hari Browser peut vérifier le type de fichier et calculer une somme de contrôle. Ce n’est pas un verdict sur la présence de logiciels malveillants.",
+            "Informations sur la sécurité du fichier",
+            "Les vérifications ne détectent que certains types de risques ; elles ne peuvent pas prouver qu’un fichier est exempt de logiciel malveillant.");
+        addSecurity(all, "ar",
+            "هل تريد حفظ %s في مجلد التنزيلات؟",
+            "تحذير: قد يثبّت هذا الملف برامج أو يشغّلها. لن يشغّله Hari Browser تلقائيًا. احتفظ به فقط إذا كنت تثق بالمصدر.",
+            "بعد التنزيل، يمكن لـ Hari Browser فحص نوع الملف وحساب المجموع الاختباري. هذا ليس حكمًا نهائيًا بشأن البرمجيات الخبيثة.",
+            "معلومات سلامة الملف",
+            "تكشف فحوصات الملفات بعض الأنواع الخطرة فقط؛ ولا يمكنها إثبات خلو الملف من البرمجيات الخبيثة.");
+
         TEXT = Collections.unmodifiableMap(all);
     }
 
@@ -614,6 +701,17 @@ final class BrowserUiText {
         Map<String, String> translated = new HashMap<>(all.getOrDefault(language, Collections.emptyMap()));
         for (int i = 0; i < MORE_KEYS.length; i++) {
             translated.put(MORE_KEYS[i], values[i]);
+        }
+        all.put(language, Collections.unmodifiableMap(translated));
+    }
+
+    private static void addSecurity(Map<String, Map<String, String>> all, String language, String... values) {
+        if (values.length != SECURITY_KEYS.length) {
+            throw new IllegalArgumentException("Incorrect security translation count for " + language);
+        }
+        Map<String, String> translated = new HashMap<>(all.getOrDefault(language, Collections.emptyMap()));
+        for (int i = 0; i < SECURITY_KEYS.length; i++) {
+            translated.put(SECURITY_KEYS[i], values[i]);
         }
         all.put(language, Collections.unmodifiableMap(translated));
     }
