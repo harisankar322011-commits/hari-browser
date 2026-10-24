@@ -44,10 +44,10 @@ public final class FingerprintProtectionTest {
         String script = FingerprintProtection.SCRIPT;
 
         assertTrue(script.contains("userAgentData"));
-        assertTrue(script.contains("navigator, 'platform'"));
-        assertTrue(script.contains("navigator, 'maxTouchPoints'"));
-        assertTrue(script.contains("screen, 'availLeft'"));
-        assertTrue(script.contains("screen, 'availTop'"));
+        assertTrue(script.contains("defineFixed(navigator, 'platform'"));
+        assertTrue(script.contains("defineFixed(navigator, 'maxTouchPoints'"));
+        assertTrue(script.contains("defineFixed(screen, 'availLeft'"));
+        assertTrue(script.contains("defineFixed(screen, 'availTop'"));
         assertTrue(script.contains("devicePixelRatio"));
     }
 
