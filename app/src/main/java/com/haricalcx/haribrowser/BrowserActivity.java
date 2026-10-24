@@ -1427,23 +1427,30 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Open a website before saving a bookmark.");
             return;
         }
-        JSONArray bookmarks = readArray(KEY_BOOKMARKS);
-        try {
-            JSONArray updated = new JSONArray();
-            for (int i = 0; i < bookmarks.length(); i++) {
-                JSONObject item = bookmarks.optJSONObject(i);
-                if (item != null && !tab.url.equals(item.optString("url"))) updated.put(item);
+        final String url = tab.url;
+        final String title = tab.title == null ? safeHost(tab.url) : tab.title;
+        secureStore.updateAsync(KEY_BOOKMARKS, "[]", serialized -> {
+            try {
+                JSONArray existing = new JSONArray(serialized == null ? "[]" : serialized);
+                JSONArray updated = new JSONArray();
+                for (int i = 0; i < existing.length(); i++) {
+                    JSONObject item = existing.optJSONObject(i);
+                    if (item != null && !url.equals(item.optString("url", ""))) updated.put(item);
+                }
+                JSONObject entry = new JSONObject();
+                entry.put("title", title);
+                entry.put("url", url);
+                entry.put("time", System.currentTimeMillis());
+                updated.put(entry);
+                return updated.toString();
+            } catch (JSONException invalid) {
+                return null;
             }
-            JSONObject entry = new JSONObject();
-            entry.put("title", tab.title == null ? safeHost(tab.url) : tab.title);
-            entry.put("url", tab.url);
-            entry.put("time", System.currentTimeMillis());
-            updated.put(entry);
-            secureStore.put(KEY_BOOKMARKS, updated.toString());
-            showToast("Bookmark saved securely on this device.");
-        } catch (JSONException ignored) {
-            showToast("Could not save this bookmark.");
-        }
+        }, getMainExecutor(), saved -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            showToast(saved == null ? "Could not save this bookmark."
+                    : "Bookmark saved securely on this device.");
+        });
     }
 
     private JSONArray readArray(String key) {
@@ -1634,16 +1641,36 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Bookmarks cannot be changed in private browsing.");
             return;
         }
-        JSONArray old = readArray(KEY_BOOKMARKS);
-        JSONArray updated = new JSONArray();
-        for (int i = 0; i < old.length(); i++) {
-            JSONObject item = old.optJSONObject(i);
-            if (item != null && !url.equals(item.optString("url"))) updated.put(item);
-        }
-        secureStore.put(KEY_BOOKMARKS, updated.toString());
-        showToast("Bookmark removed.");
-        // Reopen the list to reflect the change.
-        new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+        final java.util.concurrent.atomic.AtomicBoolean found = new java.util.concurrent.atomic.AtomicBoolean(false);
+        secureStore.updateAsync(KEY_BOOKMARKS, "[]", serialized -> {
+            try {
+                JSONArray old = new JSONArray(serialized == null ? "[]" : serialized);
+                JSONArray updated = new JSONArray();
+                for (int i = 0; i < old.length(); i++) {
+                    JSONObject item = old.optJSONObject(i);
+                    if (item != null && url.equals(item.optString("url", ""))) {
+                        found.set(true);
+                    } else if (item != null) {
+                        updated.put(item);
+                    }
+                }
+                return found.get() ? updated.toString() : old.toString();
+            } catch (JSONException invalid) {
+                return null;
+            }
+        }, getMainExecutor(), updated -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            if (updated == null) {
+                showToast("Could not update bookmarks securely.");
+                return;
+            }
+            if (!found.get()) {
+                showToast("Bookmark not found.");
+                return;
+            }
+            showToast("Bookmark removed.");
+            new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+        });
     }
 
     private void showBookmarkFolderPicker() {
@@ -1717,15 +1744,18 @@ public class BrowserActivity extends ComponentActivity {
             showToast(ui("Enter a valid folder name."));
             return;
         }
-        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
-            if (isFinishing() || isDestroyed() || privateMode) return;
+        final java.util.concurrent.atomic.AtomicBoolean changed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        secureStore.updateAsync(KEY_BOOKMARKS, "[]", serialized -> {
             String before = parseArray(serialized).toString();
             String after = BookmarkFolders.move(before, url, normalized);
-            if (before.equals(after)) {
+            changed.set(!before.equals(after));
+            return changed.get() ? after : before;
+        }, getMainExecutor(), updated -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            if (updated == null || !changed.get()) {
                 showToast(ui("Bookmark not found or folder unchanged."));
                 return;
             }
-            secureStore.putAsync(KEY_BOOKMARKS, after);
             showToast(ui("Bookmark moved to folder:") + " " + normalized + ".");
             new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
         });
@@ -1736,16 +1766,25 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Bookmarks cannot be changed in private browsing.");
             return;
         }
-        JSONArray old = readArray(KEY_BOOKMARKS);
-        String before = old.toString();
-        String after = BookmarkOrder.move(before, url, direction);
-        if (before.equals(after)) {
-            showToast(direction < 0 ? "Bookmark is already first." : "Bookmark is already last.");
-            return;
-        }
-        secureStore.put(KEY_BOOKMARKS, after);
-        showToast(direction < 0 ? "Bookmark moved up." : "Bookmark moved down.");
-        new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+        final java.util.concurrent.atomic.AtomicBoolean changed = new java.util.concurrent.atomic.AtomicBoolean(false);
+        secureStore.updateAsync(KEY_BOOKMARKS, "[]", serialized -> {
+            String before = parseArray(serialized).toString();
+            String after = BookmarkOrder.move(before, url, direction);
+            changed.set(!before.equals(after));
+            return changed.get() ? after : before;
+        }, getMainExecutor(), updated -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            if (updated == null) {
+                showToast("Could not update bookmarks securely.");
+                return;
+            }
+            if (!changed.get()) {
+                showToast(direction < 0 ? "Bookmark is already first." : "Bookmark is already last.");
+                return;
+            }
+            showToast(direction < 0 ? "Bookmark moved up." : "Bookmark moved down.");
+            new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+        });
     }
 
     private void showTabSwitcher() {
