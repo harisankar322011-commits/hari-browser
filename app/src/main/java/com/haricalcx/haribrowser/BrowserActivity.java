@@ -777,8 +777,19 @@ public class BrowserActivity extends ComponentActivity {
                     runOnUiThread(() -> showHttpsUpgradePrompt(tab, url));
                     return true;
                 }
-                if (!"https".equalsIgnoreCase(scheme) || uri.getHost() == null) {
-                    runOnUiThread(() -> showToast("This link type is blocked for your safety."));
+                if (!"https".equalsIgnoreCase(scheme)) {
+                    ExternalLinkPolicy.Kind externalKind = ExternalLinkPolicy.classify(url);
+                    if (request.isForMainFrame() &&
+                            (externalKind == ExternalLinkPolicy.Kind.MAILTO ||
+                             externalKind == ExternalLinkPolicy.Kind.TEL)) {
+                        runOnUiThread(() -> confirmExternalLink(url));
+                    } else {
+                        runOnUiThread(() -> showToast("This link type is blocked for your safety."));
+                    }
+                    return true;
+                }
+                if (uri.getHost() == null) {
+                    runOnUiThread(() -> showToast("Blocked: invalid HTTPS address."));
                     return true;
                 }
                 String protectedUrl = protectSearchUrl(url);
@@ -980,10 +991,66 @@ public class BrowserActivity extends ComponentActivity {
             if (tab != null) loadHome(tab);
             return;
         }
+        if (handleExternalLinkInput(input)) {
+            hideKeyboard();
+            return;
+        }
         String resolved = resolveInput(input);
         if (resolved == null) return;
         hideKeyboard();
         navigateTo(currentTab(), resolved);
+    }
+
+    /** Return true when an explicit external or blocked scheme was handled here. */
+    private boolean handleExternalLinkInput(String input) {
+        ExternalLinkPolicy.Kind kind = ExternalLinkPolicy.classify(input);
+        if (kind == ExternalLinkPolicy.Kind.MAILTO || kind == ExternalLinkPolicy.Kind.TEL) {
+            confirmExternalLink(input);
+            return true;
+        }
+        if (kind == ExternalLinkPolicy.Kind.BLOCKED) {
+            showToast("Blocked unsupported link type. Only HTTPS pages, confirmed email links, and confirmed dialer links are supported.");
+            return true;
+        }
+        return false;
+    }
+
+    private void confirmExternalLink(String input) {
+        ExternalLinkPolicy.Kind kind = ExternalLinkPolicy.classify(input);
+        String canonical = ExternalLinkPolicy.safeExternalUri(input);
+        if (canonical == null ||
+                (kind != ExternalLinkPolicy.Kind.MAILTO && kind != ExternalLinkPolicy.Kind.TEL)) {
+            showToast("This link type is blocked for your safety.");
+            return;
+        }
+
+        boolean mail = kind == ExternalLinkPolicy.Kind.MAILTO;
+        String target = ExternalLinkPolicy.confirmationTarget(input);
+        String title = mail ? "Open email app?" : "Open phone dialer?";
+        String message = mail
+                ? "Open your email app to compose a message to:\n" + target +
+                    "\nHari Browser will not send the message. Subject/body metadata from the link is not forwarded."
+                : "Open the system dialer with this number:\n" + target +
+                    "\nHari Browser will not place a call. Review the number before calling.";
+        new AlertDialog.Builder(this)
+                .setTitle(title)
+                .setMessage(message)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton(mail ? "Open email app" : "Open dialer", (dialog, which) -> {
+                    // Only a canonical, validated target reaches the external app. Never use ACTION_CALL.
+                    Intent intent = new Intent(mail ? Intent.ACTION_SENDTO : Intent.ACTION_DIAL,
+                            Uri.parse(canonical));
+                    try {
+                        if (intent.resolveActivity(getPackageManager()) == null) {
+                            showToast(mail ? "No email app is available." : "No dialer app is available.");
+                            return;
+                        }
+                        startActivity(intent);
+                    } catch (ActivityNotFoundException | SecurityException unavailable) {
+                        showToast(mail ? "Could not open an email app." : "Could not open the dialer.");
+                    }
+                })
+                .show();
     }
 
     private String resolveInput(String input) {
