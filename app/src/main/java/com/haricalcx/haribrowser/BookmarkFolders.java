@@ -45,7 +45,7 @@ final class BookmarkFolders {
         JSONArray source = parse(serialized);
         for (int i = 0; i < source.length() && names.size() < MAX_FOLDERS; i++) {
             JSONObject item = source.optJSONObject(i);
-            if (item == null || !PrivacyGuard.isHttpsUrl(item.optString("url", ""))) continue;
+            if (item == null || !isSafeHttpsUrl(item.optString("url", ""))) continue;
             String folder = folderFor(item);
             if (!folder.isEmpty() && !ALL_BOOKMARKS.equals(folder)) names.add(folder);
         }
@@ -59,7 +59,7 @@ final class BookmarkFolders {
         JSONArray result = new JSONArray();
         for (int i = 0; i < source.length(); i++) {
             JSONObject item = source.optJSONObject(i);
-            if (item == null || !PrivacyGuard.isHttpsUrl(item.optString("url", ""))) continue;
+            if (item == null || !isSafeHttpsUrl(item.optString("url", ""))) continue;
             if (all || folder.equals(folderFor(item))) result.put(item);
         }
         return result.toString();
@@ -68,13 +68,13 @@ final class BookmarkFolders {
     static String move(String serialized, String url, String requestedFolder) {
         JSONArray source = parse(serialized);
         String folder = normalizeFolderName(requestedFolder);
-        if (!PrivacyGuard.isHttpsUrl(url) || folder.isEmpty() || ALL_BOOKMARKS.equals(folder)) {
+        if (!isSafeHttpsUrl(url) || folder.isEmpty() || ALL_BOOKMARKS.equals(folder)) {
             return source.toString();
         }
         for (int i = 0; i < source.length(); i++) {
             JSONObject item = source.optJSONObject(i);
             if (item == null || !url.equals(item.optString("url", ""))
-                    || !PrivacyGuard.isHttpsUrl(item.optString("url", ""))) continue;
+                    || !isSafeHttpsUrl(item.optString("url", ""))) continue;
             if (DEFAULT_FOLDER.equals(folder)) item.remove("folder");
             else {
                 try {
