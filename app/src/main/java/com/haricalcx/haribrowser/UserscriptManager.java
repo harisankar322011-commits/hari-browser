@@ -163,9 +163,19 @@ final class UserscriptManager {
 
     static List<String> allowedOrigins(Script script) {
         Set<String> origins = new LinkedHashSet<>();
-        for (String pattern : script.matches) origins.add(originFor(pattern));
-        for (String pattern : script.includes) origins.add(originFor(pattern));
+        for (String pattern : script.matches) addOriginRules(origins, pattern);
+        for (String pattern : script.includes) addOriginRules(origins, pattern);
         return new ArrayList<>(origins);
+    }
+
+    private static void addOriginRules(Set<String> origins, String pattern) {
+        String origin = originFor(pattern);
+        origins.add(origin);
+        String authority = origin.substring("https://".length());
+        if (authority.startsWith("*.")) {
+            // AndroidX WebKit wildcard rules cover subdomains, not the apex domain.
+            origins.add("https://" + authority.substring(2));
+        }
     }
 
     static String injectionSource(Script script) {
@@ -345,10 +355,9 @@ final class UserscriptManager {
             } else if (!actualHost.equals(patternHost)) {
                 return false;
             }
-            if (patternPort >= 0) {
-                int actualPort = uri.getPort() < 0 ? 443 : uri.getPort();
-                if (actualPort != patternPort) return false;
-            }
+            int actualPort = uri.getPort() < 0 ? 443 : uri.getPort();
+            int expectedPort = patternPort < 0 ? 443 : patternPort;
+            if (actualPort != expectedPort) return false;
             String urlPath = uri.getRawPath() == null || uri.getRawPath().isEmpty()
                     ? "/" : uri.getRawPath();
             String patternPath = pattern.substring(slash);
