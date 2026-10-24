@@ -3340,44 +3340,59 @@ public class BrowserActivity extends ComponentActivity {
             }
             Button enableButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             Button cancelButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
-            try {
-                String salt = TeenProtection.createPinSalt();
-                String hash = TeenProtection.hashPin(pin, salt);
-                enableButton.setEnabled(false);
-                cancelButton.setEnabled(false);
-                dialog.setCancelable(false);
+            enableButton.setEnabled(false);
+            cancelButton.setEnabled(false);
+            dialog.setCancelable(false);
 
-                // Ordered removal + writes + read-back all run on SecureStore's serial queue.
-                // Clear old disabled credentials first, so a failed write cannot accidentally
-                // validate against a previous PIN record.
-                protectionStore.removeAsync(TeenProtection.PIN_SALT_KEY);
-                protectionStore.removeAsync(TeenProtection.PIN_HASH_KEY);
-                protectionStore.putAsync(TeenProtection.PIN_SALT_KEY, salt);
-                protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash);
-                protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", getMainExecutor(), savedSalt -> {
-                    if (!isTeenPinDialogActive(dialog)) return;
-                    protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", getMainExecutor(), savedHash -> {
+            // Salt creation and 120,000-iteration PBKDF2 hashing are intentionally kept off
+            // the UI thread as well as the encrypted persistence/read-back work.
+            StorageTaskQueue.execute(() -> {
+                final String salt;
+                final String hash;
+                try {
+                    salt = TeenProtection.createPinSalt();
+                    hash = TeenProtection.hashPin(pin, salt);
+                } catch (Exception ignoredError) {
+                    getMainExecutor().execute(() -> {
                         if (!isTeenPinDialogActive(dialog)) return;
-                        if (!TeenProtection.verifyPin(pin, savedSalt, savedHash)) {
-                            dialog.setCancelable(true);
-                            enableButton.setEnabled(true);
-                            cancelButton.setEnabled(true);
-                            showToast("Could not securely save the parent PIN. Protection was not enabled.");
-                            return;
-                        }
-                        protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
-                                .remove(TeenProtection.PIN_FAILURES_KEY)
-                                .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
-                        dialog.dismiss();
-                        showToast("Teen Protection enabled.");
+                        dialog.setCancelable(true);
+                        enableButton.setEnabled(true);
+                        cancelButton.setEnabled(true);
+                        showToast("Could not configure Teen Protection. Try again.");
+                    });
+                    return;
+                }
+
+                getMainExecutor().execute(() -> {
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    // Ordered remove/write/read-back tasks share the serialized SecureStore queue.
+                    // Clear old disabled credentials before writing the new PIN.
+                    protectionStore.removeAsync(TeenProtection.PIN_SALT_KEY);
+                    protectionStore.removeAsync(TeenProtection.PIN_HASH_KEY);
+                    protectionStore.putAsync(TeenProtection.PIN_SALT_KEY, salt);
+                    protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash);
+                    protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", Runnable::run, savedSalt -> {
+                        protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run, savedHash -> {
+                            boolean verified = TeenProtection.verifyPin(pin, savedSalt, savedHash);
+                            getMainExecutor().execute(() -> {
+                                if (!isTeenPinDialogActive(dialog)) return;
+                                if (!verified) {
+                                    dialog.setCancelable(true);
+                                    enableButton.setEnabled(true);
+                                    cancelButton.setEnabled(true);
+                                    showToast("Could not securely save the parent PIN. Protection was not enabled.");
+                                    return;
+                                }
+                                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
+                                        .remove(TeenProtection.PIN_FAILURES_KEY)
+                                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                                dialog.dismiss();
+                                showToast("Teen Protection enabled.");
+                            });
+                        });
                     });
                 });
-            } catch (Exception ignoredError) {
-                dialog.setCancelable(true);
-                enableButton.setEnabled(true);
-                cancelButton.setEnabled(true);
-                showToast("Could not configure Teen Protection. Try again.");
-            }
+            });
         }));
         dialog.show();
     }
