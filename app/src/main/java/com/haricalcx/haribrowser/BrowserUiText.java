@@ -11,6 +11,8 @@ import java.util.Map;
  * most-used native controls consistent with the selected home-page language.
  */
 final class BrowserUiText {
+    private static final String TLS_CERTIFICATE_WARNING_KEY =
+            "Blocked: the site's security certificate is invalid.";
     private static final String[] KEYS = {
         "Search or enter an HTTPS address",
         "GO", "Back", "Forward", "New tab", "Menu", "Home", "Save",
@@ -667,6 +669,33 @@ final class BrowserUiText {
             "معلومات سلامة الملف",
             "تكشف فحوصات الملفات بعض الأنواع الخطرة فقط؛ ولا يمكنها إثبات خلو الملف من البرمجيات الخبيثة.");
 
+        addOne(all, "ml", TLS_CERTIFICATE_WARNING_KEY,
+                "തടഞ്ഞു: സൈറ്റിന്റെ സുരക്ഷാ സർട്ടിഫിക്കറ്റ് അസാധുവാണ്.");
+        addOne(all, "hi", TLS_CERTIFICATE_WARNING_KEY,
+                "अवरुद्ध: साइट का सुरक्षा प्रमाणपत्र अमान्य है।");
+        addOne(all, "ta", TLS_CERTIFICATE_WARNING_KEY,
+                "தடுக்கப்பட்டது: தளத்தின் பாதுகாப்புச் சான்றிதழ் செல்லாது.");
+        addOne(all, "te", TLS_CERTIFICATE_WARNING_KEY,
+                "నిరోధించబడింది: సైట్ భద్రతా సర్టిఫికేట్ చెల్లదు.");
+        addOne(all, "kn", TLS_CERTIFICATE_WARNING_KEY,
+                "ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ: ಸೈಟ್‌ನ ಭದ್ರತಾ ಪ್ರಮಾಣಪತ್ರ ಅಮಾನ್ಯವಾಗಿದೆ.");
+        addOne(all, "bn", TLS_CERTIFICATE_WARNING_KEY,
+                "অবরুদ্ধ: সাইটের নিরাপত্তা শংসাপত্র অবৈধ।");
+        addOne(all, "mr", TLS_CERTIFICATE_WARNING_KEY,
+                "अवरोधित: साइटचे सुरक्षा प्रमाणपत्र अवैध आहे.");
+        addOne(all, "gu", TLS_CERTIFICATE_WARNING_KEY,
+                "અવરોધિત: સાઇટનું સુરક્ષા પ્રમાણપત્ર અમાન્ય છે.");
+        addOne(all, "pa", TLS_CERTIFICATE_WARNING_KEY,
+                "ਰੋਕਿਆ ਗਿਆ: ਸਾਈਟ ਦਾ ਸੁਰੱਖਿਆ ਸਰਟੀਫਿਕੇਟ ਅਵੈਧ ਹੈ।");
+        addOne(all, "ur", TLS_CERTIFICATE_WARNING_KEY,
+                "روک دیا گیا: سائٹ کا سیکیورٹی سرٹیفکیٹ غیر معتبر ہے۔");
+        addOne(all, "es", TLS_CERTIFICATE_WARNING_KEY,
+                "Bloqueado: el certificado de seguridad del sitio no es válido.");
+        addOne(all, "fr", TLS_CERTIFICATE_WARNING_KEY,
+                "Bloqué : le certificat de sécurité du site est invalide.");
+        addOne(all, "ar", TLS_CERTIFICATE_WARNING_KEY,
+                "تم الحظر: شهادة أمان الموقع غير صالحة.");
+
         TEXT = Collections.unmodifiableMap(all);
     }
 
@@ -722,6 +751,13 @@ final class BrowserUiText {
         }
         Map<String, String> translated = new HashMap<>(all.getOrDefault(language, Collections.emptyMap()));
         for (int i = 0; i < FOLDER_KEYS.length; i++) translated.put(FOLDER_KEYS[i], values[i]);
+        all.put(language, Collections.unmodifiableMap(translated));
+    }
+
+    private static void addOne(Map<String, Map<String, String>> all, String language,
+                               String key, String value) {
+        Map<String, String> translated = new HashMap<>(all.getOrDefault(language, Collections.emptyMap()));
+        translated.put(key, value);
         all.put(language, Collections.unmodifiableMap(translated));
     }
 
