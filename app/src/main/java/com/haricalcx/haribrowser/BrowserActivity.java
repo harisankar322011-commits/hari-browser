@@ -1564,6 +1564,24 @@ public class BrowserActivity extends ComponentActivity {
             openLp.setMargins(dp(4), dp(6), 0, 0);
             actions.addView(open, openLp);
             if (bookmarks) {
+                TextView moveUp = pillButton("↑", false, () -> {
+                    listDialog.dismiss();
+                    moveBookmark(url, -1);
+                });
+                moveUp.setContentDescription("Move bookmark up");
+                LinearLayout.LayoutParams moveUpLp = new LinearLayout.LayoutParams(dp(40), dp(36));
+                moveUpLp.setMargins(dp(6), dp(6), 0, 0);
+                actions.addView(moveUp, moveUpLp);
+
+                TextView moveDown = pillButton("↓", false, () -> {
+                    listDialog.dismiss();
+                    moveBookmark(url, 1);
+                });
+                moveDown.setContentDescription("Move bookmark down");
+                LinearLayout.LayoutParams moveDownLp = new LinearLayout.LayoutParams(dp(40), dp(36));
+                moveDownLp.setMargins(dp(4), dp(6), 0, 0);
+                actions.addView(moveDown, moveDownLp);
+
                 TextView remove = pillButton("Remove", false, () -> {
                     listDialog.dismiss();
                     removeBookmark(url);
@@ -1594,6 +1612,23 @@ public class BrowserActivity extends ComponentActivity {
         secureStore.put(KEY_BOOKMARKS, updated.toString());
         showToast("Bookmark removed.");
         // Reopen the list to reflect the change.
+        new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+    }
+
+    private void moveBookmark(String url, int direction) {
+        if (privateMode) {
+            showToast("Bookmarks cannot be changed in private browsing.");
+            return;
+        }
+        JSONArray old = readArray(KEY_BOOKMARKS);
+        String before = old.toString();
+        String after = BookmarkOrder.move(before, url, direction);
+        if (before.equals(after)) {
+            showToast(direction < 0 ? "Bookmark is already first." : "Bookmark is already last.");
+            return;
+        }
+        secureStore.put(KEY_BOOKMARKS, after);
+        showToast(direction < 0 ? "Bookmark moved up." : "Bookmark moved down.");
         new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
     }
 
