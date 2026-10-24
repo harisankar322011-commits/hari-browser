@@ -55,7 +55,7 @@ public final class FingerprintProtectionTest {
     public void scriptReducesHighResolutionTimingAndHeapInformation() {
         String script = FingerprintProtection.SCRIPT;
 
-        assertTrue(script.contains("performance, 'memory'"));
+        assertTrue(script.contains("perf, 'memory'"));
         assertTrue(script.contains("Math.floor(originalNow.apply(this, arguments))"));
     }
 
