@@ -38,6 +38,11 @@ final class HariAiClient {
     private HariAiClient() {}
 
     static String generateReply(String apiKey, JSONArray contents) throws IOException {
+        return generateReplyWithModel(apiKey, contents).text;
+    }
+
+    /** Returns both the generated text and the exact model that answered. */
+    static Reply generateReplyWithModel(String apiKey, JSONArray contents) throws IOException {
         validateInput(apiKey, contents);
         ModelUnavailableException lastUnavailable = null;
         Set<String> attempted = new HashSet<>();
@@ -71,6 +76,26 @@ final class HariAiClient {
         throw new ClientException(
                 "Hari AI could not access an available text-generation model for this API key. Check the key's API access in Google AI Studio, then try again.",
                 lastUnavailable);
+    }
+
+    static final class Reply {
+        final String modelId;
+        final String text;
+
+        Reply(String modelId, String text) {
+            if (modelId == null || !modelId.matches("gemini-[a-zA-Z0-9.-]+")) {
+                throw new IllegalArgumentException("Invalid model identifier");
+            }
+            if (text == null || text.trim().isEmpty()) {
+                throw new IllegalArgumentException("Reply text cannot be empty");
+            }
+            this.modelId = modelId;
+            this.text = text.trim();
+        }
+
+        String modelLabel() {
+            return modelId;
+        }
     }
 
     /**
@@ -215,7 +240,7 @@ final class HariAiClient {
         }
     }
 
-    private static String generateReplyForModel(String apiKey, JSONArray contents, String modelId)
+    private static Reply generateReplyForModel(String apiKey, JSONArray contents, String modelId)
             throws IOException {
         HttpsURLConnection connection = null;
         try {
@@ -303,7 +328,7 @@ final class HariAiClient {
             if (text.toString().trim().isEmpty()) {
                 throw new ClientException("Hari AI returned no text. Try rephrasing your question.");
             }
-            return text.toString().trim();
+            return new Reply(modelId, text.toString().trim());
         } catch (ModelUnavailableException error) {
             throw error;
         } catch (ClientException error) {

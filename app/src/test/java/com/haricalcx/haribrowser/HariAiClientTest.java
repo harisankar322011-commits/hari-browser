@@ -75,4 +75,21 @@ public class HariAiClientTest {
         assertTrue(message.contains("HTTP 418"));
         assertTrue(!message.contains("AIza"));
     }
+    @Test
+    public void replyCarriesSelectedModelWithoutChangingAssistantText() {
+        HariAiClient.Reply reply = new HariAiClient.Reply(
+                "gemini-3.5-flash-lite", "  Hello from Hari AI.  ");
+        assertEquals("gemini-3.5-flash-lite", reply.modelId);
+        assertEquals("gemini-3.5-flash-lite", reply.modelLabel());
+        assertEquals("Hello from Hari AI.", reply.text);
+    }
+
+    @Test
+    public void replyRejectsInvalidModelIdentifiersAndEmptyText() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new HariAiClient.Reply("https://example.com", "hello"));
+        assertThrows(IllegalArgumentException.class,
+                () -> new HariAiClient.Reply("gemini-3.5-flash-lite", "  "));
+    }
+
 }
