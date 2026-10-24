@@ -7,6 +7,19 @@ package com.haricalcx.haribrowser;
 final class FingerprintProtection {
     private FingerprintProtection() {}
 
+    /**
+     * Coarsens the passive User-Agent signal before it is sent in HTTP requests.
+     * Retaining the engine major version helps compatibility while removing device,
+     * Android release, and Chromium patch/build identifiers.
+     */
+    static String reduceUserAgent(String userAgent) {
+        if (userAgent == null || userAgent.isEmpty()) return "";
+        String reduced = userAgent.replaceAll(
+                "(?i)Android\\s+[0-9.]+;\\s*[^;)]+", "Android 10; K");
+        return reduced.replaceAll(
+                "(?i)(Chrome/\\d+)\\.\\d+(?:\\.\\d+){1,2}", "$1.0.0.0");
+    }
+
     static final String SCRIPT = """
         (() => {
           'use strict';
@@ -361,6 +374,63 @@ final class FingerprintProtection {
                     });
                   }
                 });
+              }
+            } catch (_) {}
+
+            // Normalize additional high-entropy Navigator properties where WebView permits.
+            // Keep the actual language/languages intact because they drive localization.
+            try {
+              if (typeof navigator !== 'undefined') {
+                defineFixed(navigator, 'appCodeName', 'Mozilla');
+                defineFixed(navigator, 'appName', 'Netscape');
+                defineFixed(navigator, 'product', 'Gecko');
+                defineFixed(navigator, 'productSub', '20030107');
+                defineFixed(navigator, 'vendor', 'Google Inc.');
+                defineFixed(navigator, 'vendorSub', '');
+                defineFixed(navigator, 'platform', 'Linux armv8l');
+                defineFixed(navigator, 'maxTouchPoints', 5);
+
+                // Suppress JavaScript access to User-Agent Client Hints, including its
+                // high-entropy method, when the WebView exposes the API to page scripts.
+                defineFixed(navigator, 'userAgentData', undefined);
+                defineFixed(navigator, 'oscpu', undefined);
+                defineFixed(navigator, 'buildID', undefined);
+              }
+            } catch (_) {}
+
+            // Reduce small, device-specific screen-placement and pixel-density signals.
+            try {
+              if (typeof screen !== 'undefined') {
+                defineFixed(screen, 'availLeft', 0);
+                defineFixed(screen, 'availTop', 0);
+              }
+              const rawDpr = Number(globalThis.devicePixelRatio);
+              if (Number.isFinite(rawDpr) && rawDpr > 0) {
+                const commonDpr = rawDpr <= 1.25 ? 1
+                    : rawDpr <= 1.75 ? 1.5
+                    : rawDpr <= 2.5 ? 2
+                    : rawDpr <= 3.5 ? 3 : 4;
+                defineFixed(globalThis, 'devicePixelRatio', commonDpr);
+              }
+            } catch (_) {}
+
+            // Hide non-standard heap-size reporting and quantize the high-resolution
+            // performance clock to millisecond precision. This can reduce timing detail.
+            try {
+              const perf = globalThis.performance;
+              if (perf) {
+                defineFixed(perf, 'memory', undefined);
+                const perfPrototype = Object.getPrototypeOf(perf);
+                const originalNow = perfPrototype && perfPrototype.now;
+                if (typeof originalNow === 'function') {
+                  Object.defineProperty(perfPrototype, 'now', {
+                    configurable: true,
+                    writable: true,
+                    value: function () {
+                      return Math.floor(originalNow.apply(this, arguments));
+                    }
+                  });
+                }
               }
             } catch (_) {}
           } catch (_) {

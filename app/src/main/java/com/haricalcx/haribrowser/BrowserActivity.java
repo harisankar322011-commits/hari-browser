@@ -186,8 +186,8 @@ public class BrowserActivity extends ComponentActivity {
     private boolean dataSaverEnabled() { return settings.getBoolean("lite_mode_enabled", false); }
     private int textZoom() { return settings.getInt("text_zoom", 100); }
     private String privacyReducedUserAgent() {
-        // Preserve the current WebView engine version while removing model/build identifiers.
-        return defaultUserAgent.replaceAll("(?i)Android [0-9.]+; [^;)]+", "Android 14; K");
+        // Reduce device/OS/build identifiers and Chromium patch versions consistently.
+        return FingerprintProtection.reduceUserAgent(defaultUserAgent);
     }
     private String searchEngine() { return settings.getString("search_engine", "DuckDuckGo"); }
     private String accentName() { return settings.getString("accent_color", "Ocean"); }
