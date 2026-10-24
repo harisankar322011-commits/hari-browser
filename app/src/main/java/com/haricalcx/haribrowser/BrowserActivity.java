@@ -3229,7 +3229,8 @@ public class BrowserActivity extends ComponentActivity {
         long now = System.currentTimeMillis();
         long lockUntil = protectionSettings.getLong(TeenProtection.PIN_LOCK_UNTIL_KEY, 0L);
         if (lockUntil > now) {
-            input.setError("Try again in " + Math.max(1, (lockUntil - now + 999) / 1000) + " seconds.");
+            long remainingSeconds = TeenProtectionPinLockout.remainingSeconds(lockUntil, now);
+            input.setError("Try again in " + remainingSeconds + " seconds.");
             callback.accept(false);
             return;
         }
@@ -3244,20 +3245,21 @@ public class BrowserActivity extends ComponentActivity {
                     if (!verified) {
                         // Record failures even if the user dismissed the dialog while PBKDF2
                         // was running; otherwise repeatedly cancelling could evade the lockout.
-                        int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
-                        boolean locked = failures >= 5;
-                        if (locked) {
-                            protectionSettings.edit()
-                                    .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
-                                    .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY,
-                                            System.currentTimeMillis() + 60_000L)
-                                    .apply();
+                        TeenProtectionPinLockout.State state = TeenProtectionPinLockout.afterFailedAttempt(
+                                protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0),
+                                System.currentTimeMillis());
+                        SharedPreferences.Editor editor = protectionSettings.edit()
+                                .putInt(TeenProtection.PIN_FAILURES_KEY, state.failures);
+                        if (state.locked) {
+                            editor.putLong(TeenProtection.PIN_LOCK_UNTIL_KEY, state.lockUntilMillis);
                         } else {
-                            protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
+                            editor.remove(TeenProtection.PIN_LOCK_UNTIL_KEY);
                         }
+                        editor.apply();
                         if (!isTeenPinDialogActive(dialog)) return;
-                        input.setError(locked ? "Too many attempts. Try again in 60 seconds."
-                                : "Incorrect PIN. Attempts left: " + (5 - failures) + ".");
+                        input.setError(state.locked ? "Too many attempts. Try again in 60 seconds."
+                                : "Incorrect PIN. Attempts left: "
+                                        + (TeenProtectionPinLockout.MAX_ATTEMPTS - state.failures) + ".");
                         callback.accept(false);
                         return;
                     }
