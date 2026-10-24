@@ -125,7 +125,7 @@ try:
     browser_ui_text = read("app/src/main/java/com/haricalcx/haribrowser/BrowserUiText.java")
     browser_ui_text_tests = read("app/src/test/java/com/haricalcx/haribrowser/BrowserUiTextTest.java")
     check("TLS certificate failures use the selected-language warning",
-          'showToast(ui("Blocked: the site\\'s security certificate is invalid."))' in browser and
+          "showToast(ui(\\"Blocked: the site's security certificate is invalid.\\"))" in browser and
           "TLS_CERTIFICATE_WARNING_KEY" in browser_ui_text and
           "addOne(all, \"ml\", TLS_CERTIFICATE_WARNING_KEY" in browser_ui_text and
           "translatesTlsCertificateWarningForSupportedNonEnglishLocales" in browser_ui_text_tests)
