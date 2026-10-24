@@ -6,6 +6,8 @@ The supplied review inspected commit `71ac678` (2.4.0 / versionCode 8). This led
 
 The previously reported Android device-protection warning remains an **unresolved release blocker**. Passing source checks and CI builds does not prove the old APK was safe or the warning was a false positive. A freshly built APK still requires signature/hash verification, independent scanning and careful device testing. Never bypass the warning. The CI pipeline can produce an unsigned validation artifact if the stable release signer is not configured.
 
+Static inspection of the CI validation artifact built from commit `f2a61b11ba35c2fa0f811f30790784df6db5bfb6` was also performed on 24 October 2026: workflow run `40103135233` produced `HariBrowser-2.4.0-unsigned.apk` (12,689,438 bytes; SHA-256 `4608683d3c68d9ff2a5967cdb438a9469773c3e8d5460e792195e076a62107af`). The APK archive passed ZIP integrity validation and the standard EICAR test marker was not found in its DEX. It has no APK signing certificate/signature entries and is explicitly unsigned; it is not installable as a release artifact and is not necessarily the same APK that triggered the user's Android warning. No independent antivirus or dynamic-device scan was performed, so this evidence does not clear the warning or prove the APK malware-free.
+
 This is a source audit and prioritized implementation ledger, not a claim of full runtime verification. All user-visible security features require device testing as well as automated checks.
 
 ## Full review-item status
