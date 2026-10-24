@@ -349,9 +349,12 @@ try:
           'com.haricalcx.haribrowser.debug' in build_workflow and
           'apkanalyzer manifest debuggable "$apk"' in build_workflow and
           'test "$debuggable" = "true"' in build_workflow)
-    check("Release signing is conditional on protected signing secrets",
+    check("Release signing is conditional on protected signing secrets and a pinned certificate",
           "HARI_RELEASE_KEYSTORE_BASE64" in build_workflow and
-          'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow)
+          "HARI_RELEASE_CERT_SHA256" in build_workflow and
+          'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow and
+          "certificate SHA-256 digest" in build_workflow and
+          'actual_fingerprint" != "$expected_fingerprint"' in build_workflow)
     check("CI never creates and discards a temporary release key",
           "[one-time-release-sign]" not in build_workflow and
           "hari-browser-one-time-release" not in build_workflow and
