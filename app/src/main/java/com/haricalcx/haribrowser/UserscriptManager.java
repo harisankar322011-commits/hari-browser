@@ -36,19 +36,21 @@ final class UserscriptManager {
         final String description;
         final String source;
         final String runAt;
+        final boolean noFrames;
         final List<String> matches;
         final List<String> includes;
         final List<String> excludes;
         boolean enabled;
 
         Script(String id, String name, String description, String source, String runAt,
-               List<String> matches, List<String> includes, List<String> excludes,
+               boolean noFrames, List<String> matches, List<String> includes, List<String> excludes,
                boolean enabled) {
             this.id = id;
             this.name = name;
             this.description = description;
             this.source = source;
             this.runAt = runAt;
+            this.noFrames = noFrames;
             this.matches = Collections.unmodifiableList(new ArrayList<>(matches));
             this.includes = Collections.unmodifiableList(new ArrayList<>(includes));
             this.excludes = Collections.unmodifiableList(new ArrayList<>(excludes));
@@ -75,7 +77,8 @@ final class UserscriptManager {
         boolean ended = false;
         String name = null;
         String description = "";
-        String runAt = "document-end";
+        String runAt = "document-idle";
+        boolean noFrames = false;
         List<String> matches = new ArrayList<>();
         List<String> includes = new ArrayList<>();
         List<String> excludes = new ArrayList<>();
@@ -125,6 +128,9 @@ final class UserscriptManager {
                 case "grant":
                     grants.add(value);
                     break;
+                case "noframes":
+                    noFrames = true;
+                    break;
                 case "require":
                 case "resource":
                 case "connect":
@@ -158,7 +164,7 @@ final class UserscriptManager {
                     + " dependencies or permissions. Remove that directive or use a standalone script.");
         }
         return new Script(hash(normalized), name.trim(), description.trim(), normalized, runAt,
-                dedupe(matches), dedupe(includes), dedupe(excludes), false);
+                noFrames, dedupe(matches), dedupe(includes), dedupe(excludes), false);
     }
 
     static List<String> allowedOrigins(Script script) {
@@ -188,6 +194,7 @@ final class UserscriptManager {
 
         StringBuilder wrapped = new StringBuilder(script.source.length() + 1200);
         wrapped.append("(function(){'use strict';")
+                .append("if(").append(script.noFrames).append("&&window.top!==window)return;")
                 .append("var currentUrl=String(location.href);")
                 .append("var includeRules=").append(included).append(";")
                 .append("var excludeRules=").append(excluded).append(";")
