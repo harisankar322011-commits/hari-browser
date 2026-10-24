@@ -73,7 +73,8 @@ final class ReaderArticleExtractor {
         }
 
         StringBuilder script = new StringBuilder(readabilitySource.length() + 1800);
-        script.append(readabilitySource).append("\n;(function(){try{")
+        // Keep the parser and its optional CommonJS export local; do not add globals to the website.
+        script.append("(function(){try{var module;\n").append(readabilitySource).append("\n")
                 .append("var article=new Readability(document.cloneNode(true),")
                 .append("{debug:false,maxElemsToParse:40000,charThreshold:300,disableJSONLD:true}).parse();")
                 .append("if(!article)return null;")
