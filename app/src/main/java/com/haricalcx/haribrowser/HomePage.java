@@ -9,6 +9,7 @@ import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -979,15 +980,26 @@ $('directoryCount').textContent=DIRECTORY.length+' '+extraUi().sites;
         if (!normalized.isEmpty()) {
             for (String row : normalized.split("\\R")) {
                 String[] parts = row.split("\\|", 3);
-                if (parts.length != 3 || !parts[2].startsWith("https://")) continue;
-                if (parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) continue;
+                if (parts.length != 3 || parts[0].trim().isEmpty() || parts[1].trim().isEmpty()) {
+                    continue;
+                }
+                String url = parts[2].trim();
                 try {
+                    URI parsed = new URI(url);
+                    if (!"https".equalsIgnoreCase(parsed.getScheme())
+                            || parsed.getHost() == null || parsed.getHost().trim().isEmpty()
+                            || parsed.getUserInfo() != null
+                            || parsed.getPort() < -1 || parsed.getPort() > 65535) {
+                        continue;
+                    }
                     JSONObject item = new JSONObject();
-                    item.put("category", parts[0]);
-                    item.put("name", parts[1]);
-                    item.put("url", parts[2]);
+                    item.put("category", parts[0].trim());
+                    item.put("name", parts[1].trim());
+                    item.put("url", url);
                     directory.put(item);
-                } catch (JSONException ignored) {}
+                } catch (Exception invalidHttpsUrl) {
+                    // Directory data is static, but still reject malformed URLs defensively.
+                }
             }
         }
         return forScript(directory.toString());
