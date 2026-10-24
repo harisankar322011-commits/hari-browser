@@ -85,6 +85,16 @@ public final class SecureStore {
         preferences.edit().remove(name).apply();
     }
 
+    /** Queue encryption and persistence away from the UI thread. Tasks share a serial process queue. */
+    public void putAsync(String name, String value) {
+        StorageTaskQueue.execute(() -> put(name, value));
+    }
+
+    /** Queue removal so it is ordered with other asynchronous writes. */
+    public void removeAsync(String name) {
+        StorageTaskQueue.execute(() -> remove(name));
+    }
+
     private SecretKey getOrCreateKey() throws Exception {
         KeyStore keyStore = KeyStore.getInstance("AndroidKeyStore");
         keyStore.load(null);

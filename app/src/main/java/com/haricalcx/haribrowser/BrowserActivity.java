@@ -1456,22 +1456,35 @@ public class BrowserActivity extends ComponentActivity {
 
     private void rememberHistory(String title, String url) {
         if (privateMode) return;
-        JSONArray old = readArray(KEY_HISTORY);
-        JSONArray updated = new JSONArray();
-        try {
-            JSONObject entry = new JSONObject();
-            entry.put("title", title == null ? safeHost(url) : title);
-            entry.put("url", url);
-            entry.put("time", System.currentTimeMillis());
-            updated.put(entry);
-            for (int i = 0; i < old.length() && updated.length() < 100; i++) {
-                JSONObject item = old.optJSONObject(i);
-                if (item != null && !url.equals(item.optString("url"))) updated.put(item);
+        if (!historyEnabled()) return;
+        // Only capture the application-scoped store and immutable strings: the queued
+        // transaction must not retain this Activity after a navigation finishes.
+        final SecureStore store = secureStore;
+        final String historyTitle = title == null ? safeHost(url) : title;
+        final String historyUrl = url;
+        StorageTaskQueue.execute(() -> {
+            JSONArray old;
+            try {
+                old = new JSONArray(store.get(KEY_HISTORY, "[]"));
+            } catch (Exception ignored) {
+                old = new JSONArray();
             }
-            secureStore.put(KEY_HISTORY, updated.toString());
-        } catch (JSONException ignored) {
-            // Do not persist plaintext if encryption fails.
-        }
+            JSONArray updated = new JSONArray();
+            try {
+                JSONObject entry = new JSONObject();
+                entry.put("title", historyTitle);
+                entry.put("url", historyUrl);
+                entry.put("time", System.currentTimeMillis());
+                updated.put(entry);
+                for (int i = 0; i < old.length() && updated.length() < 100; i++) {
+                    JSONObject item = old.optJSONObject(i);
+                    if (item != null && !historyUrl.equals(item.optString("url"))) updated.put(item);
+                }
+                store.put(KEY_HISTORY, updated.toString());
+            } catch (JSONException ignored) {
+                // Do not persist plaintext if encryption fails.
+            }
+        });
     }
 
     private void showBookmarks() {
@@ -2452,7 +2465,7 @@ public class BrowserActivity extends ComponentActivity {
                             } else {
                                 boolean next = !historyEnabled();
                                 settings.edit().putBoolean("history_enabled", next).apply();
-                                if (!next) secureStore.put(KEY_HISTORY, "[]");
+                                if (!next) secureStore.putAsync(KEY_HISTORY, "[]");
                                 showToast(next ? "History enabled; it is stored encrypted." : "History disabled and cleared.");
                             }
                             break;
@@ -3702,7 +3715,7 @@ public class BrowserActivity extends ComponentActivity {
                 } catch (Exception ignored) {}
             }
         }
-        if (!privateMode) secureStore.put(KEY_HISTORY, "[]");
+        if (!privateMode) secureStore.putAsync(KEY_HISTORY, "[]");
         showToast("Browsing data cleared. Downloads and bookmarks were kept.");
     }
 
@@ -3918,7 +3931,7 @@ public class BrowserActivity extends ComponentActivity {
         // Private tabs never enter the standard encrypted session snapshot.
         if (!privateMode && secureStore != null && settings != null) {
             if (settings.getBoolean("clear_data_on_exit", false)) {
-                secureStore.remove(KEY_TAB_SESSION);
+                secureStore.removeAsync(KEY_TAB_SESSION);
             } else {
                 saveTabSession();
             }
@@ -3932,7 +3945,7 @@ public class BrowserActivity extends ComponentActivity {
             if (urls.size() >= TabSessionStore.MAX_TABS) break;
             urls.add(tab.home ? "" : tab.url);
         }
-        secureStore.put(KEY_TAB_SESSION, TabSessionStore.encode(urls, currentTabIndex));
+        secureStore.putAsync(KEY_TAB_SESSION, TabSessionStore.encode(urls, currentTabIndex));
     }
 
     @Override
@@ -3956,7 +3969,7 @@ public class BrowserActivity extends ComponentActivity {
                     } catch (Exception ignored) {}
                 }
             }
-            if (secureStore != null) secureStore.put(KEY_HISTORY, "[]");
+            if (secureStore != null) secureStore.putAsync(KEY_HISTORY, "[]");
         }
         if (privateMode) {
             // Keep private download names and scan reports out of the standard profile.
