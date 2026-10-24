@@ -45,12 +45,12 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 
 ## Merged changes
 
-## Merged changes — storage and URL reputation hardening (PRs #79–#80)
+### Storage and URL reputation hardening (PRs #79–#80)
 
 - **PR #79 — remove obsolete synchronous store reader:** removed the unreferenced `BrowserActivity.readArray` method, which was the remaining direct `secureStore.get(...)` call in that class. The repository smoke test now guards against reintroducing direct synchronous encrypted-store reads into BrowserActivity. Release/debug workflows, unit tests/lint, CodeQL, secret scan and dependency review succeeded.
 - **PR #80 — bound URLhaus state:** added `UrlhausSessionState` to cap concurrent reputation workers at four and cache at most 128 definitive results with LRU eviction; transient errors are not cached. JVM tests cover duplicate and excess admissions, capacity release and eviction. Release/debug workflows, unit tests/lint, CodeQL, secret scan and dependency review succeeded. Neither PR replaces Android-device testing or clears the device-protection warning.
 
-## Merged changes — engineering follow-up (PRs #70–#73)
+### Engineering follow-up (PRs #70–#73)
 
 - **PR #70 — userscript storage and download safety UX:** asynchronous encrypted userscript reads/writes and a cache for WebView setup; stale callbacks invalidated and matching restored pages refreshed only when an enabled rule applies. Download warning text now uses actual line breaks; executable-risk classification and limited-check disclaimer have focused JVM tests. Download safety copy is translated for 13 languages. All six required CI checks passed. Userscript enable/disable/import timing, private isolation and downloads still need device testing.
 - **PR #71 — asynchronous URL reputation key reads:** removed synchronous encrypted URLhaus-key reads from the navigation preflight and Protection Dashboard. The navigation path validates the current tab/attempt before showing results; the source smoke test prevents direct synchronous reads from being reintroduced. All six required CI checks passed. Real URLhaus success/failure and navigation races still need device testing.
