@@ -2549,7 +2549,7 @@ public class BrowserActivity extends ComponentActivity {
                                 new AlertDialog.Builder(this)
                                         .setTitle("Import tracker host list")
                                         .setMessage("Import a plain-text hosts-format list. Hari Browser accepts lines like '0.0.0.0 ads.example.com' or 'ads.example.com' and skips unsupported Adblock rules. Only import a list you trust. A large or aggressive list may break websites.")
-                                        .setNeutralButton("Remove imported list", (dialog, which) ->
+                                        .setNeutralButton("Remove imported list", (removeDialog, removeWhich) ->
                                                 new AlertDialog.Builder(this)
                                                         .setTitle("Remove custom tracker list?")
                                                         .setMessage("This restores Hari Browser's built-in tracker rules. It does not change the built-in list.")
@@ -2560,7 +2560,7 @@ public class BrowserActivity extends ComponentActivity {
                                                             showToast("Custom tracker list removed.");
                                                         }).show())
                                         .setNegativeButton("Cancel", null)
-                                        .setPositiveButton("Choose file", (dialog, which) -> {
+                                        .setPositiveButton("Choose file", (fileDialog, fileWhich) -> {
                                             if (trackerListImportLauncher != null) {
                                                 trackerListImportLauncher.launch(new String[]{"text/plain", "text/*"});
                                             }
