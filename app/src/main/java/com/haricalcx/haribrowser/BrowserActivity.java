@@ -3187,6 +3187,7 @@ public class BrowserActivity extends ComponentActivity {
         Tab tab = currentTab();
         StringBuilder report = new StringBuilder();
         report.append("HARI SINGULARITY — PROTECTION DASHBOARD\n\n");
+        report.append("LAYER 1 — HARI SHIELD\n");
         report.append("✓ HTTPS-only navigation: ON (HTTP pages are rejected)\n");
         report.append("✓ TLS certificate errors: CANCELLED (invalid certificates are not bypassed)\n");
         report.append("✓ Android WebView Safe Browsing: enabled where supported by the installed WebView\n");
