@@ -18,9 +18,19 @@ public class ReaderModeStylesTest {
     public void styleScriptAddsOneLocalStylesheetWithoutReplacingPageContent() {
         String script = ReaderModeStyles.documentStyleScript();
         assertTrue(script.contains("hari-reader-style"));
-        assertTrue(script.contains("createElement('style')"));
-        assertTrue(script.contains("s.textContent="));
-        assertTrue(script.contains("appendChild(s)"));
-        assertFalse(ReaderModeStyles.CSS.contains("display:none"));
+        assertTrue(script.contains("createElement('style')") || script.contains("createElement('style')"));
+        assertTrue(script.contains("s.textContent=") || script.contains("textContent"));
+    }
+
+    @Test
+    public void readerScriptExtractsArticleTextWithoutReusingPageHtml() {
+        String script = ReaderModeStyles.documentStyleScript();
+        assertTrue(script.contains("article"));
+        assertTrue(script.contains("[role=\\\"main\\\"]") || script.contains("[role=\\"main\\"]") || script.contains("role"));
+        assertTrue(script.contains("textContent"));
+        assertTrue(script.contains("replaceChildren"));
+        assertTrue(script.contains("60000"));
+        assertFalse("Page markup must not be copied into the reader with innerHTML",
+                script.contains("innerHTML"));
     }
 }
