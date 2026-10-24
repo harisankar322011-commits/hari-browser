@@ -162,8 +162,8 @@ try:
           "Intent.ACTION_CALL" not in browser and "android.permission.CALL_PHONE" not in manifest_source)
     check("External links are reduced to canonical recipient/number before launch",
           "ExternalLinkPolicy.safeExternalUri(input)" in browser and
-          "private String safeMailTarget(String input)" in external_link_policy and
-          "private String safePhoneTarget(String input)" in external_link_policy)
+          "private static String safeMailTarget(String input)" in external_link_policy and
+          "private static String safePhoneTarget(String input)" in external_link_policy)
     check("Private-process protection reads authoritative state through a non-exported provider",
           'android:name=".TeenProtectionProvider"' in manifest_source and
           'android:exported="false"' in manifest_source and
