@@ -1242,7 +1242,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private void renderHome(Tab tab, String bookmarksJson) {
         if (tab == null || tab.webView == null || !tab.home || !HOME_URL.equals(tab.url)) return;
-        String html = HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode,
+        String html = HomePage.render(this, darkTheme(), searchEngine(), bookmarksJson, privateMode,
                 accentName(), settings.getString("home_language", "en"));
         tab.webView.loadDataWithBaseURL(HOME_URL, html, "text/html", "UTF-8", null);
     }

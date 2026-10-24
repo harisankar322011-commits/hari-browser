@@ -113,6 +113,7 @@ try:
     ]:
         check(label, fragment in browser)
     home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
+    home_directory = read("app/src/main/assets/home_directory.txt")
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
     teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
@@ -173,12 +174,19 @@ try:
     check("Private mode cannot modify Teen Protection or its parent PIN",
           "if (privateMode)" in browser[browser.find("private void handleTeenProtectionMenu()"):
                                           browser.find("private void showTeenProtectionSetupDialog()")])
+    check("Home directory data is an offline asset with bounded HTTPS parsing",
+          '"home_directory.txt"' in home_page and
+          "readDirectoryAsset" in home_page and
+          "directoryJson(directorySource)" in home_page and
+          "HomePage.render(this," in browser and
+          'if (total > 65536)' in home_page and
+          'parts[2].startsWith("https://")' in home_page)
     check("India public services directory includes verified official portals",
-          "India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/" in home_page and
-          "India services|UIDAI — Aadhaar|https://uidai.gov.in/" in home_page and
-          "India services|UMANG — Government Services|https://web.umang.gov.in/" in home_page and
-          "India services|DIKSHA — School Learning|https://diksha.gov.in/" in home_page and
-          "India services|Kerala Government|https://kerala.gov.in/" in home_page)
+          "India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/" in home_directory and
+          "India services|UIDAI — Aadhaar|https://uidai.gov.in/" in home_directory and
+          "India services|UMANG — Government Services|https://web.umang.gov.in/" in home_directory and
+          "India services|DIKSHA — School Learning|https://diksha.gov.in/" in home_directory and
+          "India services|Kerala Government|https://kerala.gov.in/" in home_directory)
     check("Five additional Indian-script home languages are available in the page UI",
           all(code + ":" in home_page for code in ("bn", "mr", "gu", "pa", "ur")) and
           all(('value="' + code + '"') in home_page for code in ("bn", "mr", "gu", "pa", "ur")))
