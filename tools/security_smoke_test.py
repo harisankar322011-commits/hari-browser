@@ -184,7 +184,7 @@ try:
           'if (total > 65536)' in home_page and
           "new URI(url)" in home_page and
           "parsed.getUserInfo() != null" in home_page and
-          "authority.endsWith(\"\":\")" in home_page and
+          'authority.endsWith(":")' in home_page and
           "port < 1" in home_page and "port > 65535" in home_page)
     check("India public services directory includes verified official portals",
           "India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/" in home_directory and
