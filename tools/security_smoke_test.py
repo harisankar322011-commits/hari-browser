@@ -141,8 +141,38 @@ try:
           "p.o.r.n videos" in teen_tests and "porn addiction help" in teen_tests)
     check("Teen protection uses a parent PIN stored as salted PBKDF2 hash",
           "PBKDF2WithHmacSHA256" in teen_protection and
-          "protectionStore.put(TeenProtection.PIN_HASH_KEY, hash)" in browser and
+          "protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash)" in browser and
           "TeenProtection.verifyPin" in browser)
+    check("Teen Protection PIN storage is asynchronous and encrypted",
+          "protectionStore.getAsync(TeenProtection.PIN_SALT_KEY" in browser and
+          "protectionStore.getAsync(TeenProtection.PIN_HASH_KEY" in browser and
+          "protectionStore.putAsync(TeenProtection.PIN_SALT_KEY, salt)" in browser and
+          "protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash)" in browser and
+          "protectionStore.get(TeenProtection.PIN_SALT_KEY" not in browser and
+          "protectionStore.get(TeenProtection.PIN_HASH_KEY" not in browser and
+          "protectionStore.put(TeenProtection.PIN_SALT_KEY" not in browser and
+          "protectionStore.put(TeenProtection.PIN_HASH_KEY" not in browser)
+    teen_setup_body = method_body(browser, "private void showTeenProtectionSetupDialog()")
+    teen_verify_body = method_body(browser, "private void verifyTeenProtectionPin(")
+    check("Teen Protection PBKDF2 setup and verification stay off the UI thread",
+          "StorageTaskQueue.execute(() -> {" in teen_setup_body and
+          "TeenProtection.hashPin(pin, salt)" in teen_setup_body and
+          'protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", Runnable::run' in teen_verify_body and
+          'protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run' in teen_verify_body and
+          "TeenProtection.verifyPin(candidate, salt, hash)" in teen_verify_body)
+    check("Teen Protection lockout counts failed PINs even after dialog dismissal",
+          "TeenProtectionPinLockout.afterFailedAttempt(" in teen_verify_body and
+          teen_verify_body.find("editor.apply();") >= 0 and
+          teen_verify_body.find("editor.apply();") <
+          teen_verify_body.find("if (!isTeenPinDialogActive(dialog)) return;", teen_verify_body.find("boolean verified =")))
+
+    pin_lockout = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionPinLockout.java")
+    pin_lockout_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionPinLockoutTest.java")
+    check("Teen Protection lockout threshold and expiry are unit tested",
+          "MAX_ATTEMPTS = 5" in pin_lockout and
+          "LOCKOUT_MILLIS = 60_000L" in pin_lockout and
+          "fifthFailureStartsOneMinuteLockoutAndResetsFailureCounter" in pin_lockout_tests and
+          "remainingLockoutTimeIsRoundedUpAndNeverNegative" in pin_lockout_tests)
     check("Teen protection applies strict SafeSearch parameters",
           'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
           'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)

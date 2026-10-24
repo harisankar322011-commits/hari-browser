@@ -3219,32 +3219,58 @@ public class BrowserActivity extends ComponentActivity {
         return TeenProtection.withStrictSafeSearch(url);
     }
 
-    private boolean verifyTeenProtectionPin(String candidate, EditText input) {
+    private boolean isTeenPinDialogActive(AlertDialog dialog) {
+        return dialog != null && dialog.isShowing() && !isFinishing() && !isDestroyed();
+    }
+
+    private void verifyTeenProtectionPin(String candidate, EditText input, AlertDialog dialog,
+                                         java.util.function.Consumer<Boolean> callback) {
+        if (!isTeenPinDialogActive(dialog)) return;
         long now = System.currentTimeMillis();
         long lockUntil = protectionSettings.getLong(TeenProtection.PIN_LOCK_UNTIL_KEY, 0L);
         if (lockUntil > now) {
-            input.setError("Try again in " + Math.max(1, (lockUntil - now + 999) / 1000) + " seconds.");
-            return false;
+            long remainingSeconds = TeenProtectionPinLockout.remainingSeconds(lockUntil, now);
+            input.setError("Try again in " + remainingSeconds + " seconds.");
+            callback.accept(false);
+            return;
         }
-        String salt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
-        String hash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
-        if (!TeenProtection.verifyPin(candidate, salt, hash)) {
-            int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
-            if (failures >= 5) {
-                protectionSettings.edit()
-                        .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
-                        .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY, now + 60_000L)
-                        .apply();
-                input.setError("Too many attempts. Try again in 60 seconds.");
-            } else {
-                protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
-                input.setError("Incorrect PIN. Attempts left: " + (5 - failures) + ".");
-            }
-            return false;
-        }
-        protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
-                .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
-        return true;
+
+        // Keystore decryption and the 120,000-iteration PBKDF2 comparison stay off the
+        // UI thread. The direct executor keeps the second read and derivation on the serial
+        // storage worker; only failure counters, errors and callbacks touch the UI afterwards.
+        protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", Runnable::run, salt -> {
+            protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run, hash -> {
+                boolean verified = TeenProtection.verifyPin(candidate, salt, hash);
+                getMainExecutor().execute(() -> {
+                    if (!verified) {
+                        // Record failures even if the user dismissed the dialog while PBKDF2
+                        // was running; otherwise repeatedly cancelling could evade the lockout.
+                        TeenProtectionPinLockout.State state = TeenProtectionPinLockout.afterFailedAttempt(
+                                protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0),
+                                System.currentTimeMillis());
+                        SharedPreferences.Editor editor = protectionSettings.edit()
+                                .putInt(TeenProtection.PIN_FAILURES_KEY, state.failures);
+                        if (state.locked) {
+                            editor.putLong(TeenProtection.PIN_LOCK_UNTIL_KEY, state.lockUntilMillis);
+                        } else {
+                            editor.remove(TeenProtection.PIN_LOCK_UNTIL_KEY);
+                        }
+                        editor.apply();
+                        if (!isTeenPinDialogActive(dialog)) return;
+                        input.setError(state.locked ? "Too many attempts. Try again in 60 seconds."
+                                : "Incorrect PIN. Attempts left: "
+                                        + (TeenProtectionPinLockout.MAX_ATTEMPTS - state.failures) + ".");
+                        callback.accept(false);
+                        return;
+                    }
+
+                    protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
+                            .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    callback.accept(true);
+                });
+            });
+        });
     }
 
     private void handleTeenProtectionMenu() {
@@ -3319,25 +3345,61 @@ public class BrowserActivity extends ComponentActivity {
                 confirmInput.setError("The PINs do not match.");
                 return;
             }
-            try {
-                String salt = TeenProtection.createPinSalt();
-                String hash = TeenProtection.hashPin(pin, salt);
-                protectionStore.put(TeenProtection.PIN_SALT_KEY, salt);
-                protectionStore.put(TeenProtection.PIN_HASH_KEY, hash);
-                String savedSalt = protectionStore.get(TeenProtection.PIN_SALT_KEY, "");
-                String savedHash = protectionStore.get(TeenProtection.PIN_HASH_KEY, "");
-                if (!TeenProtection.verifyPin(pin, savedSalt, savedHash)) {
-                    showToast("Could not securely save the parent PIN. Protection was not enabled.");
+            Button enableButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            Button cancelButton = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
+            enableButton.setEnabled(false);
+            cancelButton.setEnabled(false);
+            dialog.setCancelable(false);
+
+            // Salt creation and 120,000-iteration PBKDF2 hashing are intentionally kept off
+            // the UI thread as well as the encrypted persistence/read-back work.
+            StorageTaskQueue.execute(() -> {
+                final String salt;
+                final String hash;
+                try {
+                    salt = TeenProtection.createPinSalt();
+                    hash = TeenProtection.hashPin(pin, salt);
+                } catch (Exception ignoredError) {
+                    getMainExecutor().execute(() -> {
+                        if (!isTeenPinDialogActive(dialog)) return;
+                        dialog.setCancelable(true);
+                        enableButton.setEnabled(true);
+                        cancelButton.setEnabled(true);
+                        showToast("Could not configure Teen Protection. Try again.");
+                    });
                     return;
                 }
-                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
-                        .remove(TeenProtection.PIN_FAILURES_KEY)
-                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
-                dialog.dismiss();
-                showToast("Teen Protection enabled.");
-            } catch (Exception ignoredError) {
-                showToast("Could not configure Teen Protection. Try again.");
-            }
+
+                getMainExecutor().execute(() -> {
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    // Ordered remove/write/read-back tasks share the serialized SecureStore queue.
+                    // Clear old disabled credentials before writing the new PIN.
+                    protectionStore.removeAsync(TeenProtection.PIN_SALT_KEY);
+                    protectionStore.removeAsync(TeenProtection.PIN_HASH_KEY);
+                    protectionStore.putAsync(TeenProtection.PIN_SALT_KEY, salt);
+                    protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash);
+                    protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", Runnable::run, savedSalt -> {
+                        protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run, savedHash -> {
+                            boolean verified = TeenProtection.verifyPin(pin, savedSalt, savedHash);
+                            getMainExecutor().execute(() -> {
+                                if (!isTeenPinDialogActive(dialog)) return;
+                                if (!verified) {
+                                    dialog.setCancelable(true);
+                                    enableButton.setEnabled(true);
+                                    cancelButton.setEnabled(true);
+                                    showToast("Could not securely save the parent PIN. Protection was not enabled.");
+                                    return;
+                                }
+                                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, true)
+                                        .remove(TeenProtection.PIN_FAILURES_KEY)
+                                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                                dialog.dismiss();
+                                showToast("Teen Protection enabled.");
+                            });
+                        });
+                    });
+                });
+            });
         }));
         dialog.show();
     }
@@ -3358,19 +3420,28 @@ public class BrowserActivity extends ComponentActivity {
                 .setPositiveButton("Continue", null)
                 .setNegativeButton("Keep enabled", null)
                 .create();
-        dialog.setOnShowListener(ignored -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            if (!verifyTeenProtectionPin(pinInput.getText().toString(), pinInput)) return;
-            new AlertDialog.Builder(this)
-                    .setTitle("Disable Teen Protection?")
-                    .setMessage("Restricted search terms will no longer be blocked and strict SafeSearch will no longer be added by Hari Browser.")
-                    .setNegativeButton("Keep enabled", null)
-                    .setPositiveButton("Disable", (confirmation, which) -> {
-                        protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, false).apply();
-                        showToast("Teen Protection disabled.");
-                    })
-                    .show();
-            dialog.dismiss();
-        }));
+        dialog.setOnShowListener(ignored -> {
+            Button continueButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            continueButton.setOnClickListener(v -> {
+                continueButton.setEnabled(false);
+                verifyTeenProtectionPin(pinInput.getText().toString(), pinInput, dialog, verified -> {
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    continueButton.setEnabled(true);
+                    if (!verified) return;
+
+                    dialog.dismiss();
+                    new AlertDialog.Builder(this)
+                            .setTitle("Disable Teen Protection?")
+                            .setMessage("Restricted search terms will no longer be blocked and strict SafeSearch will no longer be added by Hari Browser.")
+                            .setNegativeButton("Keep enabled", null)
+                            .setPositiveButton("Disable", (confirmation, which) -> {
+                                protectionSettings.edit().putBoolean(TeenProtection.ENABLED_KEY, false).apply();
+                                showToast("Teen Protection disabled.");
+                            })
+                            .show();
+                });
+            });
+        });
         dialog.show();
     }
 
