@@ -212,7 +212,7 @@ try:
           'case "Google":' in search_engine_urls and
           "google.co.in/search?q=" in search_engine_urls)
     check("Hari AI home button has a native internal route",
-          'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
+          'href="https://hari-browser-home.invalid/action/ai"' in home_page_template and 'case "ai":' in browser)
     check("Hari AI prompt supports Indian context and major Indian languages",
           "Indian numbering such as lakh and crore" in ai_client and
           "Indian Standard Time" in ai_client and "₹ (INR)" in ai_client and
