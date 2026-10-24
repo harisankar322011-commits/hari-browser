@@ -127,6 +127,7 @@ public class BrowserActivity extends ComponentActivity {
     private String defaultUserAgent;
     private ActivityResultLauncher<String> fileChooserLauncher;
     private ActivityResultLauncher<String[]> userscriptImportLauncher;
+    private ActivityResultLauncher<String[]> trackerListImportLauncher;
     private ActivityResultLauncher<Intent> voiceSearchLauncher;
     private ValueCallback<Uri[]> fileChooserCallback;
     private View fullscreenCustomView;
@@ -136,10 +137,6 @@ public class BrowserActivity extends ComponentActivity {
     private static ArrayList<String> pendingThemeRestoreUrls;
     private static int pendingThemeRestoreIndex;
     private static boolean pendingThemeRestorePrivateMode;
-    // Session-only approvals avoid repeated prompts for a URL the user already reviewed.
-    private static final java.util.Set<String> APPROVED_SITE_URLS =
-            java.util.Collections.synchronizedSet(new java.util.HashSet<>());
-
     // Opt-in online URL reputation results remain in memory only and never enter browser history.
     private final Set<String> pendingUrlhausChecks = Collections.synchronizedSet(new HashSet<>());
     private final Map<String, UrlhausReputation.Result> urlhausSessionResults =
@@ -273,6 +270,7 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
+        PrivacyGuard.setCustomTrackerList(settings.getString("custom_tracker_hosts", ""));
         if (privateMode) settings.edit().putBoolean("private_session_active", true).apply();
         // Shared by normal and private sessions so private browsing cannot bypass protection.
         protectionSettings = getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE);
@@ -296,6 +294,41 @@ public class BrowserActivity extends ComponentActivity {
                     } catch (Exception error) {
                         showToast(error.getMessage() == null
                                 ? "Could not import this userscript." : error.getMessage());
+                    }
+                });
+        trackerListImportLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri == null) return;
+                    if (privateMode) {
+                        showToast("Custom tracker lists are imported in normal browsing only.");
+                        return;
+                    }
+                    try (InputStream input = getContentResolver().openInputStream(uri)) {
+                        if (input == null) throw new IOException("The selected filter list could not be opened.");
+                        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+                        byte[] buffer = new byte[8192];
+                        int total = 0;
+                        int count;
+                        while ((count = input.read(buffer)) != -1) {
+                            total += count;
+                            if (total > TrackerFilterList.MAX_TEXT_CHARS) {
+                                throw new IOException("The tracker list exceeds 512 KiB.");
+                            }
+                            output.write(buffer, 0, count);
+                        }
+                        String text = new String(output.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+                        Set<String> hosts = TrackerFilterList.parseHosts(text);
+                        if (hosts.isEmpty()) {
+                            throw new IOException("No valid hosts were found. Use lines such as 0.0.0.0 ads.example.com.");
+                        }
+                        settings.edit().putString("custom_tracker_hosts", text).apply();
+                        PrivacyGuard.setCustomTrackerList(text);
+                        showToast("Imported " + hosts.size() +
+                                " tracker domains. A list can break site features; remove it if pages stop working.");
+                    } catch (Exception error) {
+                        showToast(error.getMessage() == null
+                                ? "Could not import this tracker list." : error.getMessage());
                     }
                 });
         voiceSearchLauncher = registerForActivityResult(
@@ -823,18 +856,29 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
                 runOnUiThread(() -> {
-                    showToast("A web page crashed and was closed.");
+                    showToast("A web page crashed and its WebView was restarted.");
                     if (tab.webView != null) {
+                        String restoreUrl = tab.url;
+                        boolean restorePage = PrivacyGuard.isHttpsUrl(restoreUrl);
                         if (tab.webView.getParent() instanceof ViewGroup) {
                             ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
                         }
                         try { tab.webView.destroy(); } catch (Exception ignored) {}
                         tab.webView = new WebView(BrowserActivity.this);
                         configureWebView(tab);
+                        if (restorePage) {
+                            // Restore only the previously opened HTTPS URL; normal navigation
+                            // callbacks and site-safety checks still apply.
+                            tab.home = false;
+                            tab.url = restoreUrl;
+                            tab.webView.loadUrl(restoreUrl);
+                        } else {
+                            loadHome(tab);
+                        }
                         if (currentTab() == tab) {
                             webContainer.removeAllViews();
                             webContainer.addView(tab.webView, new FrameLayout.LayoutParams(-1, -1));
-                            loadHome(tab);
+                            updateTabControls();
                         }
                     }
                 });
@@ -1039,7 +1083,7 @@ public class BrowserActivity extends ComponentActivity {
                 return;
             }
         }
-        if (APPROVED_SITE_URLS.contains(url)) {
+        if (SessionApprovalCache.contains(url)) {
             loadAfterSiteSafetyCheck(tab, url);
             return;
         }
@@ -1110,7 +1154,7 @@ public class BrowserActivity extends ComponentActivity {
                         showToast("The navigation changed. Please retry the address if you still want to open it.");
                         return;
                     }
-                    APPROVED_SITE_URLS.add(url);
+                    SessionApprovalCache.approve(url);
                     loadAfterSiteSafetyCheck(tab, url);
                 })
                 .show();
@@ -2306,7 +2350,8 @@ public class BrowserActivity extends ComponentActivity {
                 ui("Family safety guide"),
                 ui("Save current page for offline reading"),
                 ui("Read saved pages (offline text)"),
-                ui("External userscripts · manage/import scripts")
+                ui("External userscripts · manage/import scripts"),
+                "Import custom tracker hosts list"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? ui("Private settings") : ui("Settings"))
@@ -2496,6 +2541,31 @@ public class BrowserActivity extends ComponentActivity {
                             break;
                         case 42:
                             showUserscriptManager();
+                            break;
+                        case 43:
+                            if (privateMode) {
+                                showToast("Custom tracker lists are imported in normal browsing only.");
+                            } else {
+                                new AlertDialog.Builder(this)
+                                        .setTitle("Import tracker host list")
+                                        .setMessage("Import a plain-text hosts-format list. Hari Browser accepts lines like '0.0.0.0 ads.example.com' or 'ads.example.com' and skips unsupported Adblock rules. Only import a list you trust. A large or aggressive list may break websites.")
+                                        .setNeutralButton("Remove imported list", (removeDialog, removeWhich) ->
+                                                new AlertDialog.Builder(this)
+                                                        .setTitle("Remove custom tracker list?")
+                                                        .setMessage("This restores Hari Browser's built-in tracker rules. It does not change the built-in list.")
+                                                        .setNegativeButton("Cancel", null)
+                                                        .setPositiveButton("Remove list", (confirm, selected) -> {
+                                                            settings.edit().remove("custom_tracker_hosts").apply();
+                                                            PrivacyGuard.setCustomTrackerList("");
+                                                            showToast("Custom tracker list removed.");
+                                                        }).show())
+                                        .setNegativeButton("Cancel", null)
+                                        .setPositiveButton("Choose file", (fileDialog, fileWhich) -> {
+                                            if (trackerListImportLauncher != null) {
+                                                trackerListImportLauncher.launch(new String[]{"text/plain", "text/*"});
+                                            }
+                                        }).show();
+                            }
                             break;
                     }
                 })
@@ -3482,6 +3552,54 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void openDownloads() {
+        JSONArray history = DownloadScanHistory.parse(settings.getString("download_scan_history", "[]"));
+        if (history.length() == 0) {
+            new AlertDialog.Builder(this).setTitle("Hari Browser download scan history")
+                    .setMessage("No scan reports are recorded yet. When a Hari Browser download completes, limited local checks are saved here. These checks do not prove a file is malware-free.")
+                    .setPositiveButton("Open system Downloads", (dialog, which) -> openSystemDownloads())
+                    .setNegativeButton("Close", null)
+                    .show();
+            return;
+        }
+
+        String[] labels = new String[history.length()];
+        for (int i = 0; i < history.length(); i++) {
+            JSONObject item = history.optJSONObject(i);
+            labels[i] = item == null ? "Scan report unavailable" :
+                    item.optString("filename", "Downloaded file") + " — " +
+                            item.optString("status", "SCAN_INCOMPLETE");
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Hari Browser download scans · last " + history.length())
+                .setItems(labels, (dialog, which) -> {
+                    JSONObject item = history.optJSONObject(which);
+                    if (item == null) {
+                        showToast("That scan report is unavailable.");
+                        return;
+                    }
+                    new AlertDialog.Builder(this)
+                            .setTitle(item.optString("filename", "Downloaded file") + " — " +
+                                    item.optString("status", "SCAN_INCOMPLETE"))
+                            .setMessage(DownloadScanHistory.format(item) +
+                                    "\n\nThese are limited local checks, not a complete antivirus verdict. Do not open a file you do not trust.")
+                            .setPositiveButton("Close", null)
+                            .show();
+                })
+                .setPositiveButton("Open system Downloads", (dialog, which) -> openSystemDownloads())
+                .setNeutralButton("Clear scan history", (dialog, which) ->
+                        new AlertDialog.Builder(this)
+                                .setTitle("Clear scan history?")
+                                .setMessage("This removes the saved scan reports from this browser profile. It does not delete downloaded files.")
+                                .setNegativeButton("Cancel", null)
+                                .setPositiveButton("Clear history", (confirm, selected) -> {
+                                    settings.edit().remove("download_scan_history").apply();
+                                    showToast("Download scan history cleared.");
+                                }).show())
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void openSystemDownloads() {
         try {
             startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS));
         } catch (ActivityNotFoundException ignored) {
@@ -3606,7 +3724,8 @@ public class BrowserActivity extends ComponentActivity {
                 settings.edit().putBoolean("private_session_active", false)
                         .remove("last_download_scan").remove("last_download_scan_status")
                         .remove("last_download_scan_filename").remove("last_download_scan_sha256")
-                        .remove("last_download_scan_id").remove("last_suspicious_download_id")
+                        .remove("last_download_scan_id").remove("download_scan_history")
+                        .remove("last_suspicious_download_id")
                         .remove("last_suspicious_download_filename").apply();
             }
             SharedPreferences registry = getSharedPreferences("hari_browser_download_tracking", MODE_PRIVATE);

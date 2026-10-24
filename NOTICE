@@ -1,0 +1,11 @@
+Hari Browser — Third-party notices
+
+ZXing Core
+This application uses the ZXing Core library (Maven coordinate: com.google.zxing:core, version 3.5.4) for barcode/QR-code functionality.
+Project: https://github.com/zxing/zxing
+License: Apache License 2.0
+License text: https://www.apache.org/licenses/LICENSE-2.0
+
+AndroidX Activity and AndroidX WebKit are also used by the application. Their respective upstream license and notice files apply. JUnit and JSON-java are test-scope dependencies. Consult the resolved dependency metadata for the full transitive dependency list and corresponding license texts.
+
+This notice is a convenience summary and does not replace any license text or notice distributed with an upstream component.

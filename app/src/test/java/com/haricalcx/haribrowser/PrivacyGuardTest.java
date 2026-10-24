@@ -49,4 +49,21 @@ public class PrivacyGuardTest {
         assertFalse(PrivacyGuard.isTrackerHost("example.com"));
         assertFalse(PrivacyGuard.isTrackerHost(null));
     }
+    @Test
+    public void customImportedHostsAreMatchedOnlyOnExactDnsSuffixBoundaries() {
+        PrivacyGuard.setCustomTrackerList("0.0.0.0 ads.custom.example\ntracker.custom.example # optional note\n");
+        assertTrue(PrivacyGuard.isTrackerHost("ads.custom.example"));
+        assertTrue(PrivacyGuard.isTrackerHost("cdn.ads.custom.example"));
+        assertTrue(PrivacyGuard.isTrackerHost("tracker.custom.example"));
+        assertFalse(PrivacyGuard.isTrackerHost("notcustom.example"));
+        assertFalse(PrivacyGuard.isTrackerHost("custom.example.attacker"));
+    }
+
+    @Test
+    public void invalidOrOversizedCustomListCannotReplaceBuiltInProtections() {
+        PrivacyGuard.setCustomTrackerList("https://not-a-hosts-list");
+        assertTrue(PrivacyGuard.isTrackerHost("ads.inmobi.com"));
+        assertFalse(PrivacyGuard.isTrackerHost("example.com"));
+    }
+
 }
