@@ -33,13 +33,13 @@ final class ReaderModeStyles {
     static String documentStyleScript() {
         return "(function(){try{" +
                 "if(!document.body||document.documentElement.getAttribute('data-hari-reader-active')==='1')return;" +
-                "var selectors=['article','main','[role=\\\"main\\\"]','.article-content','.post-content','.entry-content'];" +
+                "var selectors=['article','main','[role=main]','.article-content','.post-content','.entry-content'];" +
                 "var candidates=[];" +
                 "selectors.forEach(function(sel){try{document.querySelectorAll(sel).forEach(function(el){" +
                 "var t=(el.innerText||el.textContent||'').trim();" +
                 "if(t.length>=180&&t.length<=120000){" +
                 "var p=el.querySelectorAll('p').length;" +
-                "var clutter=el.querySelectorAll('nav,aside,[role=\\\"navigation\\\"]').length;" +
+                "var clutter=el.querySelectorAll('nav,aside,[role=navigation]').length;" +
                 "var score=Math.min(t.length,50000)+Math.min(p,100)*120+(/ARTICLE/i.test(el.tagName)?700:0)-clutter*500;" +
                 "candidates.push({text:t,score:score});}});}catch(ignore){}});" +
                 "candidates.sort(function(a,b){return b.score-a.score;});" +
@@ -47,7 +47,7 @@ final class ReaderModeStyles {
                 "source=source.replace(/\\r/g,'').replace(/[ \\t]+\\n/g,'\\n').replace(/\\n{3,}/g,'\\n\\n').trim().slice(0,60000);" +
                 "if(!source)source='No readable article text could be extracted from this page.';" +
                 "var title=(document.title||'Article').trim().slice(0,240)||'Article';" +
-                "document.querySelectorAll('script,iframe,object,embed,form,link[rel=\\\"stylesheet\\\"],style,meta[http-equiv=\\\"refresh\\\"]').forEach(function(n){n.remove();});" +
+                "document.querySelectorAll('script,iframe,object,embed,form,link[rel=stylesheet],style,meta[http-equiv=refresh]').forEach(function(n){n.remove();});" +
                 "var article=document.createElement('article');article.id='hari-reader-article';" +
                 "var heading=document.createElement('h1');heading.textContent=title;article.appendChild(heading);" +
                 "var text=document.createElement('div');text.id='hari-reader-text';" +
