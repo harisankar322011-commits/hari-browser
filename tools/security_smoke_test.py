@@ -278,6 +278,17 @@ try:
     check("URLhaus API key uses asynchronous encrypted storage",
           'protectionStore.getAsync("hari_rep_store_1", "", getMainExecutor()' in browser and
           'protectionStore.get("hari_rep_store_1", "")' not in browser)
+    urlhaus_state = read("app/src/main/java/com/haricalcx/haribrowser/UrlhausSessionState.java")
+    urlhaus_state_tests = read("app/src/test/java/com/haricalcx/haribrowser/UrlhausSessionStateTest.java")
+    check("URLhaus session cache and concurrent lookup count are bounded",
+          "new UrlhausSessionState()" in browser and
+          "urlhausSessionState.beginLookup(url)" in browser and
+          "urlhausSessionState.cachedResult(url)" in browser and
+          "urlhausSessionState.finishLookup(url)" in browser and
+          "MAX_PENDING_LOOKUPS = 4" in urlhaus_state and
+          "MAX_CACHED_RESULTS = 128" in urlhaus_state and
+          "cachesOnlyDefinitiveStatusesAndCapsCacheWithLeastRecentlyUsedEviction" in urlhaus_state_tests and
+          "admitsOnlyFourConcurrentLookupsAndRejectsDuplicates" in urlhaus_state_tests)
     check("No JavaScript-to-native bridge in the general browser WebView",
           re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
     crypto_html = read("app/src/main/assets/hari_cryptography.html")
