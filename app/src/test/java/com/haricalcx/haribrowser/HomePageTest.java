@@ -2,9 +2,9 @@ package com.haricalcx.haribrowser;
 
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
-/** Regression tests for the dedicated integrated protection dashboard entry point. */
+/** Regression tests for the integrated home-page protection and offline directory. */
 public final class HomePageTest {
     @Test
     public void homePageOffersDedicatedSingularityProtectionDashboard() {
@@ -17,16 +17,16 @@ public final class HomePageTest {
     @Test
     public void curatedDirectoryAcceptsHttpsOnlyAndEscapesScriptMarkup() throws Exception {
         String json = HomePage.directoryJson(
-                "Search|Known site|https://example.com/\\n" +
-                "Search|Insecure site|http://example.com/\\n" +
-                "Malformed row\\n" +
+                "Search|Known site|https://example.com/\n" +
+                "Search|Insecure site|http://example.com/\n" +
+                "Malformed row\n" +
                 "Search|<script>|https://safe.example/");
         org.json.JSONArray entries = new org.json.JSONArray(json);
 
         assertEquals(2, entries.length());
         assertTrue(json.contains("https://example.com/"));
         assertFalse(json.contains("http://example.com/"));
-        String escapedScriptName = "\\\\u003cscript" + "\\\\u003e";
+        String escapedScriptName = "\\u003cscript" + "\\u003e";
         assertTrue(json.contains(escapedScriptName));
     }
 
