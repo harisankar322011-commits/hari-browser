@@ -95,6 +95,8 @@ try:
           read("app/src/test/java/com/haricalcx/haribrowser/AntivirusEngineTest.java"))
 
     browser = read("app/src/main/java/com/haricalcx/haribrowser/BrowserActivity.java")
+    check("BrowserActivity has no synchronous SecureStore reads or obsolete array reader",
+          "secureStore.get(" not in browser and "private JSONArray readArray(" not in browser)
     search_engine_urls = read("app/src/main/java/com/haricalcx/haribrowser/SearchEngineUrls.java")
     for label, fragment in [
         ("WebView file access disabled", "web.setAllowFileAccess(false)"),
