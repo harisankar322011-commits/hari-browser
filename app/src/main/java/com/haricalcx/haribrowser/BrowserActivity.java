@@ -1451,10 +1451,6 @@ public class BrowserActivity extends ComponentActivity {
         });
     }
 
-    private JSONArray readArray(String key) {
-        return parseArray(secureStore.get(key, "[]"));
-    }
-
     private JSONArray parseArray(String serialized) {
         try {
             return new JSONArray(serialized == null ? "[]" : serialized);
