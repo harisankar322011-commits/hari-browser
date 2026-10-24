@@ -378,18 +378,24 @@ public class BrowserActivity extends ComponentActivity {
             if (!tabs.isEmpty()) selectTab(Math.max(0, Math.min(restoreIndex, tabs.size() - 1)));
         } else if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
             addNewTab(intent.getData().toString(), true);
+        } else if (privateMode) {
+            // Private browsing never reads or restores the normal-mode tab snapshot.
+            addNewTab(null, true);
         } else {
-            TabSessionStore.Session savedSession = privateMode
-                    ? TabSessionStore.decode(null)
-                    : TabSessionStore.decode(secureStore.get(KEY_TAB_SESSION, ""));
-            if (!savedSession.urls.isEmpty()) {
-                for (String savedUrl : savedSession.urls) {
-                    addNewTab(savedUrl.isEmpty() ? null : savedUrl, true);
+            // Decrypt and decode the saved session off the UI thread. If the user
+            // opens a tab before the callback returns, do not overwrite their action.
+            secureStore.getAsync(KEY_TAB_SESSION, "", getMainExecutor(), encoded -> {
+                if (isFinishing() || isDestroyed() || !tabs.isEmpty()) return;
+                TabSessionStore.Session savedSession = TabSessionStore.decode(encoded);
+                if (!savedSession.urls.isEmpty()) {
+                    for (String savedUrl : savedSession.urls) {
+                        addNewTab(savedUrl.isEmpty() ? null : savedUrl, true);
+                    }
+                    selectTab(savedSession.selectedIndex);
+                } else {
+                    addNewTab(null, true);
                 }
-                selectTab(savedSession.selectedIndex);
-            } else {
-                addNewTab(null, true);
-            }
+            });
         }
     }
 
