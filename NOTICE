@@ -6,6 +6,14 @@ Project: https://github.com/zxing/zxing
 License: Apache License 2.0
 License text: https://www.apache.org/licenses/LICENSE-2.0
 
+Mozilla Readability
+The application bundles the standalone Readability.js source (package version 0.6.0) from Mozilla's upstream repository at commit ab4027a8b37669745016869a37a504727992b2ba.
+Project: https://github.com/mozilla/readability
+License: Apache License 2.0
+Full license text: app/src/main/assets/readability/LICENSE.md
+Upstream notice: app/src/main/assets/readability/NOTICE
+The app consumes article text only; it does not render Readability's output HTML.
+
 AndroidX Activity and AndroidX WebKit are also used by the application. Their respective upstream license and notice files apply. JUnit and JSON-java are test-scope dependencies. Consult the resolved dependency metadata for the full transitive dependency list and corresponding license texts.
 
 This notice is a convenience summary and does not replace any license text or notice distributed with an upstream component.
