@@ -7,6 +7,21 @@ import static org.junit.Assert.*;
 /** Security copy and decision-label regression tests for the site safety dialog. */
 public final class SiteSafetyReportFormatterTest {
     @Test
+    public void selectedLanguageLocalizesSafetyHeadingsTitleActionAndPrivacyDisclosure() {
+        SiteSafetyReportFormatter.Presentation presentation =
+                SiteSafetyReportFormatter.format(
+                        "https://example.com/", SiteSafetyChecker.inspect("https://example.com/"),
+                        null, true, false, "ml");
+
+        assertEquals("സൈറ്റ് സുരക്ഷാ പരിശോധന", presentation.title);
+        assertEquals("സൈറ്റ് തുറക്കുക", presentation.positiveLabel);
+        assertTrue(presentation.message.contains("പ്രാദേശിക URL പരിശോധന"));
+        assertTrue(presentation.message.contains("സൂക്ഷ്മ വിവരങ്ങൾക്കുള്ള ഓർമ്മപ്പെടുത്തൽ"));
+        assertTrue(presentation.message.contains("ഈ പരിശോധന URL മൂന്നാം കക്ഷി സ്കാനറിലേക്ക് അയച്ചിട്ടില്ല."));
+        assertFalse(presentation.message.contains("This check did not send the URL to a third-party scanner."));
+    }
+
+    @Test
     public void knownMalwareRecordGetsStrongWarningAndExplicitOverrideLabel() {
         UrlhausReputation.Result reputation = new UrlhausReputation.Result(
                 true, "KNOWN_MALWARE_URL", "URLhaus reports a malware-distribution record.");
