@@ -2324,23 +2324,36 @@ public class BrowserActivity extends ComponentActivity {
     }
 
 
-    private ArrayList<UserscriptManager.Script> loadUserscripts() {
-        return new ArrayList<>(UserscriptManager.decode(secureStore.get(KEY_USERSCRIPTS, "[]")));
+    private void loadUserscripts(java.util.function.Consumer<ArrayList<UserscriptManager.Script>> callback) {
+        if (privateMode || secureStore == null) {
+            callback.accept(new ArrayList<>());
+            return;
+        }
+        secureStore.getAsync(KEY_USERSCRIPTS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed()) return;
+            callback.accept(new ArrayList<>(UserscriptManager.decode(serialized)));
+        });
     }
 
-    private boolean saveUserscripts(ArrayList<UserscriptManager.Script> scripts) {
+    private void saveUserscripts(ArrayList<UserscriptManager.Script> scripts,
+                                 java.util.function.Consumer<Boolean> callback) {
+        final String encoded;
         try {
-            String encoded = UserscriptManager.encode(scripts);
-            secureStore.put(KEY_USERSCRIPTS, encoded);
-            if (!encoded.equals(secureStore.get(KEY_USERSCRIPTS, "[]"))) {
-                showToast("Userscripts could not be saved securely.");
-                return false;
-            }
-            return true;
+            encoded = UserscriptManager.encode(scripts);
         } catch (IllegalArgumentException error) {
-            showToast(error.getMessage() == null ? "Could not save userscripts." : error.getMessage());
-            return false;
+            if (!isFinishing() && !isDestroyed()) {
+                showToast(error.getMessage() == null ? "Could not save userscripts." : error.getMessage());
+                callback.accept(false);
+            }
+            return;
         }
+        // Serialize the encrypted read/modify/write operation away from the UI thread.
+        secureStore.updateAsync(KEY_USERSCRIPTS, "[]", ignored -> encoded, getMainExecutor(), saved -> {
+            if (isFinishing() || isDestroyed()) return;
+            boolean success = encoded.equals(saved);
+            if (!success) showToast("Userscripts could not be saved securely.");
+            callback.accept(success);
+        });
     }
 
     private void showUserscriptManager() {
@@ -2348,35 +2361,41 @@ public class BrowserActivity extends ComponentActivity {
             showToast("External userscripts are disabled in Private mode.");
             return;
         }
-        ArrayList<UserscriptManager.Script> scripts = loadUserscripts();
-        String[] labels = new String[scripts.size()];
-        for (int i = 0; i < scripts.size(); i++) {
-            UserscriptManager.Script script = scripts.get(i);
-            String hostSummary = String.join(", ", UserscriptManager.allowedOrigins(script));
-            if (hostSummary.length() > 64) hostSummary = hostSummary.substring(0, 61) + "...";
-            labels[i] = (script.enabled ? "● ON  " : "○ OFF  ") + script.name
-                    + (hostSummary.isEmpty() ? "" : "\n" + hostSummary);
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("External userscripts")
-                .setMessage("Imported scripts are OFF until you review and enable them. An enabled script can read and change page content on its allowed sites. Only import code you trust. Scripts do not run in Private mode.")
-                .setItems(labels, (dialog, which) -> {
-                    if (which >= 0 && which < scripts.size()) {
-                        showUserscriptActions(scripts.get(which).id);
-                    }
-                })
-                .setPositiveButton("Import file", (dialog, which) -> {
-                    if (userscriptImportLauncher != null) {
-                        userscriptImportLauncher.launch(new String[]{"*/*"});
-                    }
-                })
-                .setNeutralButton("Import HTTPS URL", (dialog, which) -> showUserscriptUrlImport())
-                .setNegativeButton("Close", null)
-                .show();
+        loadUserscripts(scripts -> {
+            if (isFinishing() || isDestroyed()) return;
+            String[] labels = new String[scripts.size()];
+            for (int i = 0; i < scripts.size(); i++) {
+                UserscriptManager.Script script = scripts.get(i);
+                String hostSummary = String.join(", ", UserscriptManager.allowedOrigins(script));
+                if (hostSummary.length() > 64) hostSummary = hostSummary.substring(0, 61) + "...";
+                labels[i] = (script.enabled ? "● ON  " : "○ OFF  ") + script.name
+                        + (hostSummary.isEmpty() ? "" : "\n" + hostSummary);
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("External userscripts")
+                    .setMessage("Imported scripts are OFF until you review and enable them. An enabled script can read and change page content on its allowed sites. Only import code you trust. Scripts do not run in Private mode.")
+                    .setItems(labels, (dialog, which) -> {
+                        if (which >= 0 && which < scripts.size()) {
+                            showUserscriptActions(scripts.get(which).id);
+                        }
+                    })
+                    .setPositiveButton("Import file", (dialog, which) -> {
+                        if (userscriptImportLauncher != null) {
+                            userscriptImportLauncher.launch(new String[]{"*/*"});
+                        }
+                    })
+                    .setNeutralButton("Import HTTPS URL", (dialog, which) -> showUserscriptUrlImport())
+                    .setNegativeButton("Close", null)
+                    .show();
+        });
     }
 
     private void showUserscriptActions(String scriptId) {
-        ArrayList<UserscriptManager.Script> scripts = loadUserscripts();
+        loadUserscripts(scripts -> showUserscriptActionsLoaded(scripts, scriptId));
+    }
+
+    private void showUserscriptActionsLoaded(ArrayList<UserscriptManager.Script> scripts, String scriptId) {
+        if (isFinishing() || isDestroyed()) return;
         UserscriptManager.Script selected = null;
         for (UserscriptManager.Script script : scripts) {
             if (script.id.equals(scriptId)) { selected = script; break; }
@@ -2397,15 +2416,28 @@ public class BrowserActivity extends ComponentActivity {
                 .setMessage(detail)
                 .setPositiveButton(script.enabled ? "Disable" : "Review & enable", (dialog, which) -> {
                     if (script.enabled) {
-                        ArrayList<UserscriptManager.Script> latest = loadUserscripts();
-                        for (UserscriptManager.Script item : latest) {
-                            if (item.id.equals(script.id)) item.enabled = false;
-                        }
-                        if (saveUserscripts(latest)) {
-                            reconfigureWebViews();
-                            reloadCurrentPageForUserscripts();
-                            showToast("Userscript disabled.");
-                        }
+                        loadUserscripts(latest -> {
+                            boolean found = false;
+                            for (UserscriptManager.Script item : latest) {
+                                if (item.id.equals(script.id)) {
+                                    item.enabled = false;
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                showToast("That userscript is no longer installed.");
+                                showUserscriptManager();
+                                return;
+                            }
+                            saveUserscripts(latest, saved -> {
+                                if (saved) {
+                                    reconfigureWebViews();
+                                    reloadCurrentPageForUserscripts();
+                                    showToast("Userscript disabled.");
+                                }
+                            });
+                        });
                     } else {
                         if (!fingerprintScriptSupported()) {
                             showToast("Update Android System WebView first; document-start script support is unavailable.");
@@ -2416,15 +2448,28 @@ public class BrowserActivity extends ComponentActivity {
                                 .setMessage("You are responsible for this code. It can read and modify the pages on these HTTPS sites, including information visible while you browse them. Only continue if you trust the author and source.\n\n" + sites)
                                 .setNegativeButton("Cancel", null)
                                 .setPositiveButton("Enable script", (d, w) -> {
-                                    ArrayList<UserscriptManager.Script> latest = loadUserscripts();
-                                    for (UserscriptManager.Script item : latest) {
-                                        if (item.id.equals(script.id)) item.enabled = true;
-                                    }
-                                    if (saveUserscripts(latest)) {
-                                        reconfigureWebViews();
-                                        reloadCurrentPageForUserscripts();
-                                        showToast("Userscript enabled for its listed HTTPS sites.");
-                                    }
+                                    loadUserscripts(latest -> {
+                                        boolean found = false;
+                                        for (UserscriptManager.Script item : latest) {
+                                            if (item.id.equals(script.id)) {
+                                                item.enabled = true;
+                                                found = true;
+                                                break;
+                                            }
+                                        }
+                                        if (!found) {
+                                            showToast("That userscript is no longer installed.");
+                                            showUserscriptManager();
+                                            return;
+                                        }
+                                        saveUserscripts(latest, saved -> {
+                                            if (saved) {
+                                                reconfigureWebViews();
+                                                reloadCurrentPageForUserscripts();
+                                                showToast("Userscript enabled for its listed HTTPS sites.");
+                                            }
+                                        });
+                                    });
                                 })
                                 .show();
                     }
@@ -2435,15 +2480,21 @@ public class BrowserActivity extends ComponentActivity {
                                 .setMessage("Remove " + script.name + " from Hari Browser?")
                                 .setNegativeButton("Cancel", null)
                                 .setPositiveButton("Remove", (d, w) -> {
-                                    ArrayList<UserscriptManager.Script> latest = loadUserscripts();
-                                    for (int i = latest.size() - 1; i >= 0; i--) {
-                                        if (latest.get(i).id.equals(script.id)) latest.remove(i);
-                                    }
-                                    if (saveUserscripts(latest)) {
-                                        reconfigureWebViews();
-                                        reloadCurrentPageForUserscripts();
-                                        showToast("Userscript removed.");
-                                    }
+                                    loadUserscripts(latest -> {
+                                        boolean removed = latest.removeIf(item -> item.id.equals(script.id));
+                                        if (!removed) {
+                                            showToast("That userscript is no longer installed.");
+                                            showUserscriptManager();
+                                            return;
+                                        }
+                                        saveUserscripts(latest, saved -> {
+                                            if (saved) {
+                                                reconfigureWebViews();
+                                                reloadCurrentPageForUserscripts();
+                                                showToast("Userscript removed.");
+                                            }
+                                        });
+                                    });
                                 })
                                 .show())
                 .setNegativeButton("Back", (dialog, which) -> showUserscriptManager())
@@ -2460,9 +2511,14 @@ public class BrowserActivity extends ComponentActivity {
             showToast("External userscripts cannot be imported in Private mode.");
             return;
         }
+        final UserscriptManager.Script script;
         try {
-            UserscriptManager.Script script = UserscriptManager.parse(source);
-            ArrayList<UserscriptManager.Script> scripts = loadUserscripts();
+            script = UserscriptManager.parse(source);
+        } catch (IllegalArgumentException error) {
+            showToast(error.getMessage() == null ? "This is not a supported userscript." : error.getMessage());
+            return;
+        }
+        loadUserscripts(scripts -> {
             for (UserscriptManager.Script existing : scripts) {
                 if (existing.id.equals(script.id)) {
                     showToast("That userscript is already installed.");
@@ -2475,13 +2531,13 @@ public class BrowserActivity extends ComponentActivity {
                 return;
             }
             scripts.add(script); // Imported scripts always remain disabled until reviewed.
-            if (saveUserscripts(scripts)) {
-                showToast("Userscript imported and left OFF. Review it before enabling.");
-                showUserscriptManager();
-            }
-        } catch (IllegalArgumentException error) {
-            showToast(error.getMessage() == null ? "This is not a supported userscript." : error.getMessage());
-        }
+            saveUserscripts(scripts, saved -> {
+                if (saved) {
+                    showToast("Userscript imported and left OFF. Review it before enabling.");
+                    showUserscriptManager();
+                }
+            });
+        });
     }
 
     private void showUserscriptUrlImport() {
