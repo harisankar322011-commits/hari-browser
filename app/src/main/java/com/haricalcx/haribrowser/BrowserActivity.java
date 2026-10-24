@@ -671,8 +671,7 @@ public class BrowserActivity extends ComponentActivity {
             if (officialService != null) {
                 message += " • Listed official: " + officialService;
             }
-            message += fingerprintProtectionActive(tab) ? " • FP shield ON" :
-                    (fingerprintProtectionEnabled() ? " • FP shield unavailable" : " • FP shield OFF");
+            message += " • " + fingerprintProtectionShortStatus(tab);
             securityStatus.setText(message);
             securityStatus.setTextColor(officialService != null ? Color.rgb(0, 105, 94) : MUTED);
             String qualification = officialService != null
@@ -3242,15 +3241,87 @@ public class BrowserActivity extends ComponentActivity {
                 "Local file/content access: disabled for webpages\n" +
                 "Tracker blocking: " + (trackersEnabled() ? "enabled (local list)" : "disabled") + "\n" +
                 "JavaScript: " + (javascriptEnabled() ? "enabled" : "disabled") + "\n" +
-                "Anti-fingerprinting: " + (fingerprintProtectionActive(tab) ? "active" :
-                        (fingerprintProtectionEnabled() ? "unsupported by this WebView" : "disabled")) + "\n" +
-                "Reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers.\n" +
+                "Anti-fingerprinting: " + fingerprintProtectionStatus(tab) + "\n" +
+                "The site override is limited to this exact hostname; subdomains have separate settings.\n" +
+                "Reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when active.\n" +
                 "Images: " + (imagesEnabled() ? "enabled" : "blocked") + "\n" +
                 "Browser mode: " + (privateMode ? "private" : "standard") + "\n\n" +
                 "HTTPS protects the connection in transit; it does not prove a website is trustworthy or prevent the site itself from tracking you.";
-        new AlertDialog.Builder(this).setTitle("Site security").setMessage(message)
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this).setTitle("Site security").setMessage(message)
                 .setPositiveButton("Copy address", (d, w) -> copyCurrentUrl())
-                .setNegativeButton("Close", null).show();
+                .setNegativeButton("Close", null);
+        if (fingerprintProtectionEnabled() && fingerprintScriptSupported()) {
+            boolean exempt = fingerprintProtectionExempt(tab);
+            dialog.setNeutralButton(exempt ? "Enable shield here" : "Disable shield here", (d, w) ->
+                    toggleFingerprintProtectionForCurrentSite(tab));
+        }
+        dialog.show();
+    }
+
+    private void toggleFingerprintProtectionForCurrentSite(Tab selectedTab) {
+        if (selectedTab == null || selectedTab.home || !PrivacyGuard.isHttpsUrl(selectedTab.url)) {
+            showToast("Open an HTTPS website first.");
+            return;
+        }
+        if (!fingerprintProtectionExempt(selectedTab)) {
+            String host = safeHost(selectedTab.url);
+            new AlertDialog.Builder(this)
+                    .setTitle("Disable fingerprint shield here?")
+                    .setMessage("This disables only Hari Browser's page-script fingerprint reductions on " + host +
+                            " (including canvas/WebGL and timing changes), which may make tracking easier. The browser's reduced network User-Agent remains active. The exception applies only to this exact hostname, not its subdomains. HTTPS checks, cookie policy, tracker blocking and other browser protections remain unchanged. Use this only if the site has a compatibility problem.")
+                    .setNegativeButton("Keep shield", null)
+                    .setPositiveButton("Disable here", (d, w) -> saveFingerprintExemption(selectedTab, host))
+                    .show();
+            return;
+        }
+        saveFingerprintExemption(selectedTab, safeHost(selectedTab.url));
+    }
+
+    private void saveFingerprintExemption(Tab selectedTab, String host) {
+        try {
+            String updated = PerSiteFingerprintPolicy.toggle(
+                    settings.getString("fingerprint_exempt_hosts", "[]"), host);
+            settings.edit().putString("fingerprint_exempt_hosts", updated).apply();
+            for (Tab openTab : tabs) {
+                updateFingerprintProtection(openTab);
+            }
+            // Recreate each already-open context for this exact host so document-start
+            // behavior matches the new preference; other sites are left untouched.
+            for (Tab openTab : tabs) {
+                if (!openTab.home && PrivacyGuard.isHttpsUrl(openTab.url)
+                        && host.equals(safeHost(openTab.url)) && openTab.webView != null) {
+                    openTab.webView.stopLoading();
+                    openTab.webView.reload();
+                }
+            }
+            boolean exempt = PerSiteFingerprintPolicy.isExempt(updated, host);
+            showToast(exempt
+                    ? "Page-script fingerprint reduction disabled for " + host + ". The reduced network User-Agent remains active."
+                    : "Page-script fingerprint reduction restored for " + host + ".");
+            updateTabControls();
+        } catch (IllegalArgumentException invalidHost) {
+            showToast("Could not save a site-specific fingerprint setting.");
+        }
+    }
+
+    private boolean fingerprintProtectionExempt(Tab tab) {
+        return tab != null && !tab.home && PrivacyGuard.isHttpsUrl(tab.url)
+                && PerSiteFingerprintPolicy.isExempt(
+                        settings.getString("fingerprint_exempt_hosts", "[]"), safeHost(tab.url));
+    }
+
+    private String fingerprintProtectionStatus(Tab tab) {
+        if (!fingerprintProtectionEnabled()) return "disabled globally in Settings";
+        if (fingerprintProtectionExempt(tab)) return "page-script fingerprint reductions disabled for this exact hostname; reduced network User-Agent remains active";
+        if (!fingerprintScriptSupported()) return "unsupported by this Android WebView";
+        return fingerprintProtectionActive(tab) ? "active for supported signals" : "not active in this tab";
+    }
+
+    private String fingerprintProtectionShortStatus(Tab tab) {
+        if (!fingerprintProtectionEnabled()) return "FP shield OFF";
+        if (fingerprintProtectionExempt(tab)) return "FP script OFF for this site";
+        if (fingerprintProtectionActive(tab)) return "FP shield ON";
+        return "FP shield unavailable";
     }
 
     private void showSecurityPrivacyScan() {
@@ -3265,10 +3336,12 @@ public class BrowserActivity extends ComponentActivity {
         report.append("LAYER 2 — HARI GHOST\n");
         report.append("✓ Third-party cookies: BLOCKED\n");
         report.append("Local tracker blocking: ").append(trackersEnabled() ? "ON (local list; incomplete)" : "OFF").append("\n");
-        if (tab != null && !tab.home && fingerprintProtectionActive(tab)) {
-            report.append("Anti-fingerprinting: ACTIVE for supported signals\n");
-        } else if (!fingerprintProtectionEnabled()) {
+        if (!fingerprintProtectionEnabled()) {
             report.append("Anti-fingerprinting: OFF in Settings\n");
+        } else if (fingerprintProtectionExempt(tab)) {
+            report.append("Page-script fingerprint reduction: OFF for this exact hostname by site-specific override; reduced network User-Agent remains active\n");
+        } else if (tab != null && !tab.home && fingerprintProtectionActive(tab)) {
+            report.append("Anti-fingerprinting: ACTIVE for supported signals\n");
         } else {
             report.append("Anti-fingerprinting: enabled in Settings; some protections may be unsupported by this WebView\n");
         }
@@ -3435,7 +3508,7 @@ public class BrowserActivity extends ComponentActivity {
 
     private boolean fingerprintProtectionActive(Tab tab) {
         return fingerprintProtectionEnabled() && fingerprintScriptSupported() &&
-                tab != null && tab.fingerprintScriptHandler != null;
+                tab != null && tab.fingerprintScriptHandler != null && !fingerprintProtectionExempt(tab);
     }
 
     private void updateFingerprintProtection(Tab tab) {
@@ -3446,8 +3519,11 @@ public class BrowserActivity extends ComponentActivity {
         }
         if (!fingerprintProtectionEnabled() || !fingerprintScriptSupported()) return;
         try {
+            Set<String> exemptHosts = PerSiteFingerprintPolicy.parse(
+                    settings.getString("fingerprint_exempt_hosts", "[]"));
             tab.fingerprintScriptHandler = WebViewCompat.addDocumentStartJavaScript(
-                    tab.webView, FingerprintProtection.SCRIPT, Collections.singleton("*"));
+                    tab.webView, FingerprintProtection.scriptForExcludedHosts(exemptHosts),
+                    Collections.singleton("*"));
         } catch (RuntimeException ignored) {
             // Fail safely: a protection failure must not prevent ordinary browsing.
         }
@@ -3722,6 +3798,7 @@ public class BrowserActivity extends ComponentActivity {
             // Keep private download names and scan reports out of the standard profile.
             if (settings != null) {
                 settings.edit().putBoolean("private_session_active", false)
+                        .remove("fingerprint_exempt_hosts")
                         .remove("last_download_scan").remove("last_download_scan_status")
                         .remove("last_download_scan_filename").remove("last_download_scan_sha256")
                         .remove("last_download_scan_id").remove("download_scan_history")

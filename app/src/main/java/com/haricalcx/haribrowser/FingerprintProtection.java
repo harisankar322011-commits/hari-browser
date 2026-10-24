@@ -438,4 +438,23 @@ final class FingerprintProtection {
           }
         })();
         """;
+
+    /**
+     * Wrap the protection script with exact-host exceptions. The exclusion check runs
+     * before the protection script, so a chosen site keeps its normal JS APIs.
+     */
+    static String scriptForExcludedHosts(java.util.Set<String> excludedHosts) {
+        if (excludedHosts == null || excludedHosts.isEmpty()) return SCRIPT;
+        org.json.JSONArray hosts = new org.json.JSONArray();
+        for (String host : excludedHosts) {
+            String normalized = PerSiteFingerprintPolicy.normalizeHost(host);
+            if (normalized != null) hosts.put(normalized);
+        }
+        if (hosts.length() == 0) return SCRIPT;
+        return "(function(){try{const raw=String(location.hostname||'').toLowerCase();" +
+                "const host=raw.endsWith('.')?raw.slice(0,-1):raw;" +
+                "const excluded=" + hosts + ";if(excluded.indexOf(host)>=0)return;" +
+                "}catch(_e){};\n" + SCRIPT + "\n})();";
+    }
+
 }

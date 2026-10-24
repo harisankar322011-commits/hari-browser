@@ -67,4 +67,25 @@ public final class FingerprintProtectionTest {
         assertTrue(script.contains("webgl_debug_renderer_info"));
         assertTrue(script.contains("OfflineAudioContext"));
     }
+    @Test
+    public void perSiteWrapperSkipsOnlyTheConfiguredExactHostname() {
+        String wrapped = FingerprintProtection.scriptForExcludedHosts(
+                new java.util.LinkedHashSet<>(java.util.Arrays.asList("example.com", "docs.example.net")));
+
+        assertTrue(wrapped.contains("location.hostname"));
+        assertTrue(wrapped.contains("\"example.com\""));
+        assertTrue(wrapped.contains("\"docs.example.net\""));
+        assertTrue(wrapped.contains(FingerprintProtection.SCRIPT));
+        assertTrue(wrapped.indexOf("excluded.indexOf(host)>=0)return;") < wrapped.indexOf(FingerprintProtection.SCRIPT));
+    }
+
+    @Test
+    public void emptyOrInvalidExemptionsPreserveTheOriginalProtectionScript() {
+        assertSame(FingerprintProtection.SCRIPT,
+                FingerprintProtection.scriptForExcludedHosts(java.util.Collections.emptySet()));
+        String wrapped = FingerprintProtection.scriptForExcludedHosts(
+                java.util.Collections.singleton("https://example.com"));
+        assertSame(FingerprintProtection.SCRIPT, wrapped);
+    }
+
 }
