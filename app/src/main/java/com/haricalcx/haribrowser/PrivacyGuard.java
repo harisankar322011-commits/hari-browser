@@ -54,6 +54,17 @@ public final class PrivacyGuard {
             "pokkt.com"
     )));
 
+    private static volatile Set<String> CUSTOM_TRACKER_HOSTS = Collections.emptySet();
+
+    /** Load a user-imported, hosts-format list. Invalid stored data fails closed to the built-in list. */
+    public static void setCustomTrackerList(String text) {
+        try {
+            CUSTOM_TRACKER_HOSTS = TrackerFilterList.parseHosts(text);
+        } catch (IllegalArgumentException invalidStoredList) {
+            CUSTOM_TRACKER_HOSTS = Collections.emptySet();
+        }
+    }
+
     public static boolean isHttpUrl(String value) {
         try {
             return "http".equalsIgnoreCase(Uri.parse(value).getScheme());
@@ -122,7 +133,12 @@ public final class PrivacyGuard {
     public static boolean isTrackerHost(String candidate) {
         if (candidate == null) return false;
         String host = candidate.toLowerCase(Locale.ROOT);
-        for (String tracker : TRACKER_HOSTS) {
+        if (matchesTrackerSet(host, TRACKER_HOSTS)) return true;
+        return matchesTrackerSet(host, CUSTOM_TRACKER_HOSTS);
+    }
+
+    private static boolean matchesTrackerSet(String host, Set<String> trackers) {
+        for (String tracker : trackers) {
             if (host.equals(tracker) || host.endsWith("." + tracker)) return true;
         }
         return false;
