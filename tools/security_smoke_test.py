@@ -95,6 +95,7 @@ try:
           read("app/src/test/java/com/haricalcx/haribrowser/AntivirusEngineTest.java"))
 
     browser = read("app/src/main/java/com/haricalcx/haribrowser/BrowserActivity.java")
+    search_engine_urls = read("app/src/main/java/com/haricalcx/haribrowser/SearchEngineUrls.java")
     for label, fragment in [
         ("WebView file access disabled", "web.setAllowFileAccess(false)"),
         ("WebView content access disabled", "web.setAllowContentAccess(false)"),
@@ -183,7 +184,9 @@ try:
           "b.textContent=displayDirectoryCategory(c)" in home_page and
           "esc(displayDirectoryCategory(site.category))" in home_page)
     check("Google selection prefers the India search endpoint",
-          "google.co.in/search?q=" in home_page and "google.co.in/search?q=" in browser)
+          "google.co.in/search?q=" in home_page and
+          'case "Google":' in search_engine_urls and
+          "google.co.in/search?q=" in search_engine_urls)
     check("Hari AI home button has a native internal route",
           'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
     check("Hari AI prompt supports Indian context and major Indian languages",
