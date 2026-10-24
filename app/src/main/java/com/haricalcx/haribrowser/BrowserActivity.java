@@ -1238,15 +1238,24 @@ public class BrowserActivity extends ComponentActivity {
         tab.url = HOME_URL;
         tab.title = "Hari Browser";
         if (currentTab() == tab) addressBar.setText("");
-        tab.webView.loadDataWithBaseURL(HOME_URL, homeHtml(), "text/html", "UTF-8", null);
         updateTabControls();
+        if (privateMode) {
+            // Do not read standard-profile bookmark data inside the private process.
+            renderHome(tab, "[]");
+            return;
+        }
+        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || tab.webView == null
+                    || !tab.home || !HOME_URL.equals(tab.url)) return;
+            renderHome(tab, parseArray(serialized).toString());
+        });
     }
 
-    private String homeHtml() {
-        // Do not even read standard-profile bookmark data inside the private process.
-        String bookmarksJson = privateMode ? "[]" : readArray(KEY_BOOKMARKS).toString();
-        return HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode,
+    private void renderHome(Tab tab, String bookmarksJson) {
+        if (tab == null || tab.webView == null || !tab.home || !HOME_URL.equals(tab.url)) return;
+        String html = HomePage.render(darkTheme(), searchEngine(), bookmarksJson, privateMode,
                 accentName(), settings.getString("home_language", "en"));
+        tab.webView.loadDataWithBaseURL(HOME_URL, html, "text/html", "UTF-8", null);
     }
 
     /**
@@ -3475,23 +3484,26 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Bookmark export is unavailable in private browsing.");
             return;
         }
-        JSONArray bookmarks = readArray(KEY_BOOKMARKS);
-        if (bookmarks.length() == 0) {
-            showToast("There are no bookmarks to export.");
-            return;
-        }
-        new AlertDialog.Builder(this)
-                .setTitle("Export bookmarks?")
-                .setMessage("The export contains readable website addresses and titles. Share it only with people you trust. Private browsing data is never included.")
-                .setNegativeButton("Cancel", null)
-                .setPositiveButton("Export", (d, w) -> {
-                    Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("application/json");
-                    share.putExtra(Intent.EXTRA_SUBJECT, "Hari Browser bookmarks");
-                    share.putExtra(Intent.EXTRA_TEXT, bookmarks.toString());
-                    startActivity(Intent.createChooser(share, "Export bookmarks securely"));
-                })
-                .show();
+        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            JSONArray bookmarks = parseArray(serialized);
+            if (bookmarks.length() == 0) {
+                showToast("There are no bookmarks to export.");
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("Export bookmarks?")
+                    .setMessage("The export contains readable website addresses and titles. Share it only with people you trust. Private browsing data is never included.")
+                    .setNegativeButton("Cancel", null)
+                    .setPositiveButton("Export", (d, w) -> {
+                        Intent share = new Intent(Intent.ACTION_SEND);
+                        share.setType("application/json");
+                        share.putExtra(Intent.EXTRA_SUBJECT, "Hari Browser bookmarks");
+                        share.putExtra(Intent.EXTRA_TEXT, bookmarks.toString());
+                        startActivity(Intent.createChooser(share, "Export bookmarks securely"));
+                    })
+                    .show();
+        });
     }
 
     private void importBookmarks() {
@@ -3524,32 +3536,49 @@ public class BrowserActivity extends ComponentActivity {
             showToast("The bookmark export is empty or too large.");
             return;
         }
-        try {
-            JSONArray incoming = new JSONArray(source);
-            JSONArray existing = readArray(KEY_BOOKMARKS);
-            JSONArray merged = new JSONArray();
-            java.util.HashSet<String> seen = new java.util.HashSet<>();
-            for (int pass = 0; pass < 2; pass++) {
-                JSONArray list = pass == 0 ? existing : incoming;
-                for (int i = 0; i < list.length() && merged.length() < 500; i++) {
-                    JSONObject item = list.optJSONObject(i);
-                    if (item == null) continue;
-                    String url = item.optString("url", "");
-                    if (!PrivacyGuard.isHttpsUrl(url) || !seen.add(url)) continue;
-                    JSONObject safe = new JSONObject();
-                    String title = item.optString("title", safeHost(url));
-                    if (title.length() > 300) title = title.substring(0, 300);
-                    safe.put("title", title);
-                    safe.put("url", url);
-                    safe.put("time", item.optLong("time", System.currentTimeMillis()));
-                    merged.put(safe);
+        final String incomingJson = source;
+        final java.util.concurrent.atomic.AtomicInteger importedCount =
+                new java.util.concurrent.atomic.AtomicInteger(-1);
+        secureStore.updateAsync(KEY_BOOKMARKS, "[]", serialized -> {
+            try {
+                JSONArray incoming = new JSONArray(incomingJson);
+                JSONArray existing = new JSONArray(serialized == null ? "[]" : serialized);
+                JSONArray merged = new JSONArray();
+                java.util.HashSet<String> seen = new java.util.HashSet<>();
+                for (int pass = 0; pass < 2; pass++) {
+                    JSONArray list = pass == 0 ? existing : incoming;
+                    for (int i = 0; i < list.length() && merged.length() < 500; i++) {
+                        JSONObject item = list.optJSONObject(i);
+                        if (item == null) continue;
+                        String url = item.optString("url", "");
+                        if (!PrivacyGuard.isHttpsUrl(url) || !seen.add(url)) continue;
+                        JSONObject safe = new JSONObject();
+                        String title = item.optString("title", safeHost(url));
+                        if (title.length() > 300) title = title.substring(0, 300);
+                        safe.put("title", title);
+                        safe.put("url", url);
+                        safe.put("time", item.optLong("time", System.currentTimeMillis()));
+                        String folder = BookmarkFolders.normalizeFolderName(item.optString("folder", ""));
+                        if (!folder.isEmpty() && !BookmarkFolders.DEFAULT_FOLDER.equals(folder)
+                                && !BookmarkFolders.ALL_BOOKMARKS.equals(folder)) {
+                            safe.put("folder", folder);
+                        }
+                        merged.put(safe);
+                    }
                 }
+                importedCount.set(merged.length());
+                return merged.toString();
+            } catch (Exception invalid) {
+                return null;
             }
-            secureStore.put(KEY_BOOKMARKS, merged.toString());
-            showToast("Imported bookmark list saved securely (" + merged.length() + " total).");
-        } catch (Exception e) {
-            showToast("Invalid bookmark JSON. Nothing was imported.");
-        }
+        }, getMainExecutor(), saved -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            if (saved == null || importedCount.get() < 0) {
+                showToast("Invalid bookmark JSON. Nothing was imported.");
+                return;
+            }
+            showToast("Imported bookmark list saved securely (" + importedCount.get() + " total).");
+        });
     }
 
     private void toggleThemeAndRecreate() {
