@@ -27,7 +27,7 @@ public class DownloadScanHistoryTest {
 
     @Test
     public void sanitizesDisplayFieldsAndOnlyKeepsValidSha256() throws Exception {
-        String filename = "bad\\nname.apk";
+        String filename = "bad\nname.apk";
         String longDetails = "x".repeat(DownloadScanHistory.MAX_DETAILS_CHARS + 50);
         JSONArray result = DownloadScanHistory.append("[]", 7, filename,
                 "SUSPICIOUS<script>", longDetails, "not-a-hash", -5);
