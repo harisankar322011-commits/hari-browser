@@ -231,7 +231,7 @@ try:
     check("Hari AI key uses asynchronous encrypted storage",
           "secureStore.putAsync(KEY_HARI_AI_API_KEY, value)" in browser and
           'secureStore.getAsync(KEY_HARI_AI_API_KEY, "", getMainExecutor()' in browser and
-          'secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", ignored -> ""' in browser)
+          'secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", stored -> ""' in browser)
     check("No JavaScript-to-native bridge in the general browser WebView",
           re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
     crypto_html = read("app/src/main/assets/hari_cryptography.html")
