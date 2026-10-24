@@ -3798,6 +3798,7 @@ public class BrowserActivity extends ComponentActivity {
             // Keep private download names and scan reports out of the standard profile.
             if (settings != null) {
                 settings.edit().putBoolean("private_session_active", false)
+                        .remove("fingerprint_exempt_hosts")
                         .remove("last_download_scan").remove("last_download_scan_status")
                         .remove("last_download_scan_filename").remove("last_download_scan_sha256")
                         .remove("last_download_scan_id").remove("download_scan_history")
