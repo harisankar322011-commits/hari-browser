@@ -1130,41 +1130,62 @@ public class BrowserActivity extends ComponentActivity {
                 showSiteSafetyCheckDialog(tab, url, cached, attempt);
                 return;
             }
-            String authKey = protectionStore.get("hari_rep_store_1", "");
-            if (!authKey.isEmpty()) {
-                if (!pendingUrlhausChecks.add(url)) {
-                    showToast("URL reputation check is already running. Please wait.");
-                    return;
+
+            // Decrypt the optional reputation key away from the UI thread. Navigation may
+            // change while this read is queued, so every callback checks its attempt token.
+            protectionStore.getAsync("hari_rep_store_1", "", getMainExecutor(), authKey -> {
+                if (!isCurrentSiteSafetyAttempt(tab, attempt)) return;
+                if (authKey != null && !authKey.isEmpty()) {
+                    startUrlhausLookup(tab, url, authKey, attempt);
+                } else {
+                    completeLocalSiteSafetyCheck(tab, url, attempt);
                 }
-                showToast("Checking this destination with URLhaus…");
-                new Thread(() -> {
-                    UrlhausReputation.Result reputation;
-                    try {
-                        reputation = UrlhausReputation.lookup(url, authKey);
-                    } catch (Exception error) {
-                        reputation = new UrlhausReputation.Result(false, "SERVICE_UNAVAILABLE",
-                                "Online URL reputation was unavailable. Local URL checks remain active.");
-                    } finally {
-                        pendingUrlhausChecks.remove(url);
-                    }
-                    if ("KNOWN_MALWARE_URL".equals(reputation.status) || "NO_MATCH".equals(reputation.status)) {
-                        urlhausSessionResults.put(url, reputation);
-                    }
-                    UrlhausReputation.Result finalReputation = reputation;
-                    runOnUiThread(() -> {
-                        if (isFinishing() || isDestroyed() || tab.navigationAttempt != attempt ||
-                                !tabs.contains(tab)) return;
-                        showSiteSafetyCheckDialog(tab, url, finalReputation, attempt);
-                    });
-                }, "HariUrlReputation").start();
-                return;
-            }
+            });
+            return;
         }
+        completeLocalSiteSafetyCheck(tab, url, attempt);
+    }
+
+    private boolean isCurrentSiteSafetyAttempt(Tab tab, long attempt) {
+        return !isFinishing() && !isDestroyed() && tab != null && tab.webView != null
+                && tab.navigationAttempt == attempt && tabs.contains(tab);
+    }
+
+    private void completeLocalSiteSafetyCheck(Tab tab, String url, long attempt) {
+        if (!isCurrentSiteSafetyAttempt(tab, attempt)) return;
         if (SessionApprovalCache.contains(url)) {
             loadAfterSiteSafetyCheck(tab, url);
             return;
         }
         showSiteSafetyCheckDialog(tab, url, null, attempt);
+    }
+
+    private void startUrlhausLookup(Tab tab, String url, String authKey, long attempt) {
+        if (!isCurrentSiteSafetyAttempt(tab, attempt)) return;
+        if (!pendingUrlhausChecks.add(url)) {
+            showToast("URL reputation check is already running. Please wait.");
+            return;
+        }
+        showToast("Checking this destination with URLhaus…");
+        new Thread(() -> {
+            UrlhausReputation.Result reputation;
+            try {
+                reputation = UrlhausReputation.lookup(url, authKey);
+            } catch (Exception error) {
+                reputation = new UrlhausReputation.Result(false, "SERVICE_UNAVAILABLE",
+                        "Online URL reputation was unavailable. Local URL checks remain active.");
+            } finally {
+                pendingUrlhausChecks.remove(url);
+            }
+            if ("KNOWN_MALWARE_URL".equals(reputation.status) || "NO_MATCH".equals(reputation.status)) {
+                urlhausSessionResults.put(url, reputation);
+            }
+            UrlhausReputation.Result finalReputation = reputation;
+            runOnUiThread(() -> {
+                if (!isCurrentSiteSafetyAttempt(tab, attempt)) return;
+                showSiteSafetyCheckDialog(tab, url, finalReputation, attempt);
+            });
+        }, "HariUrlReputation").start();
     }
 
     private void showSiteSafetyCheckDialog(Tab tab, String url,
