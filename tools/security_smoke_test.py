@@ -143,6 +143,15 @@ try:
           "PBKDF2WithHmacSHA256" in teen_protection and
           "protectionStore.put(TeenProtection.PIN_HASH_KEY, hash)" in browser and
           "TeenProtection.verifyPin" in browser)
+    check("Teen Protection PIN storage is asynchronous and encrypted",
+          "protectionStore.getAsync(TeenProtection.PIN_SALT_KEY" in browser and
+          "protectionStore.getAsync(TeenProtection.PIN_HASH_KEY" in browser and
+          "protectionStore.putAsync(TeenProtection.PIN_SALT_KEY, salt)" in browser and
+          "protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash)" in browser and
+          "protectionStore.get(TeenProtection.PIN_SALT_KEY" not in browser and
+          "protectionStore.get(TeenProtection.PIN_HASH_KEY" not in browser and
+          "protectionStore.put(TeenProtection.PIN_SALT_KEY" not in browser and
+          "protectionStore.put(TeenProtection.PIN_HASH_KEY" not in browser)
     check("Teen protection applies strict SafeSearch parameters",
           'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
           'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)
