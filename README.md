@@ -37,6 +37,19 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 - QR-code generation, printing to PDF, bookmark import/export, and a directory of curated destinations covering education and Indian public services.
 - A home dashboard with quick actions, personal HTTPS shortcuts, offline wallpapers, themed colours, and local tools such as a calculator, unit converter, notes, password generator, JSON formatter, and text tools.
 
+### Optional external userscripts
+
+Hari Browser includes a small, optional userscript manager for scripts written for page-context execution (similar to the basic `@grant none` subset used by Tampermonkey).
+
+- Open **Settings → External userscripts** to import a `.js`/`.user.js` file or download a script as text from an HTTPS URL. The download is never executed automatically.
+- New imports are **disabled by default**. Review each script's listed site origins and explicitly approve it before enabling.
+- Supported metadata includes `@name`, `@description`, HTTPS `@match`/`@include`/`@exclude`, `@run-at` (`document-start`, `document-end`, or `document-idle`), and `@grant none`.
+- Privileged `GM_*` APIs, `@require`, `@resource`, `@connect`, global all-sites patterns, automatic updates, and automatic script signing are not supported. External scripts must use explicit HTTPS domains; WebView must support document-start script injection.
+- Scripts run inside the matching website's JavaScript context. They can read or alter that site's page content and same-origin page storage, so only install scripts from sources you trust. Hari Browser does not expose a native Android bridge to userscripts.
+- Scripts are stored in Hari Browser's encrypted local store and are **never run in Private mode**. Script code is not certified malware-free; re-import updates manually and review changes before enabling.
+
+Userscripts can break sites or expose page information. They are not browser extensions with isolated privileges and do not make untrusted scripts safe.
+
 ### Privacy-conscious defaults
 
 - HTTP navigation is never opened in cleartext. When a user follows an HTTP link, Hari Browser can offer to try the same address over HTTPS; the HTTPS version may still fail and receives the normal site-safety preflight. Cleartext traffic remains disabled.
