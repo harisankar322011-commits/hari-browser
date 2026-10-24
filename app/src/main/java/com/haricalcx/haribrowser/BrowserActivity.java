@@ -127,6 +127,7 @@ public class BrowserActivity extends ComponentActivity {
     private String defaultUserAgent;
     private ActivityResultLauncher<String> fileChooserLauncher;
     private ActivityResultLauncher<String[]> userscriptImportLauncher;
+    private ActivityResultLauncher<String[]> trackerListImportLauncher;
     private ActivityResultLauncher<Intent> voiceSearchLauncher;
     private ValueCallback<Uri[]> fileChooserCallback;
     private View fullscreenCustomView;
@@ -269,6 +270,7 @@ public class BrowserActivity extends ComponentActivity {
             }
         });
         settings = getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE);
+        PrivacyGuard.setCustomTrackerList(settings.getString("custom_tracker_hosts", ""));
         if (privateMode) settings.edit().putBoolean("private_session_active", true).apply();
         // Shared by normal and private sessions so private browsing cannot bypass protection.
         protectionSettings = getSharedPreferences("hari_browser_protection_settings", MODE_PRIVATE);
@@ -292,6 +294,41 @@ public class BrowserActivity extends ComponentActivity {
                     } catch (Exception error) {
                         showToast(error.getMessage() == null
                                 ? "Could not import this userscript." : error.getMessage());
+                    }
+                });
+        trackerListImportLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                uri -> {
+                    if (uri == null) return;
+                    if (privateMode) {
+                        showToast("Custom tracker lists are imported in normal browsing only.");
+                        return;
+                    }
+                    try (InputStream input = getContentResolver().openInputStream(uri)) {
+                        if (input == null) throw new IOException("The selected filter list could not be opened.");
+                        java.io.ByteArrayOutputStream output = new java.io.ByteArrayOutputStream();
+                        byte[] buffer = new byte[8192];
+                        int total = 0;
+                        int count;
+                        while ((count = input.read(buffer)) != -1) {
+                            total += count;
+                            if (total > TrackerFilterList.MAX_TEXT_CHARS) {
+                                throw new IOException("The tracker list exceeds 512 KiB.");
+                            }
+                            output.write(buffer, 0, count);
+                        }
+                        String text = new String(output.toByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+                        Set<String> hosts = TrackerFilterList.parseHosts(text);
+                        if (hosts.isEmpty()) {
+                            throw new IOException("No valid hosts were found. Use lines such as 0.0.0.0 ads.example.com.");
+                        }
+                        settings.edit().putString("custom_tracker_hosts", text).apply();
+                        PrivacyGuard.setCustomTrackerList(text);
+                        showToast("Imported " + hosts.size() +
+                                " tracker domains. A list can break site features; remove it if pages stop working.");
+                    } catch (Exception error) {
+                        showToast(error.getMessage() == null
+                                ? "Could not import this tracker list." : error.getMessage());
                     }
                 });
         voiceSearchLauncher = registerForActivityResult(
@@ -2302,7 +2339,8 @@ public class BrowserActivity extends ComponentActivity {
                 ui("Family safety guide"),
                 ui("Save current page for offline reading"),
                 ui("Read saved pages (offline text)"),
-                ui("External userscripts · manage/import scripts")
+                ui("External userscripts · manage/import scripts"),
+                "Import custom tracker hosts list"
         };
         new AlertDialog.Builder(this)
                 .setTitle(privateMode ? ui("Private settings") : ui("Settings"))
@@ -2492,6 +2530,21 @@ public class BrowserActivity extends ComponentActivity {
                             break;
                         case 42:
                             showUserscriptManager();
+                            break;
+                        case 43:
+                            if (privateMode) {
+                                showToast("Custom tracker lists are imported in normal browsing only.");
+                            } else {
+                                new AlertDialog.Builder(this)
+                                        .setTitle("Import tracker host list")
+                                        .setMessage("Import a plain-text hosts-format list. Hari Browser accepts lines like '0.0.0.0 ads.example.com' or 'ads.example.com' and skips unsupported Adblock rules. Only import a list you trust. A large or aggressive list may break websites.")
+                                        .setNegativeButton("Cancel", null)
+                                        .setPositiveButton("Choose file", (dialog, which) -> {
+                                            if (trackerListImportLauncher != null) {
+                                                trackerListImportLauncher.launch(new String[]{"text/plain", "text/*"});
+                                            }
+                                        }).show();
+                            }
                             break;
                     }
                 })
