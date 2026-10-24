@@ -118,7 +118,7 @@ final class ExternalLinkPolicy {
                 digits.append(c);
             }
         }
-        if (digits.length() < 3 || digits.length() > 20) return null;
+        if (digits.length() < 5 || digits.length() > 20) return null;
         return (plusSeen ? "+" : "") + digits;
     }
 
