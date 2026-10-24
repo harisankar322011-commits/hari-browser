@@ -1189,64 +1189,22 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showSiteSafetyCheckDialog(Tab tab, String url,
-                                           UrlhausReputation.Result reputation, long attempt) {
+                                            UrlhausReputation.Result reputation, long attempt) {
         if (tab == null || tab.webView == null || tab.navigationAttempt != attempt ||
                 !PrivacyGuard.isHttpsUrl(url)) return;
-        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url);
-        StringBuilder message = new StringBuilder();
-        message.append("Destination: ").append(report.getHost()).append("\n\n");
-        message.append("LOCAL URL CHECK\n");
-        for (String check : report.getPassedChecks()) {
-            message.append("✓ ").append(check).append("\n");
-        }
-        if (!report.getWarnings().isEmpty()) {
-            message.append("\nREVIEW THESE SIGNALS\n");
-            for (String warning : report.getWarnings()) {
-                message.append("⚠ ").append(warning).append("\n");
-            }
-        }
-        boolean knownMalware = reputation != null && reputation.listed;
-        if (reputation != null) {
-            message.append("\n\nONLINE URL REPUTATION (URLhaus)\n");
-            message.append(reputation.details).append("\n");
-            if (knownMalware) {
-                message.append("\nWARNING: avoid this URL. It has a URLhaus malware-distribution record.");
-            } else if ("NO_MATCH".equals(reputation.status)) {
-                message.append("\nNo record does not mean safe. URLhaus does not identify every phishing or scam site.");
-            } else {
-                message.append("\nThe online check did not complete. The URL has not received a clean verdict.");
-            }
-        } else if (!privateMode &&
-                getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
-                        .getBoolean("auto_urlhaus_enabled", false)) {
-            message.append("\n\nOnline URL reputation could not be run because no Auth-Key is configured. ");
-            message.append("Only the local URL checks below were performed.");
-        }
-        message.append("\n\nLocal checks run on this device and review URL patterns only; they do not certify the website or inspect all page content. ");
-        message.append("India-focused scam checks look for selected impersonation and OTP/KYC/payment wording in the URL only; false positives and missed scams are possible. ");
-        if (SensitiveInfoReminder.shouldRemind(url)) {
-            message.append("\n\nSENSITIVE INFORMATION REMINDER\n");
-            message.append("This address contains login, verification, OTP, KYC, or identity-related words. ");
-            message.append("This is a URL-text clue only, not a verdict that the website is unsafe or trustworthy. ");
-            message.append("Before entering Aadhaar details or account/financial information, verify the exact hostname independently. ");
-            message.append("Never share an OTP, bank PIN, password, or recovery code with a caller, message sender, or support agent.");
-        }
-        message.append("Android WebView certificate validation and Safe Browsing remain active during connection.");
-        if (reputation != null) {
-            message.append("\n\nThis URL was sent to URLhaus because online URL reputation is enabled in normal browsing.");
-        } else {
-            message.append("\n\nThis check did not send the URL to a third-party scanner.");
-        }
 
-        String title = knownMalware ? "⚠ Known malware-distribution URL" :
-                report.hasWarnings() ? "Review site before opening" : "Site safety check";
-        String positiveLabel = knownMalware ? "I understand — open anyway" :
-                report.hasWarnings() ? "Open anyway" : "Open site";
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url);
+        boolean automaticUrlhausEnabled = !privateMode &&
+                getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                        .getBoolean("auto_urlhaus_enabled", false);
+        SiteSafetyReportFormatter.Presentation presentation = SiteSafetyReportFormatter.format(
+                url, report, reputation, privateMode, automaticUrlhausEnabled);
+
         new AlertDialog.Builder(this)
-                .setTitle(title)
-                .setMessage(message.toString())
+                .setTitle(presentation.title)
+                .setMessage(presentation.message)
                 .setNegativeButton("Cancel", null)
-                .setPositiveButton(positiveLabel, (dialog, which) -> {
+                .setPositiveButton(presentation.positiveLabel, (dialog, which) -> {
                     if (isFinishing() || isDestroyed() || tab.navigationAttempt != attempt ||
                             !tabs.contains(tab)) {
                         showToast("The navigation changed. Please retry the address if you still want to open it.");
