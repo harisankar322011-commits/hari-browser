@@ -81,7 +81,10 @@ final class DownloadScanHistory {
         StringBuilder message = new StringBuilder();
         message.append("File: ").append(filename).append("\n");
         message.append("Result: ").append(status).append("\n");
-        message.append("Scanned: ").append(Math.max(0L, item.optLong("scannedAt", 0L))).append("\n\n");
+        long scannedAt = Math.max(0L, item.optLong("scannedAt", 0L));
+        String scannedAtText = scannedAt == 0L ? "unknown" :
+                java.text.DateFormat.getDateTimeInstance().format(new java.util.Date(scannedAt));
+        message.append("Scanned: ").append(scannedAtText).append("\n\n");
         message.append(limitDetails(item.optString("details", ""))).append("\n\n");
         String hash = item.optString("sha256", "");
         message.append("SHA-256: ").append(hash.matches("(?i)[0-9a-f]{64}") ?
