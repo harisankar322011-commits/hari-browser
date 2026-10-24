@@ -109,7 +109,9 @@ final class BrowserUiText {
         "This URL was sent to URLhaus because online URL reputation is enabled in normal browsing.",
         "This address contains login, verification, OTP, KYC, or identity-related words.",
         "This is a URL-text clue only, not a verdict that the website is unsafe or trustworthy.",
-        "Never share an OTP, bank PIN, password, or recovery code with a caller, message sender, or support agent."
+        "Never share an OTP, bank PIN, password, or recovery code with a caller, message sender, or support agent.",
+        "The online check did not complete. The URL has not received a clean verdict.",
+        "Cancel"
     };
 
     private static final Map<String, Map<String, String>> TEXT;
@@ -706,7 +708,9 @@ final class BrowserUiText {
             "സാധാരണ ബ്രൗസിംഗിൽ ഓൺലൈൻ URL വിശ്വാസ്യത സജീവമായതിനാൽ ഈ URL URLhaus-ലേക്ക് അയച്ചു.",
             "ഈ വിലാസത്തിൽ ലോഗിൻ, സ്ഥിരീകരണം, OTP, KYC അല്ലെങ്കിൽ തിരിച്ചറിയൽ സംബന്ധമായ വാക്കുകളുണ്ട്.",
             "ഇത് URL-ലെ വാക്കുകളെ അടിസ്ഥാനമാക്കിയ സൂചന മാത്രമാണ്; സൈറ്റ് സുരക്ഷിതമാണോ എന്ന വിധിയല്ല.",
-            "OTP, ബാങ്ക് PIN, പാസ്‌വേഡ് അല്ലെങ്കിൽ വീണ്ടെടുക്കൽ കോഡ് വിളിക്കുന്നവർക്കോ സന്ദേശമയക്കുന്നവർക്കോ സഹായപ്രവർത്തകർക്കോ ഒരിക്കലും നൽകരുത്.");
+            "OTP, ബാങ്ക് PIN, പാസ്‌വേഡ് അല്ലെങ്കിൽ വീണ്ടെടുക്കൽ കോഡ് വിളിക്കുന്നവർക്കോ സന്ദേശമയക്കുന്നവർക്കോ സഹായപ്രവർത്തകർക്കോ ഒരിക്കലും നൽകരുത്.",
+            "ഓൺലൈൻ പരിശോധന പൂർത്തിയായില്ല. ഈ URL സുരക്ഷിതമാണെന്ന് സ്ഥിരീകരിച്ചിട്ടില്ല.",
+            "റദ്ദാക്കുക");
         addSiteSafety(all, "hi",
             "गंतव्य:",
             "स्थानीय URL जाँच",
@@ -725,7 +729,9 @@ final class BrowserUiText {
             "सामान्य ब्राउज़िंग में ऑनलाइन URL प्रतिष्ठा चालू होने के कारण यह URL URLhaus को भेजा गया।",
             "इस पते में लॉगिन, सत्यापन, OTP, KYC या पहचान से जुड़े शब्द हैं।",
             "यह केवल URL के शब्दों से मिला संकेत है, साइट सुरक्षित या असुरक्षित होने का निर्णय नहीं।",
-            "किसी कॉल करने वाले, संदेश भेजने वाले या सहायता एजेंट को OTP, बैंक PIN, पासवर्ड या रिकवरी कोड कभी न दें।");
+            "किसी कॉल करने वाले, संदेश भेजने वाले या सहायता एजेंट को OTP, बैंक PIN, पासवर्ड या रिकवरी कोड कभी न दें।",
+            "ऑनलाइन जाँच पूरी नहीं हुई। इस URL को सुरक्षित होने की पुष्टि नहीं मिली।",
+            "रद्द करें");
         addSiteSafety(all, "ta",
             "இலக்கு:",
             "உள்ளூர் URL சரிபார்ப்பு",
@@ -744,7 +750,9 @@ final class BrowserUiText {
             "சாதாரண உலாவலில் ஆன்லைன் URL நற்பெயர் இயக்கப்பட்டதால் இந்த URL URLhaus-க்கு அனுப்பப்பட்டது.",
             "இந்த முகவரியில் உள்நுழைவு, சரிபார்ப்பு, OTP, KYC அல்லது அடையாளம் தொடர்பான சொற்கள் உள்ளன.",
             "இது URL உரையை அடிப்படையாகக் கொண்ட குறிப்பு மட்டுமே; தளம் பாதுகாப்பானதா என்ற தீர்ப்பு அல்ல.",
-            "அழைப்பவர், செய்தி அனுப்புபவர் அல்லது உதவி பணியாளரிடம் OTP, வங்கி PIN, கடவுச்சொல் அல்லது மீட்பு குறியீட்டை ஒருபோதும் பகிர வேண்டாம்.");
+            "அழைப்பவர், செய்தி அனுப்புபவர் அல்லது உதவி பணியாளரிடம் OTP, வங்கி PIN, கடவுச்சொல் அல்லது மீட்பு குறியீட்டை ஒருபோதும் பகிர வேண்டாம்.",
+            "ஆன்லைன் சரிபார்ப்பு முடிக்கப்படவில்லை. இந்த URL பாதுகாப்பானது என்று உறுதி செய்யப்படவில்லை.",
+            "ரத்துசெய்");
         addSiteSafety(all, "te",
             "గమ్యం:",
             "స్థానిక URL తనిఖీ",
@@ -763,7 +771,9 @@ final class BrowserUiText {
             "సాధారణ బ్రౌజింగ్‌లో ఆన్‌లైన్ URL ప్రతిష్ఠ ప్రారంభించబడినందున ఈ URL URLhaus‌కు పంపబడింది.",
             "ఈ చిరునామాలో లాగిన్, ధృవీకరణ, OTP, KYC లేదా గుర్తింపు సంబంధిత పదాలు ఉన్నాయి.",
             "ఇది URL‌లోని పదాల ఆధారంగా వచ్చిన సూచన మాత్రమే; సైట్ సురక్షితమని లేదా అసురక్షితమని తీర్పు కాదు.",
-            "కాలర్, సందేశం పంపిన వ్యక్తి లేదా సహాయకుడితో OTP, బ్యాంక్ PIN, పాస్‌వర్డ్ లేదా రికవరీ కోడ్‌ను ఎప్పుడూ పంచుకోవద్దు.");
+            "కాలర్, సందేశం పంపిన వ్యక్తి లేదా సహాయకుడితో OTP, బ్యాంక్ PIN, పాస్‌వర్డ్ లేదా రికవరీ కోడ్‌ను ఎప్పుడూ పంచుకోవద్దు.",
+            "ఆన్‌లైన్ తనిఖీ పూర్తికాలేదు. ఈ URL సురక్షితమని నిర్ధారణ కాలేదు.",
+            "రద్దు చేయి");
         addSiteSafety(all, "kn",
             "ಗಮ್ಯಸ್ಥಾನ:",
             "ಸ್ಥಳೀಯ URL ಪರಿಶೀಲನೆ",
@@ -782,7 +792,9 @@ final class BrowserUiText {
             "ಸಾಮಾನ್ಯ ಬ್ರೌಸಿಂಗ್‌ನಲ್ಲಿ ಆನ್‌ಲೈನ್ URL ಖ್ಯಾತಿ ಸಕ್ರಿಯವಾಗಿರುವುದರಿಂದ ಈ URL ಅನ್ನು URLhaus ಗೆ ಕಳುಹಿಸಲಾಗಿದೆ.",
             "ಈ ವಿಳಾಸದಲ್ಲಿ ಲಾಗಿನ್, ದೃಢೀಕರಣ, OTP, KYC ಅಥವಾ ಗುರುತಿಗೆ ಸಂಬಂಧಿಸಿದ ಪದಗಳಿವೆ.",
             "ಇದು URL ಪಠ್ಯದಿಂದ ಬಂದ ಸೂಚನೆ ಮಾತ್ರ; ತಾಣ ಸುರಕ್ಷಿತವೇ ಎಂಬ ತೀರ್ಪಲ್ಲ.",
-            "ಕರೆ ಮಾಡುವವರು, ಸಂದೇಶ ಕಳುಹಿಸುವವರು ಅಥವಾ ಸಹಾಯಕನೊಂದಿಗೆ OTP, ಬ್ಯಾಂಕ್ PIN, ಪಾಸ್‌ವರ್ಡ್ ಅಥವಾ ಮರುಪಡೆಯುವ ಕೋಡ್ ಹಂಚಿಕೊಳ್ಳಬೇಡಿ.");
+            "ಕರೆ ಮಾಡುವವರು, ಸಂದೇಶ ಕಳುಹಿಸುವವರು ಅಥವಾ ಸಹಾಯಕನೊಂದಿಗೆ OTP, ಬ್ಯಾಂಕ್ PIN, ಪಾಸ್‌ವರ್ಡ್ ಅಥವಾ ಮರುಪಡೆಯುವ ಕೋಡ್ ಹಂಚಿಕೊಳ್ಳಬೇಡಿ.",
+            "ಆನ್‌ಲೈನ್ ಪರಿಶೀಲನೆ ಪೂರ್ಣಗೊಂಡಿಲ್ಲ. ಈ URL ಸುರಕ್ಷಿತವೆಂದು ದೃಢೀಕರಿಸಲಾಗಿಲ್ಲ.",
+            "ರದ್ದುಮಾಡಿ");
         addSiteSafety(all, "bn",
             "গন্তব্য:",
             "স্থানীয় URL পরীক্ষা",
@@ -801,7 +813,9 @@ final class BrowserUiText {
             "সাধারণ ব্রাউজিংয়ে অনলাইন URL সুনাম চালু থাকায় এই URL URLhaus-এ পাঠানো হয়েছে।",
             "এই ঠিকানায় লগইন, যাচাইকরণ, OTP, KYC বা পরিচয়-সম্পর্কিত শব্দ আছে।",
             "এটি URL-এর লেখার উপর ভিত্তি করে একটি ইঙ্গিত মাত্র; সাইটটি নিরাপদ কি না তার রায় নয়।",
-            "কোনো কলার, বার্তা প্রেরক বা সহায়তাকারীকে কখনও OTP, ব্যাংক PIN, পাসওয়ার্ড বা পুনরুদ্ধার কোড দেবেন না।");
+            "কোনো কলার, বার্তা প্রেরক বা সহায়তাকারীকে কখনও OTP, ব্যাংক PIN, পাসওয়ার্ড বা পুনরুদ্ধার কোড দেবেন না।",
+            "অনলাইন পরীক্ষা সম্পূর্ণ হয়নি। এই URL নিরাপদ বলে নিশ্চিত করা হয়নি।",
+            "বাতিল");
         addSiteSafety(all, "mr",
             "गंतव्य:",
             "स्थानिक URL तपासणी",
@@ -820,7 +834,9 @@ final class BrowserUiText {
             "सामान्य ब्राउझिंगमध्ये ऑनलाइन URL प्रतिष्ठा सुरू असल्यामुळे हा URL URLhaus कडे पाठवला आहे.",
             "या पत्त्यात लॉगिन, पडताळणी, OTP, KYC किंवा ओळख-संबंधित शब्द आहेत.",
             "हा URL मधील मजकुरावर आधारित संकेत आहे; साइट सुरक्षित किंवा असुरक्षित असल्याचा निर्णय नाही.",
-            "कॉल करणाऱ्या व्यक्तीला, संदेश पाठवणाऱ्याला किंवा सहाय्यकाला OTP, बँक PIN, पासवर्ड किंवा पुनर्प्राप्ती कोड कधीही देऊ नका.");
+            "कॉल करणाऱ्या व्यक्तीला, संदेश पाठवणाऱ्याला किंवा सहाय्यकाला OTP, बँक PIN, पासवर्ड किंवा पुनर्प्राप्ती कोड कधीही देऊ नका.",
+            "ऑनलाइन तपासणी पूर्ण झाली नाही. हा URL सुरक्षित असल्याची खात्री झालेली नाही.",
+            "रद्द करा");
         addSiteSafety(all, "gu",
             "ગંતવ્ય:",
             "સ્થાનિક URL તપાસ",
@@ -839,7 +855,9 @@ final class BrowserUiText {
             "સામાન્ય બ્રાઉઝિંગમાં ઑનલાઇન URL પ્રતિષ્ઠા ચાલુ હોવાથી આ URL URLhaus ને મોકલાયો છે.",
             "આ સરનામામાં લૉગિન, ચકાસણી, OTP, KYC અથવા ઓળખ સંબંધિત શબ્દો છે.",
             "આ URL ના લખાણ પરથી મળેલો સંકેત છે; સાઇટ સુરક્ષિત છે કે નહીં તેનો ચુકાદો નથી.",
-            "કૉલ કરનાર, સંદેશ મોકલનાર અથવા સહાયક સાથે OTP, બેંક PIN, પાસવર્ડ અથવા પુનઃપ્રાપ્તિ કોડ ક્યારેય શેર ન કરો.");
+            "કૉલ કરનાર, સંદેશ મોકલનાર અથવા સહાયક સાથે OTP, બેંક PIN, પાસવર્ડ અથવા પુનઃપ્રાપ્તિ કોડ ક્યારેય શેર ન કરો.",
+            "ઑનલાઇન તપાસ પૂર્ણ થઈ નથી. આ URL સુરક્ષિત છે તેની ખાતરી મળી નથી.",
+            "રદ કરો");
         addSiteSafety(all, "pa",
             "ਮੰਜ਼ਿਲ:",
             "ਸਥਾਨਕ URL ਜਾਂਚ",
@@ -858,7 +876,9 @@ final class BrowserUiText {
             "ਆਮ ਬ੍ਰਾਊਜ਼ਿੰਗ ਵਿੱਚ ਆਨਲਾਈਨ URL ਭਰੋਸੇਯੋਗਤਾ ਚਾਲੂ ਹੋਣ ਕਰਕੇ ਇਹ URL URLhaus ਨੂੰ ਭੇਜਿਆ ਗਿਆ।",
             "ਇਸ ਪਤੇ ਵਿੱਚ ਲਾਗਇਨ, ਤਸਦੀਕ, OTP, KYC ਜਾਂ ਪਛਾਣ ਨਾਲ ਜੁੜੇ ਸ਼ਬਦ ਹਨ।",
             "ਇਹ URL ਦੇ ਲਿਖਤ ਤੋਂ ਮਿਲਿਆ ਸੰਕੇਤ ਹੈ, ਸਾਈਟ ਸੁਰੱਖਿਅਤ ਜਾਂ ਅਸੁਰੱਖਿਅਤ ਹੋਣ ਦਾ ਫ਼ੈਸਲਾ ਨਹੀਂ।",
-            "ਕਿਸੇ ਕਾਲ ਕਰਨ ਵਾਲੇ, ਸੁਨੇਹਾ ਭੇਜਣ ਵਾਲੇ ਜਾਂ ਸਹਾਇਕ ਨਾਲ OTP, ਬੈਂਕ PIN, ਪਾਸਵਰਡ ਜਾਂ ਰਿਕਵਰੀ ਕੋਡ ਕਦੇ ਸਾਂਝਾ ਨਾ ਕਰੋ।");
+            "ਕਿਸੇ ਕਾਲ ਕਰਨ ਵਾਲੇ, ਸੁਨੇਹਾ ਭੇਜਣ ਵਾਲੇ ਜਾਂ ਸਹਾਇਕ ਨਾਲ OTP, ਬੈਂਕ PIN, ਪਾਸਵਰਡ ਜਾਂ ਰਿਕਵਰੀ ਕੋਡ ਕਦੇ ਸਾਂਝਾ ਨਾ ਕਰੋ।",
+            "ਆਨਲਾਈਨ ਜਾਂਚ ਪੂਰੀ ਨਹੀਂ ਹੋਈ। ਇਸ URL ਦੇ ਸੁਰੱਖਿਅਤ ਹੋਣ ਦੀ ਪੁਸ਼ਟੀ ਨਹੀਂ ਹੋਈ।",
+            "ਰੱਦ ਕਰੋ");
         addSiteSafety(all, "ur",
             "منزل:",
             "مقامی URL جانچ",
@@ -877,7 +897,9 @@ final class BrowserUiText {
             "عام براؤزنگ میں آن لائن URL ساکھ فعال ہونے کی وجہ سے یہ URL URLhaus کو بھیجا گیا۔",
             "اس پتے میں لاگ اِن، تصدیق، OTP، KYC یا شناخت سے متعلق الفاظ ہیں۔",
             "یہ صرف URL کے متن سے ملنے والا اشارہ ہے، ویب سائٹ کے محفوظ یا غیر محفوظ ہونے کا فیصلہ نہیں۔",
-            "کسی کال کرنے والے، پیغام بھیجنے والے یا معاون کو OTP، بینک PIN، پاس ورڈ یا ریکوری کوڈ کبھی نہ دیں۔");
+            "کسی کال کرنے والے، پیغام بھیجنے والے یا معاون کو OTP، بینک PIN، پاس ورڈ یا ریکوری کوڈ کبھی نہ دیں۔",
+            "آن لائن جانچ مکمل نہیں ہوئی۔ اس URL کے محفوظ ہونے کی تصدیق نہیں ہوئی۔",
+            "منسوخ کریں");
         addSiteSafety(all, "es",
             "Destino:",
             "COMPROBACIÓN LOCAL DE URL",
@@ -896,7 +918,9 @@ final class BrowserUiText {
             "Esta URL se envió a URLhaus porque la reputación en línea está activada en la navegación normal.",
             "Esta dirección contiene palabras relacionadas con inicio de sesión, verificación, OTP, KYC o identidad.",
             "Esto es solo una pista basada en el texto de la URL, no un veredicto sobre la seguridad del sitio.",
-            "Nunca comparta un OTP, PIN bancario, contraseña o código de recuperación con quien llame, envíe mensajes o preste soporte.");
+            "Nunca comparta un OTP, PIN bancario, contraseña o código de recuperación con quien llame, envíe mensajes o preste soporte.",
+            "La comprobación en línea no terminó. No se ha confirmado que esta URL sea segura.",
+            "Cancelar");
         addSiteSafety(all, "fr",
             "Destination :",
             "VÉRIFICATION LOCALE DE L’URL",
@@ -915,7 +939,9 @@ final class BrowserUiText {
             "Cette URL a été envoyée à URLhaus car la réputation en ligne est activée en navigation normale.",
             "Cette adresse contient des termes liés à la connexion, à la vérification, à l’OTP, au KYC ou à l’identité.",
             "Il s’agit seulement d’un indice tiré du texte de l’URL, pas d’un verdict sur la sécurité du site.",
-            "Ne partagez jamais un OTP, un code PIN bancaire, un mot de passe ou un code de récupération avec un appelant, un expéditeur de message ou un agent d’assistance.");
+            "Ne partagez jamais un OTP, un code PIN bancaire, un mot de passe ou un code de récupération avec un appelant, un expéditeur de message ou un agent d’assistance.",
+            "La vérification en ligne n’a pas abouti. La sécurité de cette URL n’est pas confirmée.",
+            "Annuler");
         addSiteSafety(all, "ar",
             "الوجهة:",
             "فحص عنوان URL محليًا",
@@ -934,7 +960,9 @@ final class BrowserUiText {
             "تم إرسال هذا العنوان إلى URLhaus لأن فحص السمعة عبر الإنترنت مفعّل أثناء التصفح العادي.",
             "يحتوي هذا العنوان على كلمات تتعلق بتسجيل الدخول أو التحقق أو OTP أو KYC أو الهوية.",
             "هذه مجرد إشارة مستندة إلى نص عنوان URL، وليست حكمًا على أمان الموقع.",
-            "لا تشارك مطلقًا OTP أو رقم التعريف البنكي أو كلمة المرور أو رمز الاسترداد مع متصل أو مرسل رسالة أو موظف دعم.");
+            "لا تشارك مطلقًا OTP أو رقم التعريف البنكي أو كلمة المرور أو رمز الاسترداد مع متصل أو مرسل رسالة أو موظف دعم.",
+            "لم يكتمل الفحص عبر الإنترنت. لم يتم التأكد من أن عنوان URL هذا آمن.",
+            "إلغاء");
 
         TEXT = Collections.unmodifiableMap(all);
     }
