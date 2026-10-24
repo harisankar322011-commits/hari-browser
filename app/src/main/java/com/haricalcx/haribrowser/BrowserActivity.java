@@ -3079,10 +3079,6 @@ public class BrowserActivity extends ComponentActivity {
             showToast("That offline snapshot is no longer available.");
             return;
         }
-        if (selected == null) {
-            showToast("That offline snapshot is no longer available.");
-            return;
-        }
         String title = selected.optString("title", "Saved page");
         String body = selected.optString("body", "");
         ScrollView scroll = new ScrollView(this);
