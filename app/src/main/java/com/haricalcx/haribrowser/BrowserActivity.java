@@ -2846,8 +2846,10 @@ public class BrowserActivity extends ComponentActivity {
                 "Checks search queries on this device for a starter list of explicit adult-content, gambling, " +
                 "graphic real-world violence, self-harm instructions, dangerous weapon/explosive instructions, " +
                 "and illegal-drug procurement/manufacture. It blocks selected adult/gambling domains and requests " +
-                "strict SafeSearch for Google, Bing, Brave Search and DuckDuckGo. Startpage filtering is controlled " +
-                "by Startpage itself. A parent PIN is required to turn this feature off from Hari Browser.\n\n" +
+                "strict SafeSearch for Google, Bing, Brave Search and DuckDuckGo where provider URL controls support it. " +
+                "Other supported providers such as Startpage, Ecosia, Mojeek and Qwant may require their own settings; " +
+                "local query checks still run, but results filtering is not guaranteed. A parent PIN is required to turn " +
+                "this feature off from Hari Browser.\n\n" +
                 "Filtering is phrase-based and can miss altered wording or content inside a webpage; legitimate " +
                 "queries can occasionally be blocked. Prevention, educational and help-seeking searches are allowed " +
                 "where possible. This is a browser-level safeguard, not a complete content filter or Android " +
