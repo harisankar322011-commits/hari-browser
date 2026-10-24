@@ -733,7 +733,10 @@ body.wallpaper-on.dark .hero{background-image:linear-gradient(130deg,rgba(18,25,
 
 <section id="privacyPanel" class="panel">
   <div class="section-head"><h2>Privacy dashboard</h2><span class="mini">On-device controls</span></div>
-  <div class="card"><h3>🛡 Safer browsing</h3><p>HTTPS-only navigation, certificate-error blocking, Android Safe Browsing, mixed-content blocking, disabled file access, disabled geolocation, and denied site permission prompts.</p><a class="action" style="margin-top:10px" href="https://hari-browser-home.invalid/action/security">View current site security ↗</a></div>
+  <div class="card"><h3>🛡 Safer browsing</h3><p>HTTPS-only navigation, certificate-error blocking, Android Safe Browsing, mixed-content blocking, disabled file access, disabled geolocation, and denied site permission prompts.</p><div class="actions" style="margin-top:10px">
+    <a class="action" href="https://hari-browser-home.invalid/action/protections">HARI SINGULARITY Protection Dashboard<span>Review active safeguards and honest limitations</span></a>
+    <a class="action" href="https://hari-browser-home.invalid/action/security">View current site security<span>Inspect this website's connection settings</span></a>
+  </div></div>
   <div class="card"><h3>🧹 Data controls</h3><p>History is disabled by default. Bookmarks use encrypted on-device storage. Private browsing uses a separate profile on supported Android versions, but it cannot hide activity from websites or your network provider.</p><div class="actions" style="margin-top:10px"><a class="action" href="https://hari-browser-home.invalid/action/clear">Clear browser data<span>Review before clearing</span></a><a class="action" href="https://hari-browser-home.invalid/action/emergency">Emergency clear<span>Confirmation required</span></a><a class="action" href="https://hari-browser-home.invalid/action/settings">Privacy settings<span>Cookies, JavaScript and trackers</span></a></div></div>
   <div class="card"><h3>What this browser does not promise</h3><p>It is not a complete anonymity system. Websites and your selected search provider still receive requests when you visit them. The local tracker blocklist is best-effort, and private mode cannot erase downloads, screenshots or network logs.</p></div>
 </section>

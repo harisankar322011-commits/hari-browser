@@ -1186,6 +1186,9 @@ public class BrowserActivity extends ComponentActivity {
             case "cryptography":
                 startActivity(new Intent(BrowserActivity.this, CryptographyActivity.class));
                 break;
+            case "protections":
+                showSecurityPrivacyScan();
+                break;
             case "security":
                 showSiteSecurity();
                 break;
@@ -3183,11 +3186,13 @@ public class BrowserActivity extends ComponentActivity {
     private void showSecurityPrivacyScan() {
         Tab tab = currentTab();
         StringBuilder report = new StringBuilder();
-        report.append("HARI BROWSER PROTECTION STATUS\n\n");
+        report.append("HARI SINGULARITY — PROTECTION DASHBOARD\n\n");
+        report.append("LAYER 1 — HARI SHIELD\n");
         report.append("✓ HTTPS-only navigation: ON (HTTP pages are rejected)\n");
         report.append("✓ TLS certificate errors: CANCELLED (invalid certificates are not bypassed)\n");
         report.append("✓ Android WebView Safe Browsing: enabled where supported by the installed WebView\n");
         report.append("✓ Mixed content: blocked by browser policy\n");
+        report.append("LAYER 2 — HARI GHOST\n");
         report.append("✓ Third-party cookies: BLOCKED\n");
         report.append("Local tracker blocking: ").append(trackersEnabled() ? "ON (local list; incomplete)" : "OFF").append("\n");
         if (tab != null && !tab.home && fingerprintProtectionActive(tab)) {
@@ -3200,12 +3205,28 @@ public class BrowserActivity extends ComponentActivity {
         report.append("JavaScript: ").append(javascriptEnabled() ? "ON (needed by many sites; adds script execution risk)" : "OFF").append("\n");
         report.append("First-party cookies: ").append(cookiesEnabled() ? "ON" : "OFF").append("\n");
         report.append("Website images: ").append(imagesEnabled() ? "ON" : "BLOCKED").append("\n");
+        report.append("LAYER 3 — HARI INTELLIGENCE\n");
+        report.append("Hari AI: user-invoked online assistance; prompts go to the configured service when you choose to use it. Do not submit passwords, OTPs, or private secrets.\n");
+        report.append("LAYER 4 — HARI TEEN GUARD\n");
         report.append("Teen Protection: ").append(teenProtectionEnabled() ? "ON" : "OFF").append("\n");
         report.append("Browsing history: ");
         if (privateMode) report.append("not saved in private mode\n");
         else report.append(historyEnabled() ? "ON (encrypted on this device)" : "OFF by default/disabled").append("\n");
         report.append("Site permissions: camera/microphone requests denied; geolocation disabled; local file/content access disabled\n");
         report.append("Clear browsing data on exit: ").append(settings.getBoolean("clear_data_on_exit", false) ? "ON (best effort when the activity exits)" : "OFF").append("\n");
+        report.append("LAYER 5 — HARI LABS\n");
+        report.append("Optional tools include reader mode, offline reading, cryptography utilities, and userscripts. Review external userscripts carefully; they can change page behavior.\n");
+        boolean automaticUrlhaus = !privateMode && getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE).getBoolean("auto_urlhaus_enabled", false);
+        boolean urlhausConfigured = !privateMode && !protectionStore.get("hari_rep_store_1", "").isEmpty();
+        if (privateMode) {
+            report.append("Automatic URL reputation: OFF in Private mode; no URL is sent by the automatic lookup feature.\n");
+        } else if (automaticUrlhaus && urlhausConfigured) {
+            report.append("Automatic URL reputation: ON; checked URLs are sent to URLhaus. Avoid using it on URLs containing secret tokens.\n");
+        } else if (automaticUrlhaus) {
+            report.append("Automatic URL reputation: enabled but not configured; online URL checks are unavailable.\n");
+        } else {
+            report.append("Automatic URL reputation: OFF; URLs are not sent by automatic URLhaus checks.\n");
+        }
         SharedPreferences downloadPrefs = settings;
         String latestDownloadStatus = downloadPrefs.getString("last_download_scan_status", null);
         if (latestDownloadStatus == null) {
@@ -3224,7 +3245,7 @@ public class BrowserActivity extends ComponentActivity {
         report.append("• Device-wide virus/malware scanning or cleaning is NOT available to Hari Browser. Android's app sandbox prevents an ordinary browser from safely scanning infections in other apps or private files. Use Google Play Protect for a device scan.");
 
         new AlertDialog.Builder(this)
-                .setTitle("Security & privacy scan")
+                .setTitle("HARI SINGULARITY Protection Dashboard")
                 .setMessage(report.toString())
                 .setPositiveButton("Done", null)
                 .setNegativeButton("Latest download scan", (dialog, which) -> showLastDownloadScan())
@@ -3485,14 +3506,14 @@ public class BrowserActivity extends ComponentActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Hari Browser privacy")
                 .setMessage(
-                        "Local-first design\\n\\n" +
-                        "• HTTPS-only navigation; cleartext traffic is disabled.\\n" +
-                        "• Android WebView Safe Browsing is enabled; certificate errors are cancelled.\\n" +
-                        "• Third-party cookies are disabled; common ad/analytics hosts are blocked locally.\\n" +
-                        "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\\n" +
-                        "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\\n" +
-                        "• History is off by default; private mode never saves history.\\n" +
-                        "• No app analytics, ad SDKs, or browser account. No remote reputation request is made unless you explicitly configure MalwareBazaar hash lookup; only SHA-256 hashes are submitted, never file contents or URLs.\\n\\n" +
+                        "Local-first design\n\n" +
+                        "• HTTPS-only navigation; cleartext traffic is disabled.\n" +
+                        "• Android WebView Safe Browsing is enabled; certificate errors are cancelled.\n" +
+                        "• Third-party cookies are disabled; common ad/analytics hosts are blocked locally.\n" +
+                        "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\n" +
+                        "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\n" +
+                        "• History is off by default; private mode never saves history.\n" +
+                        "• No app analytics, ad SDKs, or browser account. Remote reputation checks are opt-in: enabling automatic URLhaus lookup sends the checked URL to URLhaus during normal browsing; avoid enabling it for URLs containing secret tokens. MalwareBazaar hash lookups submit only SHA-256 hashes, never file contents. Automatic URL reputation is disabled in Private mode.\n\n" +
                         "Limitations: the device's WebView provides the rendering engine; websites and the selected search engine receive normal requests. This app does not hide traffic from your network or internet provider. The blocker is incomplete, and private mode cannot erase downloads, screenshots, DNS/network logs, or every possible site artifact.")
                 .setPositiveButton("OK", null)
                 .show();
