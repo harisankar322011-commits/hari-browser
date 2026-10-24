@@ -5,3 +5,5 @@ Hari Browser 2.4.0
 - Local file checks and site-safety signals are best-effort; they do not prove that a website or file is safe.
 
 Important: the previously reported Android device-protection warning must be investigated against a freshly built and independently scanned APK. Do not ignore a device warning.
+- Safely opens validated email and dialer links only after confirmation; unsupported schemes remain blocked.
+- Hari AI now displays the exact model ID used for each successful reply.
