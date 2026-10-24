@@ -2083,7 +2083,7 @@ public class BrowserActivity extends ComponentActivity {
                     .setMessage("Hari AI will stop working until a new key is saved.")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear key", (d, which) -> {
-                        secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", ignored -> "",
+                        secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", stored -> "",
                                 getMainExecutor(), cleared -> {
                                     if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
                                     if (cleared == null) {
