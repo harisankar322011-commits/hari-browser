@@ -8,6 +8,9 @@ import android.util.Base64;
 
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
+import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -79,6 +82,25 @@ public final class SecureStore {
             preferences.edit().remove(name).apply();
             return fallback;
         }
+    }
+
+    /**
+     * Decrypt a value on the serialized storage queue and dispatch the result to the
+     * caller-selected executor (normally an Activity's main executor). The callback
+     * must still check its lifecycle before updating UI.
+     */
+    public void getAsync(String name, String fallback, Executor callbackExecutor,
+                         Consumer<String> callback) {
+        Objects.requireNonNull(callbackExecutor, "callbackExecutor");
+        Objects.requireNonNull(callback, "callback");
+        StorageTaskQueue.execute(() -> {
+            String value = get(name, fallback);
+            try {
+                callbackExecutor.execute(() -> callback.accept(value));
+            } catch (RuntimeException ignored) {
+                // A shutting-down callback executor must not crash the storage worker.
+            }
+        });
     }
 
     public synchronized void remove(String name) {
