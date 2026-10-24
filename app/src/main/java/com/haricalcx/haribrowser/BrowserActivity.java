@@ -4106,10 +4106,11 @@ public class BrowserActivity extends ComponentActivity {
         final String safeFilename = filename;
         boolean potentiallyExecutable = DownloadSafetyPolicy.looksExecutable(safeFilename, mimeType);
         new AlertDialog.Builder(this)
-                .setTitle("Download file")
-                .setMessage(DownloadSafetyPolicy.confirmationMessage(safeFilename, potentiallyExecutable))
-                .setNegativeButton("Cancel", null)
-                .setNeutralButton("File safety info", (d, w) -> showToast("File checks detect some risky types only; they cannot prove a file is malware-free."))
+                .setTitle(ui("Download file"))
+                .setMessage(DownloadSafetyPolicy.confirmationMessage(safeFilename, potentiallyExecutable,
+                        settings.getString("home_language", "en")))
+                .setNegativeButton(ui("Cancel"), null)
+                .setNeutralButton(ui("File safety info"), (d, w) -> showToast(ui("File checks detect some risky types only; they cannot prove a file is malware-free.")))
                 .setPositiveButton("Download", (d, w) -> startDownload(url, safeFilename, mimeType))
                 .show();
     }
