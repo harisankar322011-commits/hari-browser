@@ -1534,6 +1534,12 @@ public class BrowserActivity extends ComponentActivity {
         scroll.addView(list);
         AlertDialog listDialog = new AlertDialog.Builder(this)
                 .setTitle(title).setView(scroll).setPositiveButton("Done", null).create();
+        if (bookmarks && "Bookmarks".equals(title)) {
+            TextView folders = pillButton("Folders", false, this::showBookmarkFolderPicker);
+            LinearLayout.LayoutParams foldersLp = new LinearLayout.LayoutParams(-1, dp(36));
+            foldersLp.setMargins(0, dp(2), 0, dp(8));
+            list.addView(folders, foldersLp);
+        }
         if (array.length() == 0) {
             TextView empty = new TextView(this);
             empty.setText(bookmarks ? "No bookmarks saved yet." : "No browsing history available.");
@@ -1562,6 +1568,13 @@ public class BrowserActivity extends ComponentActivity {
             urlView.setTextSize(11);
             row.addView(titleView);
             row.addView(urlView);
+            if (bookmarks) {
+                TextView folderView = new TextView(this);
+                folderView.setText("Folder: " + BookmarkFolders.folderFor(item));
+                folderView.setTextColor(MUTED);
+                folderView.setTextSize(11);
+                row.addView(folderView);
+            }
             LinearLayout actions = new LinearLayout(this);
             actions.setOrientation(LinearLayout.HORIZONTAL);
             actions.setGravity(Gravity.END);
@@ -1590,6 +1603,15 @@ public class BrowserActivity extends ComponentActivity {
                 LinearLayout.LayoutParams moveDownLp = new LinearLayout.LayoutParams(dp(40), dp(36));
                 moveDownLp.setMargins(dp(4), dp(6), 0, 0);
                 actions.addView(moveDown, moveDownLp);
+
+                TextView moveToFolder = pillButton("▣", false, () -> {
+                    listDialog.dismiss();
+                    chooseBookmarkFolder(url);
+                });
+                moveToFolder.setContentDescription("Move bookmark to a folder");
+                LinearLayout.LayoutParams folderLp = new LinearLayout.LayoutParams(dp(38), dp(36));
+                folderLp.setMargins(dp(4), dp(6), 0, 0);
+                actions.addView(moveToFolder, folderLp);
 
                 TextView remove = pillButton("Remove", false, () -> {
                     listDialog.dismiss();
@@ -1622,6 +1644,94 @@ public class BrowserActivity extends ComponentActivity {
         showToast("Bookmark removed.");
         // Reopen the list to reflect the change.
         new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+    }
+
+    private void showBookmarkFolderPicker() {
+        if (privateMode) return;
+        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            ArrayList<String> folders = new ArrayList<>();
+            folders.add(BookmarkFolders.ALL_BOOKMARKS);
+            folders.addAll(BookmarkFolders.folderNames(serialized));
+            String[] labels = folders.toArray(new String[0]);
+            new AlertDialog.Builder(this)
+                    .setTitle("Open bookmarks folder")
+                    .setItems(labels, (dialog, which) -> {
+                        String selected = labels[which];
+                        if (BookmarkFolders.ALL_BOOKMARKS.equals(selected)) {
+                            showSavedItems(parseArray(serialized), "Bookmarks", true);
+                        } else {
+                            String filtered = BookmarkFolders.filterByFolder(serialized, selected);
+                            showSavedItems(parseArray(filtered), "Folder: " + selected, true);
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+    }
+
+    private void chooseBookmarkFolder(String url) {
+        if (privateMode) {
+            showToast("Bookmarks cannot be changed in private browsing.");
+            return;
+        }
+        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            ArrayList<String> folders = new ArrayList<>(BookmarkFolders.folderNames(serialized));
+            folders.add("Create new folder…");
+            String[] labels = folders.toArray(new String[0]);
+            new AlertDialog.Builder(this)
+                    .setTitle("Move bookmark to folder")
+                    .setItems(labels, (dialog, which) -> {
+                        String selected = labels[which];
+                        if ("Create new folder…".equals(selected)) {
+                            promptNewBookmarkFolder(url);
+                        } else {
+                            saveBookmarkFolder(url, selected);
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+    }
+
+    private void promptNewBookmarkFolder(String url) {
+        EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint("Folder name (up to 40 characters)");
+        new AlertDialog.Builder(this)
+                .setTitle("Create bookmark folder")
+                .setView(input)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Create", (dialog, which) -> {
+                    String folder = BookmarkFolders.normalizeFolderName(input.getText().toString());
+                    if (folder.isEmpty() || BookmarkFolders.ALL_BOOKMARKS.equals(folder)) {
+                        showToast("Enter a valid folder name.");
+                        return;
+                    }
+                    saveBookmarkFolder(url, folder);
+                })
+                .show();
+    }
+
+    private void saveBookmarkFolder(String url, String folder) {
+        String normalized = BookmarkFolders.normalizeFolderName(folder);
+        if (normalized.isEmpty() || BookmarkFolders.ALL_BOOKMARKS.equals(normalized)) {
+            showToast("Enter a valid folder name.");
+            return;
+        }
+        secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode) return;
+            String before = parseArray(serialized).toString();
+            String after = BookmarkFolders.move(before, url, normalized);
+            if (before.equals(after)) {
+                showToast("Bookmark not found or folder unchanged.");
+                return;
+            }
+            secureStore.putAsync(KEY_BOOKMARKS, after);
+            showToast("Bookmark moved to " + normalized + ".");
+            new android.os.Handler(getMainLooper()).postDelayed(this::showBookmarks, 180);
+        });
     }
 
     private void moveBookmark(String url, int direction) {
