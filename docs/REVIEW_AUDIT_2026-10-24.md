@@ -15,38 +15,40 @@ The previously reported Android device-protection warning remains an unresolved 
 | Split `BrowserActivity.java` into controllers | Missing; source is about 3,700 lines. | Refactor incrementally after behavior tests. |
 | Move `HomePage.java` into HTML/CSS/JS assets | Missing; source is about 1,250 lines. | Extract while preserving synthetic-origin action checks. |
 | Move SecureStore/JSON work off UI thread | Partially missing; calls remain synchronous. | Use a lifecycle-safe background executor and test ordering/errors. |
-| Importable ad/tracker host lists | Feature branch: hosts-format importer, bounded parser and custom matcher added; CI pending. Does not interpret full Adblock syntax. | Verify parsing/performance and false positives; keep built-in rules. |
+| Importable ad/tracker host lists | Implemented in main via PR #47; automated CI passed. Hosts-format importer has bounded parser and custom matcher; it does not interpret full Adblock syntax. | Verify parsing/performance and false positives; keep built-in rules. |
 | Readability-based article extraction | Missing; current reader mode injects CSS into the source document. | Add licensed and tested article extraction. |
 | Persist tabs after process death | Missing; current pending URL restore supports theme recreation only. | Add bounded encrypted standard-mode tab restore; never persist private tabs into normal storage. |
 | External handling for non-HTTPS schemes | Missing; schemes are blocked. | Consider a strict allowlist and confirmation for safe schemes; never blindly launch arbitrary intent/file/custom URLs. |
-| Per-site fingerprint shield toggle | Feature branch; CI pending. Adds an exact-host override with explicit confirmation before reducing protection, a 128-host maximum and visible per-site state. Subdomains remain separate. | Validate script injection, settings behavior and reload of currently open pages before merge. |
-| Configurable offline-reading cap | Missing; fixed at 8 pages / 24,000 characters. | Add bounded preferences and hard maximums. |
-| In-app download scan history | Feature branch: bounded, sanitized last-20 result list and UI added; CI pending. | Verify private-profile separation and presentation; never label BASIC_CHECKS_ONLY as clean. |
+| Per-site fingerprint shield toggle | Implemented in main via PR #48; automated CI passed. Adds an exact-host page-script exemption, explicit privacy confirmation, max 128 entries and visible per-site state; reduced network User-Agent and other protections remain active. Subdomains are separate. | Validate script injection, settings behavior and reload of currently open pages before merge. |
+| Configurable offline-reading cap | Implemented in main via PR #49; automated CI passed. Users can choose 4/8/12 pages and 8,000/24,000/32,000 characters per page; hard ceilings remain 12 pages and 32,000 characters. | Add bounded preferences and hard maximums. |
+| In-app download scan history | Implemented in main via PR #47; automated CI passed. Bounded, sanitized last-20 scan-result list added and private-mode history is cleared at session exit. | Verify private-profile separation and presentation; never label BASIC_CHECKS_ONLY as clean. |
 | Expose additional search engines | Feature branch; CI pending. Adds Ecosia, Mojeek and Qwant to the picker, centralizes URL mapping and tests all selectable endpoints/query escaping. UI explains that strict SafeSearch is not forcibly enforceable for every provider. | Confirm tests pass and manually verify search results, URL interception and Teen Protection behavior. |
 | Bookmark folders/reordering | Missing; flat list. | Add a backward-compatible data schema and tests. |
 | Complete localization using Android resources | Partial; `BrowserUiText` translates some runtime strings, while many dialogs/toasts remain English. | Migrate gradually, checking Malayalam and other supported locales/fallbacks. |
 | Instrumented behavioral tests | Partial; current suite is JVM tests. | Add Android tests for lifecycle, URL interception, settings and private cleanup. |
-| Bound session approval cache | Feature branch: synchronized 256-entry cache with eviction tests added; CI pending. | Keep bounded and test eviction. |
+| Bound session approval cache | Implemented in main via PR #47; automated CI passed. Synchronized cache is bounded at 256 URLs. | Keep bounded and test eviction. |
 | AI model selection visibility | Partial: named model list and discovery fallback exist; UI does not clearly identify the model that answered. | Show the resolved model in response details and test fallback. |
-| Version 8 changelog | Added on feature branch. | Keep aligned with shipped code. |
-| ZXing third-party attribution | `NOTICE` added on feature branch for ZXing Core 3.5.4 / Apache-2.0. | Recheck whenever dependencies change. |
-| Renderer crash recovery | Feature branch restores the prior HTTPS URL rather than always returning home; CI pending. | Test recovery and safety prompts on device. |
+| Version 8 changelog | Added in main via PR #47. | Keep aligned with shipped code. |
+| ZXing third-party attribution | `NOTICE` added in main via PR #47 for ZXing Core 3.5.4 / Apache-2.0. | Recheck whenever dependencies change. |
+| Renderer crash recovery | Implemented in main via PR #47; automated CI passed. Restores the prior HTTPS URL rather than always returning home. | Test recovery and safety prompts on device. |
 
-## Work prepared on the feature branch
+## Implemented on main in tested PRs
 
-- Bounded download scan history (20 items), sanitized text fields, timestamp and valid SHA-256 display.
-- Custom hosts-format tracker-list import/removal: maximum 512 KiB, 20,000 lines and 10,000 unique hosts. Import is normal-mode only; the built-in tracker list remains.
-- Bounded session approvals (256 URLs) and recovery of the previous HTTPS page after renderer crash.
-- Focused JVM tests for scan history, host-list parsing/matching and approval eviction.
-- Version 8 changelog and third-party notice.
+- PR #47: bounded download scan history (20 items), sanitized report fields, timestamp and valid SHA-256 display; hosts-format tracker-list import/removal (max 512 KiB, 20,000 lines, 10,000 unique hosts); session approval cache (256 URLs); HTTPS renderer recovery; focused tests; version 8 changelog and ZXing notice.
+- PR #48: bounded (128-host) per-site fingerprint page-script exceptions with explicit privacy confirmation, per-site status reporting, private-session cleanup and focused policy/script-wrapper tests.
+- PR #49: configurable offline reading page/text limits, hard caps, consistent limit enforcement across capture/read/remove operations and focused JVM tests.
+
+## Additional feature branch work
+
+- `feature/indian-friendly-search-engines` adds Ecosia, Mojeek and Qwant to the picker, centralizes URL mapping and query encoding, and discloses the limits of provider-enforced SafeSearch. Pending CI and PR review.
 
 ## Next order
 
 1. Resolve the device-protection alert with a fresh, independently scanned, consistently signed APK.
 2. Add behavioral Android tests.
 3. Make storage I/O asynchronous and persist standard-mode tabs securely.
-4. Implement article extraction and per-site fingerprint controls.
-5. Complete localization and search-engine options.
-6. Refactor large classes, then improve bookmarks and offline-reading settings.
+4. Implement Readability-based article extraction and verify the merged per-site fingerprint control on real WebView versions.
+5. Complete localization and broaden behavioral Android tests.
+6. Refactor large classes, then improve bookmarks and make SecureStore operations asynchronous.
 
 No item is considered complete merely because a dashboard or document names it.
