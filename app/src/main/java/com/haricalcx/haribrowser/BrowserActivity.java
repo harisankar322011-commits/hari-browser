@@ -3764,14 +3764,7 @@ public class BrowserActivity extends ComponentActivity {
                         showToast("Couldn't extract a readable article from this page.");
                         return;
                     }
-                    Intent intent = new Intent(BrowserActivity.this, ReaderArticleActivity.class);
-                    intent.putExtra(ReaderArticleActivity.EXTRA_TITLE, article.title);
-                    intent.putExtra(ReaderArticleActivity.EXTRA_BYLINE, article.byline);
-                    intent.putExtra(ReaderArticleActivity.EXTRA_TEXT, article.text);
-                    intent.putExtra(ReaderArticleActivity.EXTRA_URL, article.url);
-                    intent.putExtra(ReaderArticleActivity.EXTRA_LANGUAGE, article.language);
-                    intent.putExtra(ReaderArticleActivity.EXTRA_DIRECTION, article.direction);
-                    startActivity(intent);
+                    showExtractedArticle(article);
                 });
             });
         }, "HariBrowser-ReaderLoad").start();
@@ -3782,6 +3775,51 @@ public class BrowserActivity extends ComponentActivity {
             tab.readerExtractionInProgress = false;
             tab.readerExtractionUrl = null;
         }
+    }
+
+    private void showExtractedArticle(ReaderArticleExtractor.Article article) {
+        // Keep the text in the calling profile's process. In Private mode this is essential:
+        // article text must not be sent to a normal-process Activity through Intent extras.
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(18), dp(8), dp(18), dp(18));
+
+        if (!article.byline.isEmpty()) {
+            TextView byline = new TextView(this);
+            byline.setText(article.byline);
+            byline.setTextColor(MUTED);
+            byline.setTextSize(13);
+            content.addView(byline);
+        }
+        TextView source = new TextView(this);
+        source.setText("Source: " + safeHost(article.url));
+        source.setTextColor(MUTED);
+        source.setTextSize(12);
+        source.setPadding(0, dp(6), 0, dp(10));
+        content.addView(source);
+
+        TextView body = new TextView(this);
+        body.setText(article.text);
+        body.setTextColor(INK);
+        body.setTextSize(17);
+        body.setTextIsSelectable(true);
+        body.setLineSpacing(dp(5), 1.1f);
+        if ("rtl".equals(article.direction)) body.setTextDirection(View.TEXT_DIRECTION_RTL);
+        else if ("ltr".equals(article.direction)) body.setTextDirection(View.TEXT_DIRECTION_LTR);
+        content.addView(body);
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.addView(content);
+        int screenHeightDp = (int) (getResources().getDisplayMetrics().heightPixels
+                / getResources().getDisplayMetrics().density);
+        scroll.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(Math.max(240, screenHeightDp - 230))));
+
+        new AlertDialog.Builder(this)
+                .setTitle(article.title)
+                .setView(scroll)
+                .setPositiveButton("Done", null)
+                .show();
     }
 
     private void applyReaderStyles(Tab tab) {
