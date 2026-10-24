@@ -48,7 +48,7 @@ public class DownloadScanHistoryTest {
                 .put(new JSONObject().put("id", 5).put("filename", "duplicate.txt"));
         JSONArray parsed = DownloadScanHistory.parse(invalid.toString());
         assertEquals(1, parsed.length());
-        assertEquals("Downloaded file", parsed.getJSONObject(0).getString("filename"));
+        assertEquals("safe.txt", parsed.getJSONObject(0).getString("filename"));
     }
 
     @Test
