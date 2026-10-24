@@ -48,5 +48,6 @@ public class TrackerFilterListTest {
         assertFalse(TrackerFilterList.isDomain("*.example.com"));
         assertFalse(TrackerFilterList.isDomain("-bad.example"));
         assertFalse(TrackerFilterList.isDomain("example..com"));
+        assertFalse(TrackerFilterList.isDomain("0.0.0.0"));
     }
 }
