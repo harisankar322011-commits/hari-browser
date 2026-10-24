@@ -228,9 +228,10 @@ try:
           "Gemini" not in browser and "Gemini" not in home_page)
     check("No API key is hard-coded in source",
           re.search(r"AIza[0-9A-Za-z_-]{20,}", browser + ai_client) is None)
-    check("Hari AI key uses the encrypted store",
-          "secureStore.put(KEY_HARI_AI_API_KEY, value)" in browser and
-          'secureStore.get(KEY_HARI_AI_API_KEY, "")' in browser)
+    check("Hari AI key uses asynchronous encrypted storage",
+          "secureStore.putAsync(KEY_HARI_AI_API_KEY, value)" in browser and
+          'secureStore.getAsync(KEY_HARI_AI_API_KEY, "", getMainExecutor()' in browser and
+          'secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", ignored -> ""' in browser)
     check("No JavaScript-to-native bridge in the general browser WebView",
           re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
     crypto_html = read("app/src/main/assets/hari_cryptography.html")
