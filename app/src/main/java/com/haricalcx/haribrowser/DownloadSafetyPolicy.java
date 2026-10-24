@@ -29,13 +29,19 @@ final class DownloadSafetyPolicy {
     }
 
     static String confirmationMessage(String filename, boolean potentiallyExecutable) {
+        return confirmationMessage(filename, potentiallyExecutable, "en");
+    }
+
+    static String confirmationMessage(String filename, boolean potentiallyExecutable, String languageCode) {
         String safeName = filename == null || filename.trim().isEmpty() ? "download" : filename;
-        StringBuilder message = new StringBuilder("Save ")
-                .append(safeName)
-                .append(" to Downloads?");
+        String prompt = BrowserUiText.translate(languageCode, "Save %s to Downloads?")
+                .replace("%s", safeName);
+        String warning = BrowserUiText.translate(languageCode, EXECUTABLE_WARNING);
+        String checkLimits = BrowserUiText.translate(languageCode, CHECK_LIMITS);
+        StringBuilder message = new StringBuilder(prompt);
         if (potentiallyExecutable) {
-            message.append("\n\n").append(EXECUTABLE_WARNING);
+            message.append("\n\n").append(warning);
         }
-        return message.append("\n\n").append(CHECK_LIMITS).toString();
+        return message.append("\n\n").append(checkLimits).toString();
     }
 }
