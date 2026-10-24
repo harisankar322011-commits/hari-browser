@@ -40,4 +40,18 @@ public final class SearchEngineUrlsTest {
         assertEquals("https://duckduckgo.com/?q=",
                 SearchEngineUrls.searchUrl(null, null));
     }
+    @Test
+    public void newProvidersStillUseLocalTeenProtectionQueryChecks() {
+        for (String engine : new String[] {"Ecosia", "Mojeek", "Qwant"}) {
+            String blocked = SearchEngineUrls.searchUrl(engine, "porn");
+            assertTrue(engine + " query should be recognized by Teen Protection",
+                    TeenProtection.isBlockedSearchUrl(blocked));
+
+            String ordinary = SearchEngineUrls.searchUrl(engine, "astronomy for beginners");
+            assertFalse(engine + " educational query should remain allowed",
+                    TeenProtection.isBlockedSearchUrl(ordinary));
+            assertEquals(ordinary, TeenProtection.withStrictSafeSearch(ordinary));
+        }
+    }
+
 }
