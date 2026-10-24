@@ -1,53 +1,65 @@
-# Hari Browser review audit — 24 October 2026
+# Hari Browser Review Audit — 24 October 2026
 
-## Scope and safety status
+## Scope and evidence
 
-The uploaded review describes commit `71ac678`. At the time this branch was created, current `main` was `614ef6e6b2663c1b0298aa1f875b571bc4902e0d` (version 2.4.0 / versionCode 8), including merged PRs #47 and #48. PR #47 implemented scan history/tracker imports and related bounded controls; PR #48 implemented per-site page-script fingerprint exceptions. This document tracks the review recommendations against source; branch-only changes remain unverified until CI passes and the PR is reviewed.
+The supplied review inspected commit \`71ac678\` (2.4.0 / versionCode 8). The current source baseline for this implementation batch is main commit \`d208dbaa7379923d5a783b4137541a08160535b6\`, after the changes described below.
 
-The previously reported Android device-protection warning remains an unresolved release blocker. The release workflow checks the packaged DEX for the EICAR test marker and the post-merge release build passed, but this does not prove the device warning is a false positive. Build a fresh artifact, verify its signature/hash, scan independently, and test on a spare device. Never ignore or bypass the warning.
+The previously reported Android device-protection warning remains an **unresolved release blocker**. Passing source checks and CI builds does not prove the old APK was safe or the warning was a false positive. A freshly built APK still requires signature/hash verification, independent scanning and careful device testing. Never bypass the warning. The CI pipeline can produce an unsigned validation artifact if the stable release signer is not configured.
 
-## Complete item-by-item audit
+This is a source audit and prioritized implementation ledger, not a claim of full runtime verification. All user-visible security features require device testing as well as automated checks.
 
-| Item from review | Current status | Action |
+## Full review-item status
+
+| Review recommendation | Status on current main | Remaining action |
 |---|---|---|
-| Deny-by-default WebView, HTTPS-only navigation, TLS cancellation, Safe Browsing, encrypted store, private-process isolation, no general JS bridge, CI hygiene and India-focused home page | Present per the source review; manifest/source inspection supports the HTTPS/cleartext posture. Runtime behavior still needs device tests. | Preserve; add lifecycle/navigation behavior tests. |
-| Device-protection warning and stable signed APK | Open; no conclusive runtime diagnosis or verified stable signed artifact. | P0: investigate fresh signed APK with independent scans and device testing. |
-| Split `BrowserActivity.java` into controllers | Missing; source is about 3,700 lines. | Refactor incrementally after behavior tests. |
-| Move `HomePage.java` into HTML/CSS/JS assets | Missing; source is about 1,250 lines. | Extract while preserving synthetic-origin action checks. |
-| Move SecureStore/JSON work off UI thread | Partially missing; calls remain synchronous. | Use a lifecycle-safe background executor and test ordering/errors. |
-| Importable ad/tracker host lists | Implemented in `main` via PR #47; CI passed. Hosts-format importer has bounded parser and custom matcher; it does not interpret full Adblock syntax. | Validate performance and false positives on device; keep built-in rules. |
-| Readability-based article extraction | Missing; current reader mode injects CSS into the source document. | Add licensed and tested article extraction. |
-| Persist tabs after process death | Missing; current pending URL restore supports theme recreation only. | Add bounded encrypted standard-mode tab restore; never persist private tabs into normal storage. |
-| External handling for non-HTTPS schemes | Missing; schemes are blocked. | Consider a strict allowlist and confirmation for safe schemes; never blindly launch arbitrary intent/file/custom URLs. |
-| Per-site fingerprint shield toggle | Implemented in `main` via PR #48; automated CI passed. Adds exact-host page-script exemption, explicit privacy confirmation, max 128 entries and status display; reduced network User-Agent and other protections remain active. Subdomains are separate. | Complete manual Android WebView compatibility checks; this is not a guarantee of anonymity. |
-| Configurable offline-reading cap | Feature branch; CI pending. Adds settings choices for 4/8/12 pages and 8,000/24,000/32,000 characters per page, with hard ceilings of 12 pages and 32,000 characters. | Validate capture/display behavior and ensure shrinking limits does not corrupt unrelated saved pages. |
-| In-app download scan history | Implemented in `main` via PR #47; automated CI passed. Bounded, sanitized last-20 scan-result list added and private-mode history is cleared at session exit. | Manually verify private-profile cleanup and result presentation; never label BASIC_CHECKS_ONLY as clean. |
-| Expose additional search engines | Feature branch; CI pending. Adds Ecosia, Mojeek and Qwant to the picker, centralizes URL mapping and tests all selectable endpoints/query escaping. UI explains that strict SafeSearch is not forcibly enforceable for every provider. | Confirm tests pass and manually verify search results, URL interception and Teen Protection behavior. |
-| Bookmark folders/reordering | Missing; flat list. | Add a backward-compatible data schema and tests. |
-| Complete localization using Android resources | Partial; `BrowserUiText` translates some runtime strings, while many dialogs/toasts remain English. | Migrate gradually, checking Malayalam and other supported locales/fallbacks. |
-| Instrumented behavioral tests | Partial; current suite is JVM tests. | Add Android tests for lifecycle, URL interception, settings and private cleanup. |
-| Bound session approval cache | Implemented in `main` via PR #47; automated CI passed. Synchronized cache is bounded at 256 URLs. | Keep bounded and test eviction. |
-| AI model selection visibility | Partial: named model list and discovery fallback exist; UI does not clearly identify the model that answered. | Show the resolved model in response details and test fallback. |
-| Version 8 changelog | Added in `main` via PR #47. | Keep aligned with shipped code. |
-| ZXing third-party attribution | `NOTICE` added in `main` via PR #47 for ZXing Core 3.5.4 / Apache-2.0. | Recheck whenever dependencies change. |
-| Renderer crash recovery | Implemented in `main` via PR #47; automated CI passed. Restores the prior HTTPS URL rather than always returning home. | Test recovery and safety prompts on device. |
+| Resolve Android “malware detected” warning; build/sign/scan fresh APK | **OPEN — release blocker.** The source smoke checks prohibit the EICAR test marker in production scanner code. A previous artifact reportedly triggered device protection; no conclusive root-cause analysis or successful independent scan of a new APK is recorded here. | Build from reviewed main, inspect SHA-256/signature, use reputable independent scan services and a spare device. Do not dismiss the warning without evidence. Confirm stable signing key before distributing an install/update build. |
+| Deny-by-default WebView, HTTPS-only navigation, TLS cancellation, Safe Browsing, private isolation, encrypted store, no general JS bridge | **Present in source per the review and static tests.** These are important existing guarantees. | Preserve these guarantees; add behavioral device tests for navigation, process lifecycle and private cleanup. |
+| Split \`BrowserActivity.java\` into controllers | **NOT IMPLEMENTED.** The large activity still owns lifecycle, tabs, navigation, settings, downloads, AI and userscripts. | Extract one controller at a time after behavioral coverage; avoid risky rewrites. |
+| Move \`HomePage.java\` into local HTML/CSS/JS assets | **NOT IMPLEMENTED.** Page content is still assembled by Java. | Extract into assets while preserving the synthetic origin and native action checks. |
+| Move encrypted storage and JSON work off UI thread | **PARTIAL / OPEN.** \`SecureStore\` uses AES-GCM/Keystore and fails closed, but callers still perform synchronous read/write work. | Add a lifecycle-safe executor, serialized writes and UI callbacks; test concurrency/error handling. |
+| Importable ad/tracker host lists | **IMPLEMENTED — PR #47, CI passed.** Bounded hosts-format parser/import/remove control, DNS suffix matching and built-in list retained. It does not interpret full Adblock/EasyList syntax. | Device-test performance and false positives; consider a reviewed filter subset separately. |
+| Readability-based article extraction | **NOT IMPLEMENTED.** Reader mode remains CSS restyling rather than article extraction. | Bundle a reviewed, licensed Readability implementation; test hostile HTML, multi-language pages and attribution. |
+| Persist tabs after process death | **NOT IMPLEMENTED.** Existing restore path is for theme recreation, not durable cold-start restoration. | Save a bounded HTTPS-only standard-mode session in encrypted storage, restore only through normal safety checks, and never save private tabs in standard storage. |
+| Open supported non-HTTPS schemes externally | **IN PROGRESS — feature branch.** Strict validation and explicit confirmation for \`mailto:\` and \`tel:\` are implemented with focused tests; arbitrary schemes remain blocked. CI/PR review pending. | Pass CI, review exact launch flow and device-test mail/dialer handlers before merge. |
+| Per-site anti-fingerprinting control | **IMPLEMENTED — PR #48, CI passed.** Exact-host exception, explicit confirmation, 128-host cap, visible status and private-session cleanup. The page-script reductions are disabled for that hostname only; reduced network User-Agent and other browser protections remain. | Check compatibility behavior across supported Android System WebView versions; this is not a promise of anonymity. |
+| Configurable offline-reading page/text cap | **IMPLEMENTED — PR #49, CI passed.** User choices 4/8/12 pages and 8k/24k/32k characters; hard ceilings 12 pages / 32k characters and existing defaults remain 8 / 24k. | Manually verify capture/display at each setting and ensure changing limits does not unexpectedly lose unrelated saved pages. |
+| In-app download scan history | **IMPLEMENTED — PR #47, CI passed.** Bounded, sanitized history of last 20 scan reports, local details and clear action; private-mode report history is cleared on session exit. | Verify display and private cleanup on device; limited heuristics must never be presented as proof that a file is malware-free. |
+| Expose additional search engines | **IMPLEMENTED — PR #51, CI passed.** Ecosia, Mojeek and Qwant added alongside existing providers; centralized HTTPS URL mapping and query encoding; local query filtering tests for new providers. UI discloses that forced SafeSearch is provider-dependent. | Manually confirm each provider's URLs/results. Teen Protection is still incomplete and some providers need their own SafeSearch settings. |
+| Bookmark folders/reorder | **NOT IMPLEMENTED.** Bookmarks remain a flat list. | Add a backward-compatible encrypted data schema and ordering/migration tests. |
+| Complete localization through Android resources | **PARTIAL.** Home page and \`BrowserUiText\` cover many languages, but runtime dialogs, toasts and security labels still contain English literals. | Migrate in batches to Android string resources; verify Malayalam and fallback coverage. |
+| Instrumented/Robolectric behavior tests | **PARTIAL.** JVM unit tests and static smoke tests exist; static checks cannot prove full runtime behavior. | Add Android behavioral tests for navigation interception, WebView lifecycle, settings toggles, downloads, private cleanup and tab restore. |
+| Bound session approval cache | **IMPLEMENTED — PR #47, CI passed.** Synchronized insertion-ordered cache capped at 256 URLs with eviction tests. | Keep the bound and tests. |
+| Display selected Hari AI model | **PARTIAL.** Model IDs are in a named list and fallback discovery exists; user-facing result details do not clearly expose which model answered. | Surface the resolved model and test failure/fallback behavior. Avoid a live API test unless explicitly configured by the owner. |
+| Version 8 changelog | **IMPLEMENTED — PR #47.** Changelog added. | Keep it aligned with actual release contents. |
+| Third-party ZXing notice | **IMPLEMENTED — PR #47.** \`NOTICE\` records ZXing Core 3.5.4 and Apache-2.0. | Recheck licenses on dependency updates and consider a complete transitive license inventory. |
+| Restore prior HTTPS URL after renderer crash | **IMPLEMENTED — PR #47, CI passed.** Recreates the WebView and restores prior HTTPS URL rather than always returning home. | Exercise renderer recovery and normal safety prompts on-device. |
 
-## Implemented on `main` in tested PRs
+## Merged changes
 
-- PR #47: bounded download scan history (20 items), sanitized report fields, timestamp and valid SHA-256 display; hosts-format tracker-list import/removal (max 512 KiB, 20,000 lines, 10,000 unique hosts); session approval cache (256 URLs); HTTPS renderer recovery; focused tests; version 8 changelog and ZXing notice.
-- PR #48: bounded (128-host) per-site fingerprint page-script exceptions with explicit privacy confirmation, per-site status reporting, private-session cleanup and focused policy/script-wrapper tests.
+- **PR #47 — tracker lists, download history and bounded state:** \`DownloadScanHistory\` (20 reports); hosts-format list import/removal with limits (512 KiB / 20,000 lines / 10,000 unique hosts); a 256-entry session approval cache; HTTPS renderer recovery; focused tests; version 8 changelog; ZXing notice. CI passed before merge.
+- **PR #48 — per-site page-script fingerprint controls:** exact-host overrides with explicit consent; bounded 128-host policy; visible status; private-session cleanup; host-policy and script-wrapper tests. CI passed before merge.
+- **PR #49 — offline reading limits:** configurable page/text caps with hard ceilings; capture/read/remove paths honor selected preferences; focused JVM tests. CI passed before merge.
+- **PR #51 — additional search providers:** Ecosia, Mojeek and Qwant; central URL generator and query encoding; Teen Protection checks for new providers; honest SafeSearch limitation text; static smoke test updated to validate the centralized URL helper. CI passed before merge.
 
-## Additional feature branch work
+## Current feature branch: safe external links
 
-- `feature/offline-reading-limits` is adding configurable, bounded offline page/text limits and tests. This work is not considered done until its CI passes and the PR is reviewed.
+Branch: \`feature/safe-external-links\` (PR not opened yet).
 
-## Next order
+- \`ExternalLinkPolicy\` classifies normal web/search input, HTTPS, HTTP, validated mailto/tel links and blocked schemes.
+- \`mailto:\` is reduced to a validated recipient only. Query/subject/body metadata is not forwarded, and encoded CR/LF is rejected to guard against header injection.
+- \`tel:\` is reduced to a normalized number; malformed or decorated targets are rejected. Confirmation launches \`ACTION_DIAL\`, never \`ACTION_CALL\`, so the browser does not place a call.
+- The user must explicitly confirm opening the email app or dialer. Missing handlers are handled.
+- \`file:\`, \`intent:\`, \`market:\`, \`javascript:\`, \`data:\`, \`content:\` and other non-allowlisted schemes remain blocked.
+- Focused unit tests and static smoke checks were added; final CI is still required.
 
-1. Resolve the device-protection alert with a fresh, independently scanned, consistently signed APK.
-2. Add behavioral Android tests.
-3. Make storage I/O asynchronous and persist standard-mode tabs securely.
-4. Implement article extraction and verify the merged per-site fingerprint control on real WebView versions.
-5. Complete localization and search-engine options.
-6. Refactor large classes, then improve bookmarks and offline-reading settings.
+## Recommended next implementation order
 
-No item is considered complete merely because a dashboard or document names it.
+1. Resolve and document the Android device-protection warning using a newly built, scanned and consistently signed artifact.
+2. Complete the safe external-link PR only after all CI checks pass.
+3. Add behavioral Android tests around URL interception, WebView lifecycle, private cleanup and tabs.
+4. Persist standard-mode tabs safely; then move encrypted-store calls off the UI thread.
+5. Implement Readability-based reader extraction and verify per-site fingerprint controls on real WebView versions.
+6. Complete localization, surface selected AI model, and improve bookmarks.
+7. Split \`BrowserActivity\` and \`HomePage\` gradually.
+
+No item is complete merely because it appears in a dashboard or documentation, and no APK should be described as release-ready until the old device-protection issue is investigated.

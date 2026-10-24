@@ -150,6 +150,20 @@ try:
           "Startpage's filtering is controlled by Startpage itself" in read("README.md") and
           "not a complete content filter" in teen_protection)
     manifest_source = read("app/src/main/AndroidManifest.xml")
+    external_link_policy = read("app/src/main/java/com/haricalcx/haribrowser/ExternalLinkPolicy.java")
+    check("External scheme policy explicitly allows only validated HTTP(S), mailto and tel",
+          'case "mailto":' in external_link_policy and 'case "tel":' in external_link_policy and
+          'default:' in external_link_policy and 'return Kind.BLOCKED;' in external_link_policy and
+          "safeMailTarget(input)" in external_link_policy and "safePhoneTarget(input)" in external_link_policy)
+    check("External mail and telephone links require confirmation and never place calls",
+          "confirmExternalLink(url)" in browser and
+          'setPositiveButton(mail ? "Open email app" : "Open dialer"' in browser and
+          "Intent.ACTION_SENDTO" in browser and "Intent.ACTION_DIAL" in browser and
+          "Intent.ACTION_CALL" not in browser and "android.permission.CALL_PHONE" not in manifest_source)
+    check("External links are reduced to canonical recipient/number before launch",
+          "ExternalLinkPolicy.safeExternalUri(input)" in browser and
+          "private static String safeMailTarget(String input)" in external_link_policy and
+          "private static String safePhoneTarget(String input)" in external_link_policy)
     check("Private-process protection reads authoritative state through a non-exported provider",
           'android:name=".TeenProtectionProvider"' in manifest_source and
           'android:exported="false"' in manifest_source and
