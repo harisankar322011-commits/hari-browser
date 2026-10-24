@@ -3234,30 +3234,34 @@ public class BrowserActivity extends ComponentActivity {
             return;
         }
 
-        // Keystore decryption runs on the serial storage queue. Do not block the PIN dialog's
-        // click handler while reading the salt and hash.
-        protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", getMainExecutor(), salt -> {
-            if (!isTeenPinDialogActive(dialog)) return;
-            protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", getMainExecutor(), hash -> {
-                if (!isTeenPinDialogActive(dialog)) return;
-                if (!TeenProtection.verifyPin(candidate, salt, hash)) {
-                    int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
-                    if (failures >= 5) {
-                        protectionSettings.edit()
-                                .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
-                                .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY, now + 60_000L)
-                                .apply();
-                        input.setError("Too many attempts. Try again in 60 seconds.");
-                    } else {
-                        protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
-                        input.setError("Incorrect PIN. Attempts left: " + (5 - failures) + ".");
+        // Keystore decryption and the 120,000-iteration PBKDF2 comparison stay off the
+        // UI thread. The direct executor keeps the second read and derivation on the serial
+        // storage worker; only failure counters, errors and callbacks touch the UI afterwards.
+        protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", Runnable::run, salt -> {
+            protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run, hash -> {
+                boolean verified = TeenProtection.verifyPin(candidate, salt, hash);
+                getMainExecutor().execute(() -> {
+                    if (!isTeenPinDialogActive(dialog)) return;
+                    if (!verified) {
+                        int failures = protectionSettings.getInt(TeenProtection.PIN_FAILURES_KEY, 0) + 1;
+                        if (failures >= 5) {
+                            protectionSettings.edit()
+                                    .putInt(TeenProtection.PIN_FAILURES_KEY, 0)
+                                    .putLong(TeenProtection.PIN_LOCK_UNTIL_KEY,
+                                            System.currentTimeMillis() + 60_000L)
+                                    .apply();
+                            input.setError("Too many attempts. Try again in 60 seconds.");
+                        } else {
+                            protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply();
+                            input.setError("Incorrect PIN. Attempts left: " + (5 - failures) + ".");
+                        }
+                        callback.accept(false);
+                        return;
                     }
-                    callback.accept(false);
-                    return;
-                }
-                protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
-                        .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
-                callback.accept(true);
+                    protectionSettings.edit().remove(TeenProtection.PIN_FAILURES_KEY)
+                            .remove(TeenProtection.PIN_LOCK_UNTIL_KEY).apply();
+                    callback.accept(true);
+                });
             });
         });
     }
