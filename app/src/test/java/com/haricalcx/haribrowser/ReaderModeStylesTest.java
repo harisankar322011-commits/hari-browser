@@ -15,7 +15,7 @@ public class ReaderModeStylesTest {
     }
 
     @Test
-    public void styleScriptAddsOneLocalStylesheetWithoutReplacingPageContent() {
+    public void styleScriptAddsOneLocalStylesheet() {
         String script = ReaderModeStyles.documentStyleScript();
         assertTrue(script.contains("hari-reader-style"));
         assertTrue(script.contains("createElement('style')") || script.contains("createElement('style')"));
@@ -26,7 +26,7 @@ public class ReaderModeStylesTest {
     public void readerScriptExtractsArticleTextWithoutReusingPageHtml() {
         String script = ReaderModeStyles.documentStyleScript();
         assertTrue(script.contains("article"));
-        assertTrue(script.contains("[role=\\\"main\\\"]") || script.contains("[role=\\"main\\"]") || script.contains("role"));
+        assertTrue(script.contains("role"));
         assertTrue(script.contains("textContent"));
         assertTrue(script.contains("replaceChildren"));
         assertTrue(script.contains("60000"));
