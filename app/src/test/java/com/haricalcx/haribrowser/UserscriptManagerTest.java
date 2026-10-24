@@ -74,6 +74,21 @@ public final class UserscriptManagerTest {
     }
 
     @Test
+    public void respectsNoFramesMetadata() {
+        UserscriptManager.Script script = UserscriptManager.parse(
+                "// ==UserScript==\n" +
+                "// @name         Top-frame only\n" +
+                "// @match        https://example.com/*\n" +
+                "// @noframes\n" +
+                "// @grant        none\n" +
+                "// ==/UserScript==\n" +
+                "void 0;\n");
+
+        assertTrue(script.noFrames);
+        assertTrue(UserscriptManager.injectionSource(script).contains("window.top!==window"));
+    }
+
+    @Test
     public void generatesAPathCheckedWrapperAndEscapesMetadata() {
         UserscriptManager.Script script = UserscriptManager.parse(BASIC_SCRIPT);
         String wrapper = UserscriptManager.injectionSource(script);
