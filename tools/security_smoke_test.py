@@ -161,8 +161,9 @@ try:
           'protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run' in teen_verify_body and
           "TeenProtection.verifyPin(candidate, salt, hash)" in teen_verify_body)
     check("Teen Protection lockout counts failed PINs even after dialog dismissal",
-          teen_verify_body.find("protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply()") >= 0 and
-          teen_verify_body.find("protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply()") <
+          "TeenProtectionPinLockout.afterFailedAttempt(" in teen_verify_body and
+          teen_verify_body.find("editor.apply();") >= 0 and
+          teen_verify_body.find("editor.apply();") <
           teen_verify_body.find("if (!isTeenPinDialogActive(dialog)) return;", teen_verify_body.find("boolean verified =")))
 
     pin_lockout = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionPinLockout.java")
