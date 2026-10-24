@@ -67,4 +67,26 @@ public class BrowserUiTextTest {
         assertEquals("fr-FR", BrowserUiText.speechLocale("fr"));
         assertEquals("en-IN", BrowserUiText.speechLocale(null));
     }
+
+    @Test
+    public void translatesTlsCertificateWarningForSupportedNonEnglishLocales() {
+        String warning = "Blocked: the site's security certificate is invalid.";
+        assertEquals(warning, BrowserUiText.translate("en", warning));
+        assertEquals("തടഞ്ഞു: സൈറ്റിന്റെ സുരക്ഷാ സർട്ടിഫിക്കറ്റ് അസാധുവാണ്.",
+                BrowserUiText.translate("ml", warning));
+        assertEquals("अवरुद्ध: साइट का सुरक्षा प्रमाणपत्र अमान्य है।",
+                BrowserUiText.translate("hi-IN", warning));
+        assertEquals("தடுக்கப்பட்டது: தளத்தின் பாதுகாப்புச் சான்றிதழ் செல்லாது.",
+                BrowserUiText.translate("ta", warning));
+        assertEquals("تم الحظر: شهادة أمان الموقع غير صالحة.",
+                BrowserUiText.translate("ar", warning));
+
+        for (String language : new String[] {
+                "ml", "hi", "ta", "te", "kn", "bn", "mr", "gu", "pa", "ur", "es", "fr", "ar"
+        }) {
+            assertFalse("TLS warning should be localized for " + language,
+                    warning.equals(BrowserUiText.translate(language, warning)));
+        }
+    }
+
 }

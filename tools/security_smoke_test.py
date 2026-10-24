@@ -123,6 +123,12 @@ try:
     teen_provider = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionProvider.java")
     teen_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionTest.java")
     browser_ui_text = read("app/src/main/java/com/haricalcx/haribrowser/BrowserUiText.java")
+    browser_ui_text_tests = read("app/src/test/java/com/haricalcx/haribrowser/BrowserUiTextTest.java")
+    check("TLS certificate failures use the selected-language warning",
+          "showToast(ui(\"Blocked: the site's security certificate is invalid.\"))" in browser and
+          "TLS_CERTIFICATE_WARNING_KEY" in browser_ui_text and
+          "addOne(all, \"ml\", TLS_CERTIFICATE_WARNING_KEY" in browser_ui_text and
+          "translatesTlsCertificateWarningForSupportedNonEnglishLocales" in browser_ui_text_tests)
     check("Teen protection menu and protected navigation are wired",
           'ui("Teen protection")' in browser and '"Teen protection"' in browser_ui_text and
           "case 33:" in browser and "protectSearchUrl(url)" in browser)
