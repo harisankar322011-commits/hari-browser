@@ -141,7 +141,7 @@ try:
           "p.o.r.n videos" in teen_tests and "porn addiction help" in teen_tests)
     check("Teen protection uses a parent PIN stored as salted PBKDF2 hash",
           "PBKDF2WithHmacSHA256" in teen_protection and
-          "protectionStore.put(TeenProtection.PIN_HASH_KEY, hash)" in browser and
+          "protectionStore.putAsync(TeenProtection.PIN_HASH_KEY, hash)" in browser and
           "TeenProtection.verifyPin" in browser)
     check("Teen Protection PIN storage is asynchronous and encrypted",
           "protectionStore.getAsync(TeenProtection.PIN_SALT_KEY" in browser and
