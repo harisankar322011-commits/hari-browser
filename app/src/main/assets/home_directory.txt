@@ -1,0 +1,307 @@
+Search & reference|DuckDuckGo|https://duckduckgo.com/
+Search & reference|Brave Search|https://search.brave.com/
+Search & reference|Startpage|https://www.startpage.com/
+Search & reference|Google Search|https://www.google.com/
+Search & reference|Bing Search|https://www.bing.com/
+Search & reference|Wikipedia|https://www.wikipedia.org/
+Search & reference|Wikidata|https://www.wikidata.org/
+Search & reference|Encyclopaedia Britannica|https://www.britannica.com/
+Search & reference|Internet Archive|https://archive.org/
+Search & reference|Wayback Machine|https://web.archive.org/
+Search & reference|WorldCat|https://www.worldcat.org/
+Search & reference|WolframAlpha|https://www.wolframalpha.com/
+Search & reference|RefSeek|https://www.refseek.com/
+Search & reference|Swisscows Search|https://swisscows.com/
+Search & reference|Dictionary.com|https://www.dictionary.com/
+Search & reference|Merriam-Webster|https://www.merriam-webster.com/
+Learning & courses|Khan Academy|https://www.khanacademy.org/
+Learning & courses|Coursera|https://www.coursera.org/
+Learning & courses|edX|https://www.edx.org/
+Learning & courses|MIT OpenCourseWare|https://ocw.mit.edu/
+Learning & courses|OpenLearn|https://www.open.edu/openlearn/
+Learning & courses|Saylor Academy|https://www.saylor.org/
+Learning & courses|OpenStax|https://openstax.org/
+Learning & courses|CK-12|https://www.ck12.org/
+Learning & courses|TED-Ed|https://ed.ted.com/
+Learning & courses|Crash Course|https://thecrashcourse.com/
+Learning & courses|GCFGlobal|https://edu.gcfglobal.org/
+Learning & courses|BBC Bitesize|https://www.bbc.co.uk/bitesize
+Learning & courses|National Geographic Education|https://education.nationalgeographic.org/
+Learning & courses|Smithsonian Learning Lab|https://learninglab.si.edu/
+Learning & courses|Duolingo|https://www.duolingo.com/
+Learning & courses|Alison Courses|https://alison.com/
+Learning & courses|Brilliant|https://brilliant.org/
+Learning & courses|Open Culture|https://www.openculture.com/
+Learning & courses|FutureLearn|https://www.futurelearn.com/
+Learning & courses|Class Central|https://www.classcentral.com/
+Coding & development|GitHub|https://github.com/
+Coding & development|GitLab|https://gitlab.com/
+Coding & development|Codeberg|https://codeberg.org/
+Coding & development|SourceForge|https://sourceforge.net/
+Coding & development|MDN Web Docs|https://developer.mozilla.org/
+Coding & development|web.dev|https://web.dev/
+Coding & development|W3Schools|https://www.w3schools.com/
+Coding & development|freeCodeCamp|https://www.freecodecamp.org/
+Coding & development|The Odin Project|https://www.theodinproject.com/
+Coding & development|Stack Overflow|https://stackoverflow.com/
+Coding & development|Super User|https://superuser.com/
+Coding & development|Server Fault|https://serverfault.com/
+Coding & development|Ask Ubuntu|https://askubuntu.com/
+Coding & development|DevDocs|https://devdocs.io/
+Coding & development|Can I Use|https://caniuse.com/
+Coding & development|npm|https://www.npmjs.com/
+Coding & development|PyPI|https://pypi.org/
+Coding & development|Maven Central|https://central.sonatype.com/
+Coding & development|crates.io|https://crates.io/
+Coding & development|Go documentation|https://go.dev/doc/
+Coding & development|Rust language|https://www.rust-lang.org/
+Coding & development|Python|https://www.python.org/
+Coding & development|Kotlin|https://kotlinlang.org/
+Coding & development|Java|https://www.java.com/
+Coding & development|Android Developers|https://developer.android.com/
+Coding & development|Microsoft Learn|https://learn.microsoft.com/
+Coding & development|Swift|https://www.swift.org/
+Coding & development|cppreference|https://en.cppreference.com/
+Coding & development|Linux Kernel|https://www.kernel.org/
+Coding & development|Open Source Guides|https://opensource.guide/
+Math & science|arXiv|https://arxiv.org/
+Math & science|PubMed|https://pubmed.ncbi.nlm.nih.gov/
+Math & science|Europe PMC|https://europepmc.org/
+Math & science|Crossref|https://www.crossref.org/
+Math & science|DOAJ|https://doaj.org/
+Math & science|CORE Research|https://core.ac.uk/
+Math & science|OpenAlex|https://openalex.org/
+Math & science|NASA|https://www.nasa.gov/
+Math & science|European Space Agency|https://www.esa.int/
+Math & science|NOAA|https://www.noaa.gov/
+Math & science|US Geological Survey|https://www.usgs.gov/
+Math & science|NIST|https://www.nist.gov/
+Math & science|CERN|https://home.cern/
+Math & science|Fermilab|https://www.fnal.gov/
+Math & science|Science.gov|https://www.science.gov/
+Math & science|Royal Society|https://royalsociety.org/
+Math & science|Nature|https://www.nature.com/
+Math & science|Science Magazine|https://www.science.org/
+Math & science|PLOS|https://plos.org/
+Math & science|iNaturalist|https://www.inaturalist.org/
+Math & science|GBIF|https://www.gbif.org/
+Math & science|Encyclopedia of Life|https://eol.org/
+Math & science|Our World in Data|https://ourworldindata.org/
+Math & science|Nobel Prize|https://www.nobelprize.org/
+Math & science|MathWorld|https://mathworld.wolfram.com/
+Math & science|Desmos|https://www.desmos.com/
+Math & science|GeoGebra|https://www.geogebra.org/
+Math & science|CK-12 Simulations|https://interactives.ck12.org/
+Books & culture|Project Gutenberg|https://www.gutenberg.org/
+Books & culture|Open Library|https://openlibrary.org/
+Books & culture|Wikisource|https://wikisource.org/
+Books & culture|LibriVox|https://librivox.org/
+Books & culture|Standard Ebooks|https://standardebooks.org/
+Books & culture|ManyBooks|https://manybooks.net/
+Books & culture|Goodreads|https://www.goodreads.com/
+Books & culture|Google Books|https://books.google.com/
+Books & culture|Poetry Foundation|https://www.poetryfoundation.org/
+Books & culture|Poetry Archive|https://poetryarchive.org/
+Books & culture|Europeana|https://www.europeana.eu/
+Books & culture|Digital Public Library of America|https://dp.la/
+Books & culture|The Met Collection|https://www.metmuseum.org/art/collection
+Books & culture|Louvre Collections|https://collections.louvre.fr/
+Books & culture|Rijksmuseum|https://www.rijksmuseum.nl/
+Productivity & documents|Google Docs|https://docs.google.com/
+Productivity & documents|Google Sheets|https://sheets.google.com/
+Productivity & documents|Google Slides|https://slides.google.com/
+Productivity & documents|Microsoft 365|https://www.microsoft365.com/
+Productivity & documents|ONLYOFFICE|https://www.onlyoffice.com/
+Productivity & documents|Zoho Writer|https://www.zoho.com/writer/
+Productivity & documents|Etherpad|https://etherpad.org/
+Productivity & documents|Trello|https://trello.com/
+Productivity & documents|Todoist|https://todoist.com/
+Productivity & documents|Asana|https://asana.com/
+Productivity & documents|ClickUp|https://clickup.com/
+Productivity & documents|Monday.com|https://monday.com/
+Productivity & documents|Calendly|https://calendly.com/
+Productivity & documents|TimeAndDate|https://www.timeanddate.com/
+Productivity & documents|Doodle|https://doodle.com/
+Productivity & documents|Excalidraw|https://excalidraw.com/
+Productivity & documents|diagrams.net|https://app.diagrams.net/
+Productivity & documents|Mermaid Live|https://mermaid.live/
+Productivity & documents|Overleaf|https://www.overleaf.com/
+Productivity & documents|Zotero|https://www.zotero.org/
+News & public information|BBC News|https://www.bbc.com/news
+News & public information|Reuters|https://www.reuters.com/
+News & public information|Associated Press|https://apnews.com/
+News & public information|The Guardian|https://www.theguardian.com/
+News & public information|DW News|https://www.dw.com/
+News & public information|Al Jazeera|https://www.aljazeera.com/
+News & public information|NPR|https://www.npr.org/
+News & public information|The Hindu|https://www.thehindu.com/
+News & public information|The Indian Express|https://indianexpress.com/
+News & public information|Times of India|https://timesofindia.indiatimes.com/
+News & public information|Economic Times|https://economictimes.indiatimes.com/
+News & public information|Press Information Bureau India|https://pib.gov.in/
+News & public information|India.gov.in|https://www.india.gov.in/
+News & public information|Open Government Data India|https://data.gov.in/
+News & public information|Lok Sabha|https://loksabha.nic.in/
+News & public information|Rajya Sabha|https://rajyasabha.nic.in/
+News & public information|Supreme Court of India|https://www.sci.gov.in/
+News & public information|Reserve Bank of India|https://www.rbi.org.in/
+News & public information|ISRO|https://www.isro.gov.in/
+News & public information|Election Commission of India|https://www.eci.gov.in/
+News & public information|UNESCO|https://www.unesco.org/
+News & public information|United Nations|https://www.un.org/
+News & public information|UNICEF|https://www.unicef.org/
+Maps & travel|Google Maps|https://maps.google.com/
+Maps & travel|OpenStreetMap|https://www.openstreetmap.org/
+Maps & travel|Bing Maps|https://www.bing.com/maps
+Maps & travel|Mapillary|https://www.mapillary.com/
+Maps & travel|Rome2Rio|https://www.rome2rio.com/
+Maps & travel|Wikivoyage|https://www.wikivoyage.org/
+Maps & travel|Lonely Planet|https://www.lonelyplanet.com/
+Maps & travel|IRCTC|https://www.irctc.co.in/
+Maps & travel|Indian Railways NTES|https://enquiry.indianrail.gov.in/
+Maps & travel|redBus|https://www.redbus.in/
+Maps & travel|MakeMyTrip|https://www.makemytrip.com/
+Maps & travel|Goibibo|https://www.goibibo.com/
+Maps & travel|Cleartrip|https://www.cleartrip.com/
+Maps & travel|Passport Seva|https://www.passportindia.gov.in/
+Maps & travel|IndiGo|https://www.goindigo.in/
+Maps & travel|Air India|https://www.airindia.com/
+Maps & travel|IRCTC eCatering|https://www.ecatering.irctc.co.in/
+Maps & travel|India Tourism|https://www.incredibleindia.gov.in/
+Maps & travel|Booking.com|https://www.booking.com/
+Maps & travel|Skyscanner|https://www.skyscanner.co.in/
+India services|India.gov.in — National Portal|https://www.india.gov.in/
+India services|Government Services Portal|https://services.india.gov.in/service/listing
+India services|UMANG — Government Services|https://web.umang.gov.in/
+India services|DigiLocker — Digital Documents|https://www.digilocker.gov.in/
+India services|UIDAI — Aadhaar|https://uidai.gov.in/
+India services|MyGov India|https://www.mygov.in/
+India services|National Scholarship Portal|https://scholarships.gov.in/
+India services|DIKSHA — School Learning|https://diksha.gov.in/
+India services|ePathshala — Textbooks|https://epathshala.gov.in/
+India services|SWAYAM — Online Courses|https://swayam.gov.in/
+India services|National Testing Agency|https://nta.ac.in/
+India services|CBSE — Central Board of Secondary Education|https://www.cbse.gov.in/
+India services|Income Tax e-Filing|https://www.incometax.gov.in/iec/foportal/
+India services|EPFO — Provident Fund|https://www.epfindia.gov.in/
+India services|GST Portal|https://www.gst.gov.in/
+India services|Parivahan — Transport Services|https://parivahan.gov.in/
+India services|NPCI — UPI Information|https://www.npci.org.in/what-we-do/upi/product-overview
+India services|BHIM UPI|https://www.bhimupi.org.in/
+India services|Kerala Government|https://kerala.gov.in/
+India services|Kerala Public Service Commission|https://www.keralapsc.gov.in/
+India services|KSEB — Kerala Electricity|https://kseb.in/
+Privacy & security|Electronic Frontier Foundation|https://www.eff.org/
+Privacy & security|Privacy Guides|https://www.privacyguides.org/
+Privacy & security|Mozilla Monitor|https://monitor.mozilla.org/
+Privacy & security|Have I Been Pwned|https://haveibeenpwned.com/
+Privacy & security|Cloudflare Radar|https://radar.cloudflare.com/
+Privacy & security|BrowserLeaks|https://browserleaks.com/
+Privacy & security|Qualys SSL Labs|https://www.ssllabs.com/ssltest/
+Privacy & security|Let's Encrypt|https://letsencrypt.org/
+Privacy & security|OpenSSL|https://www.openssl.org/
+Privacy & security|GnuPG|https://gnupg.org/
+Privacy & security|Signal|https://signal.org/
+Privacy & security|Proton|https://proton.me/
+Privacy & security|Tor Project|https://www.torproject.org/
+Privacy & security|OWASP|https://owasp.org/
+Privacy & security|Security Headers|https://securityheaders.com/
+Privacy & security|Mozilla Security Blog|https://blog.mozilla.org/security/
+Cloud & communication|Gmail|https://mail.google.com/
+Cloud & communication|Outlook Mail|https://outlook.live.com/
+Cloud & communication|Proton Mail|https://mail.proton.me/
+Cloud & communication|Fastmail|https://www.fastmail.com/
+Cloud & communication|Google Drive|https://drive.google.com/
+Cloud & communication|OneDrive|https://onedrive.live.com/
+Cloud & communication|Dropbox|https://www.dropbox.com/
+Cloud & communication|Nextcloud|https://nextcloud.com/
+Cloud & communication|MEGA|https://mega.io/
+Cloud & communication|SwissTransfer|https://www.swisstransfer.com/
+Cloud & communication|WeTransfer|https://wetransfer.com/
+Cloud & communication|Telegram Web|https://web.telegram.org/
+Cloud & communication|WhatsApp Web|https://web.whatsapp.com/
+Cloud & communication|Discord|https://discord.com/app
+Cloud & communication|Slack|https://slack.com/
+Design & media tools|Figma|https://www.figma.com/
+Design & media tools|Canva|https://www.canva.com/
+Design & media tools|Adobe Color|https://color.adobe.com/
+Design & media tools|Photopea|https://www.photopea.com/
+Design & media tools|SVGOMG|https://jakearchibald.github.io/svgomg/
+Design & media tools|Squoosh|https://squoosh.app/
+Design & media tools|TinyPNG|https://tinypng.com/
+Design & media tools|Unsplash|https://unsplash.com/
+Design & media tools|Pexels|https://www.pexels.com/
+Design & media tools|Pixabay|https://pixabay.com/
+Design & media tools|Wikimedia Commons|https://commons.wikimedia.org/
+Design & media tools|Google Fonts|https://fonts.google.com/
+Design & media tools|Font Squirrel|https://www.fontsquirrel.com/
+Design & media tools|Coolors|https://coolors.co/
+Design & media tools|Krita|https://krita.org/
+Design & media tools|GIMP|https://www.gimp.org/
+Design & media tools|Inkscape|https://inkscape.org/
+Design & media tools|Blender|https://www.blender.org/
+Design & media tools|Audacity|https://www.audacityteam.org/
+Design & media tools|OBS Studio|https://obsproject.com/
+Shopping & comparison|Amazon India|https://www.amazon.in/
+Shopping & comparison|Flipkart|https://www.flipkart.com/
+Shopping & comparison|Croma|https://www.croma.com/
+Shopping & comparison|Reliance Digital|https://www.reliancedigital.in/
+Shopping & comparison|Tata CLiQ|https://www.tatacliq.com/
+Shopping & comparison|Myntra|https://www.myntra.com/
+Shopping & comparison|AJIO|https://www.ajio.com/
+Shopping & comparison|IKEA India|https://www.ikea.com/in/en/
+Shopping & comparison|Decathlon India|https://www.decathlon.in/
+Shopping & comparison|eBay|https://www.ebay.com/
+Shopping & comparison|Etsy|https://www.etsy.com/
+Shopping & comparison|Newegg|https://www.newegg.com/
+Shopping & comparison|PriceRunner|https://www.pricerunner.com/
+Shopping & comparison|GSMArena|https://www.gsmarena.com/
+Shopping & comparison|Notebookcheck|https://www.notebookcheck.net/
+Video, music & entertainment|YouTube|https://www.youtube.com/
+Video, music & entertainment|Vimeo|https://vimeo.com/
+Video, music & entertainment|Dailymotion|https://www.dailymotion.com/
+Video, music & entertainment|Twitch|https://www.twitch.tv/
+Video, music & entertainment|Spotify|https://open.spotify.com/
+Video, music & entertainment|SoundCloud|https://soundcloud.com/
+Video, music & entertainment|Bandcamp|https://bandcamp.com/
+Video, music & entertainment|IMDb|https://www.imdb.com/
+Video, music & entertainment|Rotten Tomatoes|https://www.rottentomatoes.com/
+Video, music & entertainment|Letterboxd|https://letterboxd.com/
+Video, music & entertainment|JustWatch|https://www.justwatch.com/
+Video, music & entertainment|Radio Garden|https://radio.garden/
+Video, music & entertainment|BBC Sounds|https://www.bbc.co.uk/sounds
+Video, music & entertainment|Mixcloud|https://www.mixcloud.com/
+Video, music & entertainment|Apple Music|https://music.apple.com/
+Video, music & entertainment|Crunchyroll|https://www.crunchyroll.com/
+Video, music & entertainment|Netflix|https://www.netflix.com/
+Video, music & entertainment|Disney+|https://www.disneyplus.com/
+Sports|ESPN|https://www.espn.com/
+Sports|Olympics|https://olympics.com/
+Sports|FIFA|https://www.fifa.com/
+Sports|ICC Cricket|https://www.icc-cricket.com/
+Sports|BCCI|https://www.bcci.tv/
+Sports|NBA|https://www.nba.com/
+Sports|Formula 1|https://www.formula1.com/
+Sports|Wimbledon|https://www.wimbledon.com/
+Sports|Premier League|https://www.premierleague.com/
+Sports|UEFA|https://www.uefa.com/
+Food & home|BBC Good Food|https://www.bbcgoodfood.com/
+Food & home|Allrecipes|https://www.allrecipes.com/
+Food & home|Serious Eats|https://www.seriouseats.com/
+Food & home|King Arthur Baking|https://www.kingarthurbaking.com/
+Food & home|Tasty|https://tasty.co/
+Food & home|Epicurious|https://www.epicurious.com/
+Food & home|Veg Recipes of India|https://www.vegrecipesofindia.com/
+Food & home|Hebbars Kitchen|https://hebbarskitchen.com/
+Food & home|Swasthi's Recipes|https://www.indianhealthyrecipes.com/
+Food & home|Food Network|https://www.foodnetwork.com/
+Weather & environment|India Meteorological Department|https://mausam.imd.gov.in/
+Weather & environment|National Weather Service|https://www.weather.gov/
+Weather & environment|UK Met Office|https://www.metoffice.gov.uk/
+Weather & environment|Windy|https://www.windy.com/
+Weather & environment|AccuWeather|https://www.accuweather.com/
+Weather & environment|Climate Reanalyzer|https://climatereanalyzer.org/
+Weather & environment|Global Forest Watch|https://www.globalforestwatch.org/
+Weather & environment|AirNow|https://www.airnow.gov/
+Weather & environment|IQAir|https://www.iqair.com/
+Weather & environment|Time.is|https://time.is/
