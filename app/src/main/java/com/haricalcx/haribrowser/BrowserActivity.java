@@ -233,6 +233,7 @@ public class BrowserActivity extends ComponentActivity {
         boolean home = true;
         boolean readerMode = false;
         long navigationAttempt = 0L;
+        long userscriptRequestId = 0L;
         ScriptHandler fingerprintScriptHandler;
         final ArrayList<ScriptHandler> userscriptHandlers = new ArrayList<>();
     }
@@ -2641,6 +2642,8 @@ public class BrowserActivity extends ComponentActivity {
 
     private void clearUserscriptHandlers(Tab tab) {
         if (tab == null) return;
+        // Invalidate pending encrypted-store reads before removing existing handlers.
+        tab.userscriptRequestId++;
         for (ScriptHandler handler : tab.userscriptHandlers) {
             try { handler.remove(); } catch (RuntimeException ignored) {}
         }
@@ -2650,18 +2653,28 @@ public class BrowserActivity extends ComponentActivity {
     private void updateUserscripts(Tab tab) {
         clearUserscriptHandlers(tab);
         if (tab == null || tab.webView == null || privateMode || !javascriptEnabled()
-                || !fingerprintScriptSupported()) return;
-        for (UserscriptManager.Script script : UserscriptManager.decode(secureStore.get(KEY_USERSCRIPTS, "[]"))) {
-            if (!script.enabled) continue;
-            List<String> origins = UserscriptManager.allowedOrigins(script);
-            if (origins.isEmpty()) continue;
-            try {
-                tab.userscriptHandlers.add(WebViewCompat.addDocumentStartJavaScript(
-                        tab.webView, UserscriptManager.injectionSource(script), new HashSet<>(origins)));
-            } catch (RuntimeException ignored) {
-                // A bad or unsupported script must not stop normal browsing.
+                || !fingerprintScriptSupported() || secureStore == null) return;
+
+        final WebView expectedWebView = tab.webView;
+        final long requestId = tab.userscriptRequestId;
+        // Decryption and JSON decoding happen on the shared storage worker, not the UI thread.
+        secureStore.getAsync(KEY_USERSCRIPTS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed() || privateMode || !javascriptEnabled()
+                    || !fingerprintScriptSupported() || tab.webView != expectedWebView
+                    || tab.userscriptRequestId != requestId) return;
+
+            for (UserscriptManager.Script script : UserscriptManager.decode(serialized)) {
+                if (!script.enabled) continue;
+                List<String> origins = UserscriptManager.allowedOrigins(script);
+                if (origins.isEmpty()) continue;
+                try {
+                    tab.userscriptHandlers.add(WebViewCompat.addDocumentStartJavaScript(
+                            expectedWebView, UserscriptManager.injectionSource(script), new HashSet<>(origins)));
+                } catch (RuntimeException ignored) {
+                    // A bad or unsupported script must not stop normal browsing.
+                }
             }
-        }
+        });
     }
 
     private void showSettings() {
