@@ -51,7 +51,8 @@ final class TrackerFilterList {
     static boolean isDomain(String value) {
         if (value == null || value.length() > 253 || value.length() < 3 ||
                 !value.contains(".") || value.startsWith(".") || value.endsWith(".") ||
-                value.contains("..") || "localhost".equals(value)) return false;
+                value.contains("..") || "localhost".equals(value) ||
+                value.matches("[0-9]+(?:\\.[0-9]+){3}")) return false;
         String[] labels = value.split("\\.", -1);
         for (String label : labels) {
             if (label.isEmpty() || label.length() > 63 ||
