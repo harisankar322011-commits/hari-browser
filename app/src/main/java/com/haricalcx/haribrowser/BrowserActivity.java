@@ -3263,7 +3263,21 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Open an HTTPS website first.");
             return;
         }
-        String host = safeHost(selectedTab.url);
+        if (!fingerprintProtectionExempt(selectedTab)) {
+            String host = safeHost(selectedTab.url);
+            new AlertDialog.Builder(this)
+                    .setTitle("Disable fingerprint shield here?")
+                    .setMessage("This allows " + host +
+                            " to see the fingerprinting signals that Hari Browser normally reduces, which may make tracking easier. The exception applies only to this exact hostname, not its subdomains. HTTPS checks, cookie policy, tracker blocking and other browser protections remain unchanged. Use this only if the site has a compatibility problem.")
+                    .setNegativeButton("Keep shield", null)
+                    .setPositiveButton("Disable here", (d, w) -> saveFingerprintExemption(selectedTab, host))
+                    .show();
+            return;
+        }
+        saveFingerprintExemption(selectedTab, safeHost(selectedTab.url));
+    }
+
+    private void saveFingerprintExemption(Tab selectedTab, String host) {
         try {
             String updated = PerSiteFingerprintPolicy.toggle(
                     settings.getString("fingerprint_exempt_hosts", "[]"), host);
@@ -3276,6 +3290,7 @@ public class BrowserActivity extends ComponentActivity {
             for (Tab openTab : tabs) {
                 if (!openTab.home && PrivacyGuard.isHttpsUrl(openTab.url)
                         && host.equals(safeHost(openTab.url)) && openTab.webView != null) {
+                    openTab.webView.stopLoading();
                     openTab.webView.reload();
                 }
             }
