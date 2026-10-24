@@ -3876,6 +3876,17 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showSecurityPrivacyScan() {
+        if (privateMode) {
+            showSecurityPrivacyScanWithUrlhausConfig(false);
+            return;
+        }
+        protectionStore.getAsync("hari_rep_store_1", "", getMainExecutor(), authKey -> {
+            if (isFinishing() || isDestroyed()) return;
+            showSecurityPrivacyScanWithUrlhausConfig(authKey != null && !authKey.isEmpty());
+        });
+    }
+
+    private void showSecurityPrivacyScanWithUrlhausConfig(boolean urlhausConfigured) {
         Tab tab = currentTab();
         StringBuilder report = new StringBuilder();
         report.append("HARI SINGULARITY — PROTECTION DASHBOARD\n\n");
@@ -3911,7 +3922,6 @@ public class BrowserActivity extends ComponentActivity {
         report.append("LAYER 5 — HARI LABS\n");
         report.append("Optional tools include reader mode, offline reading, cryptography utilities, and userscripts. Review external userscripts carefully; they can change page behavior.\n");
         boolean automaticUrlhaus = !privateMode && getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE).getBoolean("auto_urlhaus_enabled", false);
-        boolean urlhausConfigured = !privateMode && !protectionStore.get("hari_rep_store_1", "").isEmpty();
         if (privateMode) {
             report.append("Automatic URL reputation: OFF in Private mode; no URL is sent by the automatic lookup feature.\n");
         } else if (automaticUrlhaus && urlhausConfigured) {
