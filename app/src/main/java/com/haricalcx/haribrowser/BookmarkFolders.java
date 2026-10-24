@@ -4,6 +4,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -85,6 +86,19 @@ final class BookmarkFolders {
             return source.toString();
         }
         return source.toString();
+    }
+
+    private static boolean isSafeHttpsUrl(String value) {
+        if (value == null || value.isEmpty() || value.length() > 8192) return false;
+        try {
+            URI uri = new URI(value);
+            return "https".equalsIgnoreCase(uri.getScheme())
+                    && uri.getHost() != null
+                    && !uri.getHost().isEmpty()
+                    && uri.getRawUserInfo() == null;
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 
     private static JSONArray parse(String serialized) {
