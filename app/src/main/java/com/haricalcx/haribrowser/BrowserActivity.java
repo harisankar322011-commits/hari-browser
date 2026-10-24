@@ -106,6 +106,7 @@ public class BrowserActivity extends ComponentActivity {
     private static final String KEY_BOOKMARKS = "bookmarks_v1";
     private static final String KEY_HISTORY = "history_v1";
     private static final String KEY_READ_LATER = "read_later_v1";
+    private static final String KEY_TAB_SESSION = "tab_session_v1";
     private static final String KEY_USERSCRIPTS = "userscripts_v1";
     private static final String KEY_HARI_AI_API_KEY = "hari_ai_api_key_v1";
     private static final int MAX_HARI_AI_PROMPT_CHARS = 6000;
@@ -378,7 +379,17 @@ public class BrowserActivity extends ComponentActivity {
         } else if (intent != null && Intent.ACTION_VIEW.equals(intent.getAction()) && intent.getData() != null) {
             addNewTab(intent.getData().toString(), true);
         } else {
-            addNewTab(null, true);
+            TabSessionStore.Session savedSession = privateMode
+                    ? TabSessionStore.decode(null)
+                    : TabSessionStore.decode(secureStore.get(KEY_TAB_SESSION, ""));
+            if (!savedSession.urls.isEmpty()) {
+                for (String savedUrl : savedSession.urls) {
+                    addNewTab(savedUrl.isEmpty() ? null : savedUrl, true);
+                }
+                selectTab(savedSession.selectedIndex);
+            } else {
+                addNewTab(null, true);
+            }
         }
     }
 
@@ -3900,6 +3911,28 @@ public class BrowserActivity extends ComponentActivity {
             if (currentTab() == null) addNewTab(url, true);
             else navigateTo(currentTab(), url);
         }
+    }
+
+    @Override
+    protected void onStop() {
+        // Private tabs never enter the standard encrypted session snapshot.
+        if (!privateMode && secureStore != null && settings != null) {
+            if (settings.getBoolean("clear_data_on_exit", false)) {
+                secureStore.remove(KEY_TAB_SESSION);
+            } else {
+                saveTabSession();
+            }
+        }
+        super.onStop();
+    }
+
+    private void saveTabSession() {
+        ArrayList<String> urls = new ArrayList<>();
+        for (Tab tab : tabs) {
+            if (urls.size() >= TabSessionStore.MAX_TABS) break;
+            urls.add(tab.home ? "" : tab.url);
+        }
+        secureStore.put(KEY_TAB_SESSION, TabSessionStore.encode(urls, currentTabIndex));
     }
 
     @Override
