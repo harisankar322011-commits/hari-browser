@@ -43,9 +43,9 @@ public final class SiteSafetyReportFormatterTest {
                         "https://example.com/", SiteSafetyChecker.inspect("https://example.com/"),
                         null, true, false);
 
-        assertTrue(presentation.message.contains("Automatic URL reputation: OFF in Private mode"));
         assertTrue(presentation.message.contains("This check did not send the URL to a third-party scanner."));
-        assertFalse(presentation.message.contains("URLhaus because online URL reputation"));
+        assertFalse(presentation.message.contains("ONLINE URL REPUTATION (URLhaus)"));
+        assertFalse(presentation.message.contains("This URL was sent to URLhaus"));
     }
 
     @Test
