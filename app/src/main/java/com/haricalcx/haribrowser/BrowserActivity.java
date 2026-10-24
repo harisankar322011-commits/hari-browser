@@ -2991,27 +2991,44 @@ public class BrowserActivity extends ComponentActivity {
                             showToast("No readable page text was available to save.");
                             return;
                         }
-                        String existing = secureStore.get(KEY_READ_LATER, "[]");
-                        final JSONArray updated;
-                        try {
-                            updated = OfflineReading.addOrReplace(existing, pageTitle,
-                                    pageUrl, body, System.currentTimeMillis(),
-                                    offlineReadingMaxPages(), maxBodyChars);
-                        } catch (IllegalArgumentException invalidPage) {
-                            showToast("This address or page could not be saved safely.");
-                            return;
-                        }
-                        String serialized = updated.toString();
-                        secureStore.put(KEY_READ_LATER, serialized);
-                        if (!serialized.equals(secureStore.get(KEY_READ_LATER, ""))) {
-                            showToast("The offline snapshot could not be stored securely.");
-                            return;
-                        }
-                        showToast("Saved a text-only offline snapshot. Images, links, scripts and cookies are not saved.");
+                        final int maxPages = offlineReadingMaxPages();
+                        final java.util.concurrent.atomic.AtomicBoolean invalidPage =
+                                new java.util.concurrent.atomic.AtomicBoolean(false);
+                        secureStore.updateAsync(KEY_READ_LATER, "[]", existing -> {
+                            try {
+                                return OfflineReading.addOrReplace(existing, pageTitle, pageUrl, body,
+                                        System.currentTimeMillis(), maxPages, maxBodyChars).toString();
+                            } catch (IllegalArgumentException invalid) {
+                                invalidPage.set(true);
+                                return null;
+                            }
+                        }, getMainExecutor(), saved -> {
+                            if (isFinishing() || isDestroyed() || privateMode) return;
+                            if (saved == null) {
+                                showToast(invalidPage.get()
+                                        ? "This address or page could not be saved safely."
+                                        : "The offline snapshot could not be stored securely.");
+                                return;
+                            }
+                            showToast("Saved a text-only offline snapshot. Images, links, scripts and cookies are not saved.");
+                        });
                     });
         } catch (RuntimeException unavailable) {
             showToast("Could not capture this page for offline reading.");
         }
+    }
+
+    private void readOfflinePagesAsync(java.util.function.Consumer<JSONArray> callback) {
+        if (privateMode) return;
+        secureStore.getAsync(KEY_READ_LATER, "[]",
+                command -> StorageTaskQueue.execute(command), serialized -> {
+                    JSONArray parsed = OfflineReading.parse(serialized,
+                            offlineReadingMaxPages(), offlineReadingMaxBodyChars());
+                    getMainExecutor().execute(() -> {
+                        if (isFinishing() || isDestroyed() || privateMode) return;
+                        callback.accept(parsed);
+                    });
+                });
     }
 
     private void showSavedPages() {
@@ -3019,7 +3036,10 @@ public class BrowserActivity extends ComponentActivity {
             showToast("Saved pages are available only in normal browsing, not Private mode.");
             return;
         }
-        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"), offlineReadingMaxPages(), offlineReadingMaxBodyChars());
+        readOfflinePagesAsync(this::showSavedPagesFromArray);
+    }
+
+    private void showSavedPagesFromArray(JSONArray saved) {
         if (saved.length() == 0) {
             new AlertDialog.Builder(this).setTitle("Saved pages")
                     .setMessage("No offline reading snapshots yet. Open an HTTPS page and choose 'Save current page for offline reading'.")
@@ -3047,16 +3067,24 @@ public class BrowserActivity extends ComponentActivity {
                                 .setMessage("This removes all encrypted offline text snapshots from this browser profile.")
                                 .setNegativeButton("Cancel", null)
                                 .setPositiveButton("Clear saved pages", (confirm, selected) -> {
-                                    secureStore.put(KEY_READ_LATER, "[]");
-                                    showToast("Offline saved pages cleared.");
+                                    secureStore.updateAsync(KEY_READ_LATER, "[]", current -> "[]",
+                                            getMainExecutor(), cleared -> {
+                                                if (isFinishing() || isDestroyed() || privateMode) return;
+                                                showToast(cleared == null
+                                                        ? "Could not securely clear saved pages."
+                                                        : "Offline saved pages cleared.");
+                                            });
                                 }).show())
                 .setNegativeButton("Close", null)
                 .show();
     }
 
     private void showSavedPage(String pageUrl) {
-        if (pageUrl == null || pageUrl.isEmpty()) return;
-        JSONArray saved = OfflineReading.parse(secureStore.get(KEY_READ_LATER, "[]"), offlineReadingMaxPages(), offlineReadingMaxBodyChars());
+        if (pageUrl == null || pageUrl.isEmpty() || privateMode) return;
+        readOfflinePagesAsync(saved -> showSavedPageFromArray(pageUrl, saved));
+    }
+
+    private void showSavedPageFromArray(String pageUrl, JSONArray saved) {
         JSONObject selected = null;
         for (int i = 0; i < saved.length(); i++) {
             JSONObject item = saved.optJSONObject(i);
@@ -3085,10 +3113,15 @@ public class BrowserActivity extends ComponentActivity {
                 .setView(scroll)
                 .setPositiveButton("Close", null)
                 .setNeutralButton("Remove saved page", (dialog, which) -> {
-                    String current = secureStore.get(KEY_READ_LATER, "[]");
-                    secureStore.put(KEY_READ_LATER,
-                            OfflineReading.removeByUrl(current, pageUrl, offlineReadingMaxPages(), offlineReadingMaxBodyChars()).toString());
-                    showToast("Offline snapshot removed.");
+                    secureStore.updateAsync(KEY_READ_LATER, "[]", current ->
+                                    OfflineReading.removeByUrl(current, pageUrl,
+                                            offlineReadingMaxPages(), offlineReadingMaxBodyChars()).toString(),
+                            getMainExecutor(), updated -> {
+                                if (isFinishing() || isDestroyed() || privateMode) return;
+                                showToast(updated == null
+                                        ? "Could not securely remove the offline snapshot."
+                                        : "Offline snapshot removed.");
+                            });
                 })
                 .show();
     }
