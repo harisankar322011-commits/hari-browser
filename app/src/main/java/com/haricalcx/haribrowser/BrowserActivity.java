@@ -1971,30 +1971,30 @@ public class BrowserActivity extends ComponentActivity {
             }
 
             Thread requestThread = new Thread(() -> {
-                String answer = null;
+                HariAiClient.Reply reply = null;
                 String problem = null;
                 try {
-                    answer = HariAiClient.generateReply(currentKey, contents);
+                    reply = HariAiClient.generateReplyWithModel(currentKey, contents);
                 } catch (Exception ignored) {
                     problem = ignored.getMessage();
                     if (TextUtils.isEmpty(problem)) {
                         problem = "Could not get a reply. Check your connection and try again.";
                     }
                 }
-                final String finalAnswer = answer;
+                final HariAiClient.Reply finalReply = reply;
                 final String finalProblem = problem;
                 runOnUiThread(() -> {
                     requestInFlight[0] = false;
                     if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
                     sendButton.setEnabled(true);
                     questionInput.setEnabled(true);
-                    if (finalAnswer != null && !finalAnswer.trim().isEmpty()) {
-                        messages.add(new HariAiMessage("model", finalAnswer.trim()));
+                    if (finalReply != null && !finalReply.text.trim().isEmpty()) {
+                        messages.add(new HariAiMessage("model", finalReply.text));
                         while (messages.size() > 40) {
                             messages.remove(0);
                             if (!messages.isEmpty()) messages.remove(0);
                         }
-                        status.setText("Ready");
+                        status.setText("Ready · Model: " + finalReply.modelLabel());
                     } else {
                         if (!messages.isEmpty()) {
                             HariAiMessage last = messages.get(messages.size() - 1);
