@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-The supplied review inspected commit `71ac678` (2.4.0 / versionCode 8). This ledger was reconciled against current main commit `4461b8ff60a11ea82c5c93707e6b6007324854cf`. PRs #52 and #55 are merged; the tab-session implementation is present in that main revision.
+The supplied review inspected commit `71ac678` (2.4.0 / versionCode 8). This ledger was reconciled against current main commit `258a1b7ac0d3de0247986808bcef569d1079c607`. PRs #52 and #55 are merged; the tab-session implementation is present. PR #57 also moved automatic history transactions and tab-session writes onto a serialized background queue. PR #58 added bookmark reordering controls; bookmark folders and migration remain unimplemented.
 
 The previously reported Android device-protection warning remains an **unresolved release blocker**. Passing source checks and CI builds does not prove the old APK was safe or the warning was a false positive. A freshly built APK still requires signature/hash verification, independent scanning and careful device testing. Never bypass the warning. The CI pipeline can produce an unsigned validation artifact if the stable release signer is not configured.
 
@@ -25,7 +25,7 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 | Configurable offline-reading page/text cap | **IMPLEMENTED — PR #49, CI passed.** User choices 4/8/12 pages and 8k/24k/32k characters; hard ceilings 12 pages / 32k characters and existing defaults remain 8 / 24k. | Manually verify capture/display at each setting and ensure changing limits does not unexpectedly lose unrelated saved pages. |
 | In-app download scan history | **IMPLEMENTED — PR #47, CI passed.** Bounded, sanitized history of last 20 scan reports, local details and clear action; private-mode report history is cleared on session exit. | Verify display and private cleanup on device; limited heuristics must never be presented as proof that a file is malware-free. |
 | Expose additional search engines | **IMPLEMENTED — PR #51, CI passed.** Ecosia, Mojeek and Qwant added alongside existing providers; centralized HTTPS URL mapping and query encoding; local query filtering tests for new providers. UI discloses that forced SafeSearch is provider-dependent. | Manually confirm each provider's URLs/results. Teen Protection is still incomplete and some providers need their own SafeSearch settings. |
-| Bookmark folders/reorder | **NOT IMPLEMENTED.** Bookmarks remain a flat list. | Add a backward-compatible encrypted data schema and ordering/migration tests. |
+| Bookmark folders/reorder | **PARTIAL — PR #58 merged.** Bookmark list has accessible Move Up/Move Down actions; JSON metadata and the existing encrypted storage schema are preserved, with focused reorder tests. Folders remain unimplemented. | Add backward-compatible folder metadata and migration tests only after defining a safe user-facing folder workflow. |
 | Complete localization through Android resources | **PARTIAL.** Home page and \`BrowserUiText\` cover many languages, but runtime dialogs, toasts and security labels still contain English literals. | Migrate in batches to Android string resources; verify Malayalam and fallback coverage. |
 | Instrumented/Robolectric behavior tests | **PARTIAL.** JVM unit tests and static smoke tests exist; static checks cannot prove full runtime behavior. | Add Android behavioral tests for navigation interception, WebView lifecycle, settings toggles, downloads, private cleanup and tab restore. |
 | Bound session approval cache | **IMPLEMENTED — PR #47, CI passed.** Synchronized insertion-ordered cache capped at 256 URLs with eviction tests. | Keep the bound and tests. |
@@ -40,6 +40,8 @@ This is a source audit and prioritized implementation ledger, not a claim of ful
 - **PR #48 — per-site page-script fingerprint controls:** exact-host overrides with explicit consent; bounded 128-host policy; visible status; private-session cleanup; host-policy and script-wrapper tests. CI passed before merge.
 - **PR #49 — offline reading limits:** configurable page/text caps with hard ceilings; capture/read/remove paths honor selected preferences; focused JVM tests. CI passed before merge.
 - **PR #51 — additional search providers:** Ecosia, Mojeek and Qwant; central URL generator and query encoding; Teen Protection checks for new providers; honest SafeSearch limitation text; static smoke test updated to validate the centralized URL helper. CI passed before merge.
+- **PR #57 — serialized background storage:** history read/modify/write and tab-session save/clear moved to the single-thread storage queue, with FIFO/off-caller test coverage. Six CI checks passed, including debug/release APK builds and CodeQL.
+- **PR #58 — bookmark reordering:** accessible up/down controls, metadata-preserving HTTPS bookmark reorder helper and focused boundary/malformed-data tests. Six CI checks passed, including debug/release APK builds and CodeQL.
 
 ## Merged changes — safe external links (PR #52)
 
