@@ -1,0 +1,7 @@
+Hari Browser 2.4.0
+- Adds the HARI SINGULARITY five-layer protection dashboard and clearer disclosures for optional URL reputation checks.
+- Improves download scan reporting and custom local tracker-list support.
+- Bounds session-only site approvals and restores the previously open HTTPS page after a WebView renderer crash.
+- Local file checks and site-safety signals are best-effort; they do not prove that a website or file is safe.
+
+Important: the previously reported Android device-protection warning must be investigated against a freshly built and independently scanned APK. Do not ignore a device warning.
