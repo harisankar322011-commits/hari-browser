@@ -42,6 +42,16 @@ public class BrowserUiTextTest {
     }
 
     @Test
+    public void translatesBookmarkFolderControlsForIndianLanguages() {
+        assertEquals("ഫോൾഡറുകൾ", BrowserUiText.translate("ml", "Folders"));
+        assertEquals("फ़ोल्डर", BrowserUiText.translate("hi", "Folders"));
+        assertEquals("கோப்புறைகள்", BrowserUiText.translate("ta", "Folders"));
+        assertEquals("Folders", BrowserUiText.translate("en", "Folders"));
+        assertEquals("புத்தகக்குறி கோப்புறையைத் திறக்கவும்",
+                BrowserUiText.translate("ta", "Open bookmarks folder"));
+    }
+
+    @Test
     public void keepsUnknownAndUntranslatedLabelsInEnglish() {
         assertEquals("Custom label", BrowserUiText.translate("ml", "Custom label"));
         assertEquals("Settings", BrowserUiText.translate("unknown", "Settings"));

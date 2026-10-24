@@ -8,6 +8,10 @@ import android.util.Base64;
 
 import java.nio.ByteBuffer;
 import java.security.KeyStore;
+import java.util.Objects;
+import java.util.concurrent.Executor;
+import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -39,7 +43,7 @@ public final class SecureStore {
         preferences = app.getSharedPreferences(PREFS_NAME + suffix, Context.MODE_PRIVATE);
     }
 
-    public synchronized void put(String name, String value) {
+    public synchronized boolean put(String name, String value) {
         try {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey());
@@ -50,9 +54,11 @@ public final class SecureStore {
             buffer.put(iv);
             buffer.put(encrypted);
             preferences.edit().putString(name, Base64.encodeToString(buffer.array(), Base64.NO_WRAP)).apply();
+            return true;
         } catch (Exception ignored) {
             // Fail closed: do not fall back to storing sensitive data in plaintext.
             preferences.edit().remove(name).apply();
+            return false;
         }
     }
 
@@ -79,6 +85,54 @@ public final class SecureStore {
             preferences.edit().remove(name).apply();
             return fallback;
         }
+    }
+
+    /**
+     * Decrypt a value on the serialized storage queue and dispatch the result to the
+     * caller-selected executor (normally an Activity's main executor). The callback
+     * must still check its lifecycle before updating UI.
+     */
+    public void getAsync(String name, String fallback, Executor callbackExecutor,
+                         Consumer<String> callback) {
+        Objects.requireNonNull(callbackExecutor, "callbackExecutor");
+        Objects.requireNonNull(callback, "callback");
+        StorageTaskQueue.execute(() -> {
+            String value = get(name, fallback);
+            try {
+                callbackExecutor.execute(() -> callback.accept(value));
+            } catch (RuntimeException ignored) {
+                // A shutting-down callback executor must not crash the storage worker.
+            }
+        });
+    }
+
+    /**
+     * Run a read/modify/write transaction on the serial queue so JSON transformations
+     * do not execute on the UI thread and concurrent queued changes cannot interleave.
+     * Return null from the transformer to cancel without writing. The callback runs on
+     * the caller-selected executor; it receives null for a cancelled or failed update.
+     */
+    public void updateAsync(String name, String fallback, UnaryOperator<String> transformer,
+                            Executor callbackExecutor, Consumer<String> callback) {
+        Objects.requireNonNull(transformer, "transformer");
+        Objects.requireNonNull(callbackExecutor, "callbackExecutor");
+        Objects.requireNonNull(callback, "callback");
+        StorageTaskQueue.execute(() -> {
+            String result = null;
+            try {
+                String current = get(name, fallback);
+                String updated = transformer.apply(current);
+                if (updated != null && put(name, updated)) result = updated;
+            } catch (RuntimeException ignored) {
+                // Invalid transforms fail closed and do not save plaintext.
+            }
+            final String completedValue = result;
+            try {
+                callbackExecutor.execute(() -> callback.accept(completedValue));
+            } catch (RuntimeException ignored) {
+                // A shutting-down callback executor must not crash the storage worker.
+            }
+        });
     }
 
     public synchronized void remove(String name) {
