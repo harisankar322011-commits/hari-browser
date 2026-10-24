@@ -84,4 +84,33 @@ public class SiteSafetyCheckerTest {
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(url.toString());
         assertTrue(String.join(" ", report.getWarnings()).contains("long query string"));
     }
+
+    @Test
+    public void unicodeHostnameIsNormalizedToPunycodeAndFlagged() {
+        String lookalikeHost = "\u0440\u0430ypal.example";
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://" + lookalikeHost + "/login");
+
+        assertEquals("xn--ypal-43d9g.example", report.getHost());
+        String warnings = String.join(" ", report.getWarnings()).toLowerCase(java.util.Locale.ROOT);
+        assertTrue(warnings.contains("internationalized domain name"));
+        assertTrue(warnings.contains("punycode"));
+    }
+
+    @Test
+    public void mixedLatinAndCyrillicHostnameGetsVisualSpoofingWarning() {
+        String lookalikeHost = "\u0440\u0430ypal.example";
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://" + lookalikeHost + "/login");
+        String warnings = String.join(" ", report.getWarnings());
+
+        assertTrue(warnings.contains("mixes Latin with Cyrillic or Greek"));
+    }
+
+    @Test
+    public void unicodeHostnameDoesNotHideNonstandardPort() {
+        String lookalikeHost = "\u0440\u0430ypal.example";
+        SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(
+                "https://" + lookalikeHost + ":8443/login");
+
+        assertTrue(String.join(" ", report.getWarnings()).contains("non-standard HTTPS port (8443)"));
+    }
 }

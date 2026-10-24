@@ -1,6 +1,7 @@
 package com.haricalcx.haribrowser;
 
 import java.net.URI;
+import java.net.IDN;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -71,50 +72,77 @@ public final class SiteSafetyChecker {
         }
 
         String host = uri.getHost();
+        // java.net.URI returns null from getHost() for Unicode domain labels. Parse the
+        // authority conservatively so those addresses receive a specific warning instead
+        // of being reduced to a generic "unknown host" message.
+        if (host == null || host.trim().isEmpty()) {
+            host = hostFromAuthority(uri);
+        }
         if (host == null || host.trim().isEmpty()) {
             warnings.add("The browser could not reliably identify the destination hostname.");
-            host = null;
         } else {
-            hostLabel = host;
-            String normalizedHost = host.toLowerCase(Locale.ROOT);
-
-            String listedService = OfficialDomainRegistry.serviceForHost(normalizedHost);
-            if (listedService != null) {
-                passed.add("Hostname matches the curated official-domain list: " + listedService
-                        + " (a list match, not a guarantee that this page is safe)");
+            String normalizedHost;
+            try {
+                normalizedHost = host.indexOf(':') >= 0
+                        ? host.toLowerCase(Locale.ROOT)
+                        : IDN.toASCII(host, IDN.USE_STD3_ASCII_RULES).toLowerCase(Locale.ROOT);
+            } catch (IllegalArgumentException invalidHostname) {
+                hostLabel = host;
+                normalizedHost = null;
+                warnings.add("The destination hostname contains invalid or unsupported internationalized characters.");
             }
 
-            if (uri.getUserInfo() != null) {
-                warnings.add("The URL contains text before the hostname that can disguise the real destination.");
-            } else {
-                passed.add("No embedded username or password in the URL");
-            }
+            if (normalizedHost != null) {
+                hostLabel = normalizedHost;
 
-            if (normalizedHost.startsWith("xn--") || normalizedHost.contains(".xn--")) {
-                warnings.add("The hostname contains punycode. Confirm the spelling carefully; internationalized names can be legitimate.");
-            } else {
-                passed.add("Hostname is not visibly punycode-encoded");
-            }
+                if (containsNonAscii(host)) {
+                    warnings.add("The hostname is an internationalized domain name. Confirm the spelling carefully; visually similar characters may disguise the destination.");
+                }
+                String unicodeHost = IDN.toUnicode(normalizedHost);
+                if (hasMixedLatinCyrillicOrGreekLabel(unicodeHost)) {
+                    warnings.add("A hostname label mixes Latin with Cyrillic or Greek characters, a pattern sometimes used for visual spoofing.");
+                }
 
-            if (isIpLiteral(normalizedHost)) {
-                warnings.add("The destination uses an IP address instead of a familiar domain name.");
-            } else {
-                passed.add("Destination is a named hostname, not an IP literal");
-            }
+                String listedService = OfficialDomainRegistry.serviceForHost(normalizedHost);
+                if (listedService != null) {
+                    passed.add("Hostname matches the curated official-domain list: " + listedService
+                            + " (a list match, not a guarantee that this page is safe)");
+                }
 
-            if (normalizedHost.length() > 100) {
-                warnings.add("The hostname is unusually long.");
-            }
+                if (uri.getUserInfo() != null) {
+                    warnings.add("The URL contains text before the hostname that can disguise the real destination.");
+                } else {
+                    passed.add("No embedded username or password in the URL");
+                }
 
-            if (countLabels(normalizedHost) > 5) {
-                warnings.add("The hostname has many subdomains. Check the registered domain carefully.");
-            }
+                if (normalizedHost.startsWith("xn--") || normalizedHost.contains(".xn--")) {
+                    warnings.add("The hostname contains punycode. Confirm the spelling carefully; internationalized names can be legitimate.");
+                } else {
+                    passed.add("Hostname is not visibly punycode-encoded");
+                }
 
-            int port = uri.getPort();
-            if (port == -1 || port == 443) {
-                passed.add("No unusual HTTPS port");
-            } else {
-                warnings.add("The URL uses a non-standard HTTPS port (" + port + ").");
+                if (isIpLiteral(normalizedHost)) {
+                    warnings.add("The destination uses an IP address instead of a familiar domain name.");
+                } else {
+                    passed.add("Destination is a named hostname, not an IP literal");
+                }
+
+                if (normalizedHost.length() > 100) {
+                    warnings.add("The hostname is unusually long.");
+                }
+
+                if (countLabels(normalizedHost) > 5) {
+                    warnings.add("The hostname has many subdomains. Check the registered domain carefully.");
+                }
+
+                int port = effectivePort(uri);
+                if (port == -1 || port == 443) {
+                    passed.add("No unusual HTTPS port");
+                } else if (port < 0) {
+                    warnings.add("The URL has a malformed or out-of-range port.");
+                } else {
+                    warnings.add("The URL uses a non-standard HTTPS port (" + port + ").");
+                }
             }
         }
 
@@ -130,6 +158,96 @@ public final class SiteSafetyChecker {
             passed.add("No obvious URL-structure warning found (this is not a trust or malware verdict)");
         }
         return new Report(hostLabel, passed, warnings);
+    }
+
+    private static String hostFromAuthority(URI uri) {
+        String authority = uri.getRawAuthority();
+        if (authority == null || authority.isEmpty()) return null;
+
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) authority = authority.substring(at + 1);
+        if (authority.isEmpty()) return null;
+
+        if (authority.startsWith("[")) {
+            int closingBracket = authority.indexOf(']');
+            return closingBracket > 0 ? authority.substring(1, closingBracket) : null;
+        }
+
+        int firstColon = authority.indexOf(':');
+        int lastColon = authority.lastIndexOf(':');
+        if (firstColon >= 0 && firstColon == lastColon) {
+            String port = authority.substring(lastColon + 1);
+            if (port.isEmpty() || !port.chars().allMatch(Character::isDigit)) return null;
+            authority = authority.substring(0, lastColon);
+        } else if (firstColon >= 0) {
+            // An unbracketed multi-colon authority is ambiguous; do not guess its host.
+            return null;
+        }
+        return authority.isEmpty() ? null : authority;
+    }
+
+    private static int effectivePort(URI uri) {
+        int parsedPort = uri.getPort();
+        if (parsedPort >= 0) return parsedPort;
+
+        // URI#getPort() may be -1 when the hostname contains Unicode characters.
+        String authority = uri.getRawAuthority();
+        if (authority == null || authority.isEmpty()) return -1;
+        int at = authority.lastIndexOf('@');
+        if (at >= 0) authority = authority.substring(at + 1);
+
+        String portText;
+        if (authority.startsWith("[")) {
+            int closingBracket = authority.indexOf(']');
+            if (closingBracket < 0) return -2;
+            if (closingBracket == authority.length() - 1) return -1;
+            if (authority.charAt(closingBracket + 1) != ':') return -2;
+            portText = authority.substring(closingBracket + 2);
+        } else {
+            int firstColon = authority.indexOf(':');
+            int lastColon = authority.lastIndexOf(':');
+            if (firstColon < 0) return -1;
+            if (firstColon != lastColon) return -2;
+            portText = authority.substring(lastColon + 1);
+        }
+
+        if (portText.isEmpty() || !portText.chars().allMatch(Character::isDigit)) return -2;
+        try {
+            int port = Integer.parseInt(portText);
+            return port >= 0 && port <= 65535 ? port : -2;
+        } catch (NumberFormatException invalidPort) {
+            return -2;
+        }
+    }
+
+    private static boolean containsNonAscii(String value) {
+        if (value == null) return false;
+        for (int i = 0; i < value.length(); i++) {
+            if (value.charAt(i) > 0x7f) return true;
+        }
+        return false;
+    }
+
+    /** Only flags mixed Latin/Cyrillic/Greek letters within the same hostname label. */
+    private static boolean hasMixedLatinCyrillicOrGreekLabel(String hostname) {
+        if (hostname == null || hostname.isEmpty()) return false;
+        String unicodeHost = IDN.toUnicode(hostname);
+        for (String label : unicodeHost.split("\\.", -1)) {
+            boolean latin = false;
+            boolean cyrillic = false;
+            boolean greek = false;
+            for (int offset = 0; offset < label.length();) {
+                int codePoint = label.codePointAt(offset);
+                offset += Character.charCount(codePoint);
+                if (!Character.isLetter(codePoint)) continue;
+                Character.UnicodeScript script = Character.UnicodeScript.of(codePoint);
+                if (script == Character.UnicodeScript.LATIN) latin = true;
+                else if (script == Character.UnicodeScript.CYRILLIC) cyrillic = true;
+                else if (script == Character.UnicodeScript.GREEK) greek = true;
+            }
+            if ((latin && (cyrillic || greek)) || (cyrillic && greek)) return true;
+        }
+        return false;
     }
 
     private static boolean isIpLiteral(String host) {
