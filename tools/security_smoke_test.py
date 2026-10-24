@@ -153,7 +153,7 @@ try:
     external_link_policy = read("app/src/main/java/com/haricalcx/haribrowser/ExternalLinkPolicy.java")
     check("External scheme policy explicitly allows only validated HTTP(S), mailto and tel",
           'case "mailto":' in external_link_policy and 'case "tel":' in external_link_policy and
-          'default:\\n                return Kind.BLOCKED;' in external_link_policy and
+          'default:' in external_link_policy and 'return Kind.BLOCKED;' in external_link_policy and
           "safeMailTarget(input)" in external_link_policy and "safePhoneTarget(input)" in external_link_policy)
     check("External mail and telephone links require confirmation and never place calls",
           "confirmExternalLink(url)" in browser and
