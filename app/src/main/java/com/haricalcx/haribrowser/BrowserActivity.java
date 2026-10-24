@@ -1455,7 +1455,8 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void rememberHistory(String title, String url) {
-        if (privateMode || !historyEnabled()) return;
+        if (privateMode) return;
+        if (!historyEnabled()) return;
         // Only capture the application-scoped store and immutable strings: the queued
         // transaction must not retain this Activity after a navigation finishes.
         final SecureStore store = secureStore;
