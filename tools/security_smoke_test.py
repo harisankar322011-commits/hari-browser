@@ -152,6 +152,19 @@ try:
           "protectionStore.get(TeenProtection.PIN_HASH_KEY" not in browser and
           "protectionStore.put(TeenProtection.PIN_SALT_KEY" not in browser and
           "protectionStore.put(TeenProtection.PIN_HASH_KEY" not in browser)
+    teen_setup_body = method_body(browser, "private void showTeenProtectionSetupDialog()")
+    teen_verify_body = method_body(browser, "private void verifyTeenProtectionPin(")
+    check("Teen Protection PBKDF2 setup and verification stay off the UI thread",
+          "StorageTaskQueue.execute(() -> {" in teen_setup_body and
+          "TeenProtection.hashPin(pin, salt)" in teen_setup_body and
+          'protectionStore.getAsync(TeenProtection.PIN_SALT_KEY, "", Runnable::run' in teen_verify_body and
+          'protectionStore.getAsync(TeenProtection.PIN_HASH_KEY, "", Runnable::run' in teen_verify_body and
+          "TeenProtection.verifyPin(candidate, salt, hash)" in teen_verify_body)
+    check("Teen Protection lockout counts failed PINs even after dialog dismissal",
+          teen_verify_body.find("protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply()") >= 0 and
+          teen_verify_body.find("protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply()") <
+          teen_verify_body.find("if (!isTeenPinDialogActive(dialog)) return;", teen_verify_body.find("boolean verified =")))
+
     check("Teen protection applies strict SafeSearch parameters",
           'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
           'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)
