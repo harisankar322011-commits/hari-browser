@@ -1964,7 +1964,13 @@ public class BrowserActivity extends ComponentActivity {
 
 
     private void showHariAiSettingsDialog() {
-        String existingKey = secureStore.get(KEY_HARI_AI_API_KEY, "");
+        secureStore.getAsync(KEY_HARI_AI_API_KEY, "", getMainExecutor(), existingKey -> {
+            if (isFinishing() || isDestroyed()) return;
+            buildHariAiSettingsDialog(existingKey == null ? "" : existingKey);
+        });
+    }
+
+    private void buildHariAiSettingsDialog(String existingKey) {
         boolean hasKey = !TextUtils.isEmpty(existingKey);
 
         EditText keyInput = new EditText(this);
@@ -2059,23 +2065,34 @@ public class BrowserActivity extends ComponentActivity {
                     keyInput.setError("That key format is not valid.");
                     return;
                 }
-                secureStore.put(KEY_HARI_AI_API_KEY, value);
-                String saved = secureStore.get(KEY_HARI_AI_API_KEY, "");
-                if (!value.equals(saved)) {
-                    showToast("Could not securely save the key. Try again.");
-                    return;
-                }
-                dialog.dismiss();
-                showToast("Hari AI is ready.");
+                saveButton.setEnabled(false);
+                secureStore.putAsync(KEY_HARI_AI_API_KEY, value);
+                secureStore.getAsync(KEY_HARI_AI_API_KEY, "", getMainExecutor(), saved -> {
+                    if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
+                    saveButton.setEnabled(true);
+                    if (!value.equals(saved)) {
+                        showToast("Could not securely save the key. Try again.");
+                        return;
+                    }
+                    dialog.dismiss();
+                    showToast("Hari AI is ready.");
+                });
             });
             clearButton.setOnClickListener(v -> new AlertDialog.Builder(BrowserActivity.this)
                     .setTitle("Clear Hari AI key?")
                     .setMessage("Hari AI will stop working until a new key is saved.")
                     .setNegativeButton("Cancel", null)
                     .setPositiveButton("Clear key", (d, which) -> {
-                        secureStore.put(KEY_HARI_AI_API_KEY, "");
-                        dialog.dismiss();
-                        showToast("Hari AI key cleared.");
+                        secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", stored -> "",
+                                getMainExecutor(), cleared -> {
+                                    if (isFinishing() || isDestroyed() || !dialog.isShowing()) return;
+                                    if (cleared == null) {
+                                        showToast("Could not securely clear the Hari AI key.");
+                                        return;
+                                    }
+                                    dialog.dismiss();
+                                    showToast("Hari AI key cleared.");
+                                });
                     })
                     .show());
         });
@@ -2083,7 +2100,13 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showHariAiDialog() {
-        String apiKey = secureStore.get(KEY_HARI_AI_API_KEY, "");
+        secureStore.getAsync(KEY_HARI_AI_API_KEY, "", getMainExecutor(), apiKey -> {
+            if (isFinishing() || isDestroyed()) return;
+            buildHariAiDialog(apiKey == null ? "" : apiKey);
+        });
+    }
+
+    private void buildHariAiDialog(String apiKey) {
         if (TextUtils.isEmpty(apiKey.trim())) {
             new AlertDialog.Builder(this)
                     .setTitle("Hari AI")
@@ -2171,12 +2194,7 @@ public class BrowserActivity extends ComponentActivity {
                 questionInput.setError("Keep each message under 6,000 characters.");
                 return;
             }
-            String currentKey = secureStore.get(KEY_HARI_AI_API_KEY, "");
-            if (TextUtils.isEmpty(currentKey.trim())) {
-                dialog.dismiss();
-                showHariAiSettingsDialog();
-                return;
-            }
+            final String currentKey = apiKey;
 
             messages.add(new HariAiMessage("user", question));
             questionInput.setText("");
