@@ -31,6 +31,16 @@ public final class DownloadSafetyPolicyTest {
     }
 
     @Test
+    public void selectedLanguageLocalizesTheSecurityWarningAndDisclaimer() {
+        String message = DownloadSafetyPolicy.confirmationMessage("installer.apk", true, "ml");
+
+        assertTrue(message.startsWith("installer.apk ഡൗൺലോഡ്സ് ഫോൾഡറിൽ സേവ് ചെയ്യണോ?"));
+        assertTrue(message.contains("മുന്നറിയിപ്പ്:"));
+        assertTrue(message.contains("ഇത് മാൽവെയർ സംബന്ധിച്ച അന്തിമ വിധിയല്ല."));
+        assertFalse(message.contains("Warning: this file may install or run software."));
+    }
+
+    @Test
     public void ordinaryDownloadsStillExplainTheLimitsOfTheFileChecks() {
         String message = DownloadSafetyPolicy.confirmationMessage("notes.pdf", false);
 
