@@ -232,6 +232,9 @@ try:
           "secureStore.putAsync(KEY_HARI_AI_API_KEY, value)" in browser and
           'secureStore.getAsync(KEY_HARI_AI_API_KEY, "", getMainExecutor()' in browser and
           'secureStore.updateAsync(KEY_HARI_AI_API_KEY, "", stored -> ""' in browser)
+    check("URLhaus API key uses asynchronous encrypted storage",
+          'protectionStore.getAsync("hari_rep_store_1", "", getMainExecutor()' in browser and
+          'protectionStore.get("hari_rep_store_1", "")' not in browser)
     check("No JavaScript-to-native bridge in the general browser WebView",
           re.search(r"\.addJavascriptInterface\s*\(", browser) is None)
     crypto_html = read("app/src/main/assets/hari_cryptography.html")
