@@ -113,6 +113,8 @@ try:
     ]:
         check(label, fragment in browser)
     home_page = read("app/src/main/java/com/haricalcx/haribrowser/HomePage.java")
+    home_page_template = read("app/src/main/assets/home_page_template.html")
+    home_page_content = home_page + "\n" + home_page_template
     home_directory = read("app/src/main/assets/home_directory.txt")
     ai_client = read("app/src/main/java/com/haricalcx/haribrowser/HariAiClient.java")
     teen_protection = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtection.java")
@@ -188,29 +190,29 @@ try:
           "India services|DIKSHA — School Learning|https://diksha.gov.in/" in home_directory and
           "India services|Kerala Government|https://kerala.gov.in/" in home_directory)
     check("Five additional Indian-script home languages are available in the page UI",
-          all(code + ":" in home_page for code in ("bn", "mr", "gu", "pa", "ur")) and
-          all(('value="' + code + '"') in home_page for code in ("bn", "mr", "gu", "pa", "ur")))
+          all(code + ":" in home_page_template for code in ("bn", "mr", "gu", "pa", "ur")) and
+          all(('value="' + code + '"') in home_page_template for code in ("bn", "mr", "gu", "pa", "ur")))
     check("Native language settings persist all five new Indian languages",
           all(('"' + code + '"') in browser[browser.find("private void setHomeLanguage"):browser.find("private void setHomeSearchEngine")]
               for code in ("bn", "mr", "gu", "pa", "ur")) and
           all(name in browser for name in ("Bengali (বাংলা)", "Marathi (मराठी)", "Gujarati (ગુજરાતી)", "Punjabi (ਪੰਜਾਬੀ)", "Urdu (اردو)")))
     check("Indian home languages use India date formatting and Urdu is right-to-left",
-          "en-IN" in home_page and "currentLanguage+'-IN'" in home_page and
-          "['ar','ur'].includes(currentLanguage)" in home_page)
+          "en-IN" in home_page_template and "currentLanguage+'-IN'" in home_page_template and
+          "['ar','ur'].includes(currentLanguage)" in home_page_template)
     check("Indian language actions remain translated instead of falling back to English",
-          "EXTRA_UI[code].actions = words.actions || EXTRA_UI.en.actions" in home_page and
-          "＋ নতুন ট্যাব" in home_page and "＋ नवीन टॅब" in home_page and
-          "＋ નવી ટૅબ" in home_page and "＋ ਨਵੀਂ ਟੈਬ" in home_page and "＋ نیا ٹیب" in home_page)
+          "EXTRA_UI[code].actions = words.actions || EXTRA_UI.en.actions" in home_page_template and
+          "＋ নতুন ট্যাব" in home_page_template and "＋ नवीन टॅब" in home_page_template and
+          "＋ નવી ટૅબ" in home_page_template and "＋ ਨਵੀਂ ਟੈਬ" in home_page_template and "＋ نیا ٹیب" in home_page_template)
     check("India services category is translated on both category buttons and site cards",
-          "function displayDirectoryCategory(category)" in home_page and
-          "b.textContent=displayDirectoryCategory(c)" in home_page and
-          "esc(displayDirectoryCategory(site.category))" in home_page)
+          "function displayDirectoryCategory(category)" in home_page_template and
+          "b.textContent=displayDirectoryCategory(c)" in home_page_template and
+          "esc(displayDirectoryCategory(site.category))" in home_page_template)
     check("Google selection prefers the India search endpoint",
-          "google.co.in/search?q=" in home_page and
+          "google.co.in/search?q=" in home_page_template and
           'case "Google":' in search_engine_urls and
           "google.co.in/search?q=" in search_engine_urls)
     check("Hari AI home button has a native internal route",
-          'href="https://hari-browser-home.invalid/action/ai"' in home_page and 'case "ai":' in browser)
+          'href="https://hari-browser-home.invalid/action/ai"' in home_page_template and 'case "ai":' in browser)
     check("Hari AI prompt supports Indian context and major Indian languages",
           "Indian numbering such as lakh and crore" in ai_client and
           "Indian Standard Time" in ai_client and "₹ (INR)" in ai_client and
@@ -233,7 +235,7 @@ try:
           "usesDocumentedGenerateContentEndpointShape" in ai_tests and
           "explainsCommonApiKeyAndQuotaErrors" in ai_tests)
     check("AI provider name is absent from app-facing UI",
-          "Gemini" not in browser and "Gemini" not in home_page)
+          "Gemini" not in browser and "Gemini" not in home_page_content)
     check("No API key is hard-coded in source",
           re.search(r"AIza[0-9A-Za-z_-]{20,}", browser + ai_client) is None)
     check("Hari AI key uses asynchronous encrypted storage",
@@ -265,7 +267,7 @@ try:
           "Intent.ACTION_CREATE_DOCUMENT" in crypto_activity and
           "Arrays.fill(decoded, (byte) 0)" in crypto_activity)
     check("Cryptography toolbox action reaches its dedicated native screen",
-          "action/cryptography" in home_page and 'case "cryptography":' in browser)
+          "action/cryptography" in home_page_template and 'case "cryptography":' in browser)
     check("Debugging is never turned on in source",
           re.search(r"setWebContentsDebuggingEnabled\s*\(\s*true\s*\)", browser) is None)
 
