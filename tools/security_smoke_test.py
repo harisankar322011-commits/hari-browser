@@ -165,6 +165,13 @@ try:
           teen_verify_body.find("protectionSettings.edit().putInt(TeenProtection.PIN_FAILURES_KEY, failures).apply()") <
           teen_verify_body.find("if (!isTeenPinDialogActive(dialog)) return;", teen_verify_body.find("boolean verified =")))
 
+    pin_lockout = read("app/src/main/java/com/haricalcx/haribrowser/TeenProtectionPinLockout.java")
+    pin_lockout_tests = read("app/src/test/java/com/haricalcx/haribrowser/TeenProtectionPinLockoutTest.java")
+    check("Teen Protection lockout threshold and expiry are unit tested",
+          "MAX_ATTEMPTS = 5" in pin_lockout and
+          "LOCKOUT_MILLIS = 60_000L" in pin_lockout and
+          "fifthFailureStartsOneMinuteLockoutAndResetsFailureCounter" in pin_lockout_tests and
+          "remainingLockoutTimeIsRoundedUpAndNeverNegative" in pin_lockout_tests)
     check("Teen protection applies strict SafeSearch parameters",
           'key = "safe"' in teen_protection and 'key = "adlt"' in teen_protection and
           'key = "kp"' in teen_protection and 'key = "safesearch"' in teen_protection)
