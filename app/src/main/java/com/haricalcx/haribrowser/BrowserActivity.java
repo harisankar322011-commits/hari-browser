@@ -140,10 +140,8 @@ public class BrowserActivity extends ComponentActivity {
     private static ArrayList<String> pendingThemeRestoreUrls;
     private static int pendingThemeRestoreIndex;
     private static boolean pendingThemeRestorePrivateMode;
-    // Opt-in online URL reputation results remain in memory only and never enter browser history.
-    private final Set<String> pendingUrlhausChecks = Collections.synchronizedSet(new HashSet<>());
-    private final Map<String, UrlhausReputation.Result> urlhausSessionResults =
-            Collections.synchronizedMap(new HashMap<>());
+    // Optional URL reputation is bounded to four concurrent lookups and 128 cached outcomes.
+    private final UrlhausSessionState urlhausSessionState = new UrlhausSessionState();
 
     private String ui(String english) {
         return BrowserUiText.translate(settings.getString("home_language", "en"), english);
@@ -1125,7 +1123,7 @@ public class BrowserActivity extends ComponentActivity {
                 getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
                         .getBoolean("auto_urlhaus_enabled", false);
         if (onlineChecksEnabled) {
-            UrlhausReputation.Result cached = urlhausSessionResults.get(url);
+            UrlhausReputation.Result cached = urlhausSessionState.cachedResult(url);
             if (cached != null) {
                 showSiteSafetyCheckDialog(tab, url, cached, attempt);
                 return;
@@ -1162,10 +1160,21 @@ public class BrowserActivity extends ComponentActivity {
 
     private void startUrlhausLookup(Tab tab, String url, String authKey, long attempt) {
         if (!isCurrentSiteSafetyAttempt(tab, attempt)) return;
-        if (!pendingUrlhausChecks.add(url)) {
-            showToast("URL reputation check is already running. Please wait.");
+
+        UrlhausSessionState.LookupAdmission admission = urlhausSessionState.beginLookup(url);
+        if (admission != UrlhausSessionState.LookupAdmission.STARTED) {
+            String message;
+            if (admission == UrlhausSessionState.LookupAdmission.ALREADY_RUNNING) {
+                message = "URL reputation check is already running. Please wait.";
+            } else if (admission == UrlhausSessionState.LookupAdmission.CAPACITY_REACHED) {
+                message = "Too many URL reputation checks are running. Please try again shortly.";
+            } else {
+                message = "This destination cannot be checked as a valid HTTPS URL.";
+            }
+            showToast(message);
             return;
         }
+
         showToast("Checking this destination with URLhaus…");
         new Thread(() -> {
             UrlhausReputation.Result reputation;
@@ -1174,11 +1183,12 @@ public class BrowserActivity extends ComponentActivity {
             } catch (Exception error) {
                 reputation = new UrlhausReputation.Result(false, "SERVICE_UNAVAILABLE",
                         "Online URL reputation was unavailable. Local URL checks remain active.");
-            } finally {
-                pendingUrlhausChecks.remove(url);
             }
-            if ("KNOWN_MALWARE_URL".equals(reputation.status) || "NO_MATCH".equals(reputation.status)) {
-                urlhausSessionResults.put(url, reputation);
+            try {
+                // Session state only retains definitive results and evicts old ones above its cap.
+                urlhausSessionState.cacheResult(url, reputation);
+            } finally {
+                urlhausSessionState.finishLookup(url);
             }
             UrlhausReputation.Result finalReputation = reputation;
             runOnUiThread(() -> {
