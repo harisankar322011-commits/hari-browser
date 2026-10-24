@@ -261,7 +261,10 @@ try:
     private_settings = 'getSharedPreferences(privateMode ? "hari_browser_private_settings" : "hari_browser_settings", MODE_PRIVATE)'
     check("Private settings do not alter standard-browser settings", private_settings in browser)
     check("Private start page receives no standard bookmarks",
-          'String bookmarksJson = privateMode ? "[]" : readArray(KEY_BOOKMARKS).toString()' in browser)
+          'renderHome(tab, "[]");' in browser and
+          'secureStore.getAsync(KEY_BOOKMARKS, "[]", getMainExecutor()' in browser and
+          'renderHome(tab, parseArray(serialized).toString())' in browser and
+          'String bookmarksJson = privateMode ? "[]" : readArray(KEY_BOOKMARKS).toString()' not in browser)
     check("Browser constructs a profile-specific encrypted store",
           "new SecureStore(this, privateMode)" in browser)
     check("Private encrypted-store namespace and key are isolated",
