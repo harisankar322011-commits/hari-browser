@@ -138,8 +138,12 @@ public final class PrivacyGuard {
     }
 
     private static boolean matchesTrackerSet(String host, Set<String> trackers) {
-        for (String tracker : trackers) {
-            if (host.equals(tracker) || host.endsWith("." + tracker)) return true;
+        // Walk only the candidate's DNS suffixes so large imported lists remain fast.
+        if (trackers.contains(host)) return true;
+        int dot = host.indexOf('.');
+        while (dot >= 0 && dot < host.length() - 1) {
+            if (trackers.contains(host.substring(dot + 1))) return true;
+            dot = host.indexOf('.', dot + 1);
         }
         return false;
     }
