@@ -7,3 +7,5 @@ Hari Browser 2.4.0
 Important: the previously reported Android device-protection warning must be investigated against a freshly built and independently scanned APK. Do not ignore a device warning.
 - Safely opens validated email and dialer links only after confirmation; unsupported schemes remain blocked.
 - Hari AI now displays the exact model ID used for each successful reply.
+- Caps optional URLhaus reputation work at four concurrent lookups and 128 cached definitive results.
+- Removes an obsolete synchronous encrypted-store read path from the browser activity.
