@@ -113,6 +113,8 @@ public class BrowserActivity extends ComponentActivity {
 
     private SharedPreferences settings;
     private SecureStore secureStore;
+    private ArrayList<UserscriptManager.Script> userscriptCache = new ArrayList<>();
+    private boolean userscriptsLoaded = false;
     private SharedPreferences protectionSettings;
     private SecureStore protectionStore;
     private boolean privateMode;
@@ -349,6 +351,7 @@ public class BrowserActivity extends ComponentActivity {
                     }
                 });
         secureStore = new SecureStore(this, privateMode);
+        loadUserscriptCache();
         defaultUserAgent = WebSettings.getDefaultUserAgent(this);
         WebView.setWebContentsDebuggingEnabled(false);
 
@@ -2325,6 +2328,37 @@ public class BrowserActivity extends ComponentActivity {
     }
 
 
+    private void loadUserscriptCache() {
+        if (privateMode || secureStore == null) {
+            userscriptsLoaded = true;
+            userscriptCache.clear();
+            return;
+        }
+        secureStore.getAsync(KEY_USERSCRIPTS, "[]", getMainExecutor(), serialized -> {
+            if (isFinishing() || isDestroyed()) return;
+            userscriptCache = new ArrayList<>(UserscriptManager.decode(serialized));
+            userscriptsLoaded = true;
+            boolean reloadPages = false;
+            for (Tab tab : tabs) {
+                if (tab.webView == null) continue;
+                updateUserscripts(tab);
+                if (!tab.home && tab.url != null && PrivacyGuard.isHttpsUrl(tab.url)) {
+                    reloadPages = true;
+                }
+            }
+            // A document-start handler added after a restored page began loading will
+            // apply on the next load. The one-time refresh makes the startup cache effective.
+            if (reloadPages && !isFinishing() && !isDestroyed()) {
+                for (Tab tab : tabs) {
+                    if (tab.webView != null && !tab.home && tab.url != null
+                            && PrivacyGuard.isHttpsUrl(tab.url)) {
+                        tab.webView.reload();
+                    }
+                }
+            }
+        });
+    }
+
     private void loadUserscripts(java.util.function.Consumer<ArrayList<UserscriptManager.Script>> callback) {
         if (privateMode || secureStore == null) {
             callback.accept(new ArrayList<>());
@@ -2352,7 +2386,12 @@ public class BrowserActivity extends ComponentActivity {
         secureStore.updateAsync(KEY_USERSCRIPTS, "[]", ignored -> encoded, getMainExecutor(), saved -> {
             if (isFinishing() || isDestroyed()) return;
             boolean success = encoded.equals(saved);
-            if (!success) showToast("Userscripts could not be saved securely.");
+            if (!success) {
+                showToast("Userscripts could not be saved securely.");
+            } else {
+                userscriptCache = new ArrayList<>(UserscriptManager.decode(saved));
+                userscriptsLoaded = true;
+            }
             callback.accept(success);
         });
     }
@@ -2653,28 +2692,20 @@ public class BrowserActivity extends ComponentActivity {
     private void updateUserscripts(Tab tab) {
         clearUserscriptHandlers(tab);
         if (tab == null || tab.webView == null || privateMode || !javascriptEnabled()
-                || !fingerprintScriptSupported() || secureStore == null) return;
+                || !fingerprintScriptSupported() || !userscriptsLoaded) return;
 
-        final WebView expectedWebView = tab.webView;
-        final long requestId = tab.userscriptRequestId;
-        // Decryption and JSON decoding happen on the shared storage worker, not the UI thread.
-        secureStore.getAsync(KEY_USERSCRIPTS, "[]", getMainExecutor(), serialized -> {
-            if (isFinishing() || isDestroyed() || privateMode || !javascriptEnabled()
-                    || !fingerprintScriptSupported() || tab.webView != expectedWebView
-                    || tab.userscriptRequestId != requestId) return;
-
-            for (UserscriptManager.Script script : UserscriptManager.decode(serialized)) {
-                if (!script.enabled) continue;
-                List<String> origins = UserscriptManager.allowedOrigins(script);
-                if (origins.isEmpty()) continue;
-                try {
-                    tab.userscriptHandlers.add(WebViewCompat.addDocumentStartJavaScript(
-                            expectedWebView, UserscriptManager.injectionSource(script), new HashSet<>(origins)));
-                } catch (RuntimeException ignored) {
-                    // A bad or unsupported script must not stop normal browsing.
-                }
+        WebView expectedWebView = tab.webView;
+        for (UserscriptManager.Script script : userscriptCache) {
+            if (!script.enabled) continue;
+            List<String> origins = UserscriptManager.allowedOrigins(script);
+            if (origins.isEmpty()) continue;
+            try {
+                tab.userscriptHandlers.add(WebViewCompat.addDocumentStartJavaScript(
+                        expectedWebView, UserscriptManager.injectionSource(script), new HashSet<>(origins)));
+            } catch (RuntimeException ignored) {
+                // A bad or unsupported script must not stop normal browsing.
             }
-        });
+        }
     }
 
     private void showSettings() {
