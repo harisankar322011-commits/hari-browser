@@ -3506,14 +3506,14 @@ public class BrowserActivity extends ComponentActivity {
         new AlertDialog.Builder(this)
                 .setTitle("Hari Browser privacy")
                 .setMessage(
-                        "Local-first design\\n\\n" +
-                        "• HTTPS-only navigation; cleartext traffic is disabled.\\n" +
-                        "• Android WebView Safe Browsing is enabled; certificate errors are cancelled.\\n" +
-                        "• Third-party cookies are disabled; common ad/analytics hosts are blocked locally.\\n" +
-                        "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\\n" +
-                        "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\\n" +
-                        "• History is off by default; private mode never saves history.\\n" +
-                        "• No app analytics, ad SDKs, or browser account. Remote reputation checks are opt-in: enabling automatic URLhaus lookup sends the checked URL to URLhaus during normal browsing; avoid enabling it for URLs containing secret tokens. MalwareBazaar hash lookups submit only SHA-256 hashes, never file contents. Automatic URL reputation is disabled in Private mode.\\n\\n" +
+                        "Local-first design\n\n" +
+                        "• HTTPS-only navigation; cleartext traffic is disabled.\n" +
+                        "• Android WebView Safe Browsing is enabled; certificate errors are cancelled.\n" +
+                        "• Third-party cookies are disabled; common ad/analytics hosts are blocked locally.\n" +
+                        "• The anti-fingerprinting shield reduces selected hardware hints, screen precision, canvas/WebGL signals and device identifiers when supported by Android System WebView.\n" +
+                        "• Bookmarks and optional history use AES-GCM encryption with a key held by Android Keystore.\n" +
+                        "• History is off by default; private mode never saves history.\n" +
+                        "• No app analytics, ad SDKs, or browser account. Remote reputation checks are opt-in: enabling automatic URLhaus lookup sends the checked URL to URLhaus during normal browsing; avoid enabling it for URLs containing secret tokens. MalwareBazaar hash lookups submit only SHA-256 hashes, never file contents. Automatic URL reputation is disabled in Private mode.\n\n" +
                         "Limitations: the device's WebView provides the rendering engine; websites and the selected search engine receive normal requests. This app does not hide traffic from your network or internet provider. The blocker is incomplete, and private mode cannot erase downloads, screenshots, DNS/network logs, or every possible site artifact.")
                 .setPositiveButton("OK", null)
                 .show();
