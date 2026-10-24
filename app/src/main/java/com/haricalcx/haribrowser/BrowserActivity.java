@@ -856,18 +856,29 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public boolean onRenderProcessGone(WebView view, android.webkit.RenderProcessGoneDetail detail) {
                 runOnUiThread(() -> {
-                    showToast("A web page crashed and was closed.");
+                    showToast("A web page crashed and its WebView was restarted.");
                     if (tab.webView != null) {
+                        String restoreUrl = tab.url;
+                        boolean restorePage = PrivacyGuard.isHttpsUrl(restoreUrl);
                         if (tab.webView.getParent() instanceof ViewGroup) {
                             ((ViewGroup) tab.webView.getParent()).removeView(tab.webView);
                         }
                         try { tab.webView.destroy(); } catch (Exception ignored) {}
                         tab.webView = new WebView(BrowserActivity.this);
                         configureWebView(tab);
+                        if (restorePage) {
+                            // Restore only the previously opened HTTPS URL; normal navigation
+                            // callbacks and site-safety checks still apply.
+                            tab.home = false;
+                            tab.url = restoreUrl;
+                            tab.webView.loadUrl(restoreUrl);
+                        } else {
+                            loadHome(tab);
+                        }
                         if (currentTab() == tab) {
                             webContainer.removeAllViews();
                             webContainer.addView(tab.webView, new FrameLayout.LayoutParams(-1, -1));
-                            loadHome(tab);
+                            updateTabControls();
                         }
                     }
                 });
@@ -2538,6 +2549,16 @@ public class BrowserActivity extends ComponentActivity {
                                 new AlertDialog.Builder(this)
                                         .setTitle("Import tracker host list")
                                         .setMessage("Import a plain-text hosts-format list. Hari Browser accepts lines like '0.0.0.0 ads.example.com' or 'ads.example.com' and skips unsupported Adblock rules. Only import a list you trust. A large or aggressive list may break websites.")
+                                        .setNeutralButton("Remove imported list", (dialog, which) ->
+                                                new AlertDialog.Builder(this)
+                                                        .setTitle("Remove custom tracker list?")
+                                                        .setMessage("This restores Hari Browser's built-in tracker rules. It does not change the built-in list.")
+                                                        .setNegativeButton("Cancel", null)
+                                                        .setPositiveButton("Remove list", (confirm, selected) -> {
+                                                            settings.edit().remove("custom_tracker_hosts").apply();
+                                                            PrivacyGuard.setCustomTrackerList("");
+                                                            showToast("Custom tracker list removed.");
+                                                        }).show())
                                         .setNegativeButton("Cancel", null)
                                         .setPositiveButton("Choose file", (dialog, which) -> {
                                             if (trackerListImportLauncher != null) {
