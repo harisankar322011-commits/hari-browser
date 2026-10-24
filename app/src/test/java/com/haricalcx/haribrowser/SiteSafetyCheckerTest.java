@@ -87,7 +87,7 @@ public class SiteSafetyCheckerTest {
 
     @Test
     public void unicodeHostnameIsNormalizedToPunycodeAndFlagged() {
-        String lookalikeHost = "\\u0440\\u0430ypal.example";
+        String lookalikeHost = "\u0440\u0430ypal.example";
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://" + lookalikeHost + "/login");
 
         assertEquals("xn--ypal-43d9g.example", report.getHost());
@@ -98,7 +98,7 @@ public class SiteSafetyCheckerTest {
 
     @Test
     public void mixedLatinAndCyrillicHostnameGetsVisualSpoofingWarning() {
-        String lookalikeHost = "\\u0440\\u0430ypal.example";
+        String lookalikeHost = "\u0440\u0430ypal.example";
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect("https://" + lookalikeHost + "/login");
         String warnings = String.join(" ", report.getWarnings());
 
@@ -107,7 +107,7 @@ public class SiteSafetyCheckerTest {
 
     @Test
     public void unicodeHostnameDoesNotHideNonstandardPort() {
-        String lookalikeHost = "\\u0440\\u0430ypal.example";
+        String lookalikeHost = "\u0440\u0430ypal.example";
         SiteSafetyChecker.Report report = SiteSafetyChecker.inspect(
                 "https://" + lookalikeHost + ":8443/login");
 
