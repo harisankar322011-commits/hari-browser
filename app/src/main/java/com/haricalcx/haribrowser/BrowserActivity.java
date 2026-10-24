@@ -1002,17 +1002,7 @@ public class BrowserActivity extends ComponentActivity {
             return null;
         }
         if (input.contains(" ") || !input.contains(".")) {
-            try {
-                String encoded = URLEncoder.encode(input, "UTF-8");
-                String engine = searchEngine();
-                if ("Startpage".equals(engine)) return "https://www.startpage.com/sp/search?query=" + encoded;
-                if ("Brave Search".equals(engine)) return "https://search.brave.com/search?q=" + encoded;
-                if ("Google".equals(engine)) return "https://www.google.co.in/search?q=" + encoded;
-                if ("Bing".equals(engine)) return "https://www.bing.com/search?q=" + encoded;
-                return "https://duckduckgo.com/?q=" + encoded;
-            } catch (Exception e) {
-                return "https://duckduckgo.com/";
-            }
+            return SearchEngineUrls.searchUrl(searchEngine(), input);
         }
         return "https://" + input;
     }
@@ -2856,8 +2846,10 @@ public class BrowserActivity extends ComponentActivity {
                 "Checks search queries on this device for a starter list of explicit adult-content, gambling, " +
                 "graphic real-world violence, self-harm instructions, dangerous weapon/explosive instructions, " +
                 "and illegal-drug procurement/manufacture. It blocks selected adult/gambling domains and requests " +
-                "strict SafeSearch for Google, Bing, Brave Search and DuckDuckGo. Startpage filtering is controlled " +
-                "by Startpage itself. A parent PIN is required to turn this feature off from Hari Browser.\n\n" +
+                "strict SafeSearch for Google, Bing, Brave Search and DuckDuckGo where provider URL controls support it. " +
+                "Other supported providers such as Startpage, Ecosia, Mojeek and Qwant may require their own settings; " +
+                "local query checks still run, but results filtering is not guaranteed. A parent PIN is required to turn " +
+                "this feature off from Hari Browser.\n\n" +
                 "Filtering is phrase-based and can miss altered wording or content inside a webpage; legitimate " +
                 "queries can occasionally be blocked. Prevention, educational and help-seeking searches are allowed " +
                 "where possible. This is a browser-level safeguard, not a complete content filter or Android " +
@@ -3033,7 +3025,8 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showSearchEnginePicker() {
-        String[] engines = {"DuckDuckGo", "Startpage", "Brave Search", "Google", "Bing"};
+        String[] engines = {"DuckDuckGo", "Startpage", "Brave Search", "Google", "Bing",
+                "Ecosia", "Mojeek", "Qwant"};
         String current = searchEngine();
         int selected = 0;
         for (int i = 0; i < engines.length; i++) {
@@ -3041,6 +3034,7 @@ public class BrowserActivity extends ComponentActivity {
         }
         new AlertDialog.Builder(this)
                 .setTitle("Default search engine")
+                .setMessage("Teen Protection locally filters selected harmful queries on recognized search providers. Strict SafeSearch can only be forced where a verified provider URL control exists; Startpage, Ecosia, Mojeek and Qwant may require their own settings. Filtering is helpful but incomplete.")
                 .setSingleChoiceItems(engines, selected, (dialog, which) -> {
                     settings.edit().putString("search_engine", engines[which]).apply();
                     dialog.dismiss();
