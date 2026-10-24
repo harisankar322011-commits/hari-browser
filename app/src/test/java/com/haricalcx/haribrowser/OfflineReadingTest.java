@@ -109,7 +109,9 @@ public class OfflineReadingTest {
         String serialized = "[]";
         for (int i = 0; i < count; i++) {
             serialized = OfflineReading.addOrReplace(serialized, "Page " + i,
-                    "https://example.com/many/" + i, "Text", i).toString();
+                    "https://example.com/many/" + i, "Text", i,
+                    OfflineReading.MAX_ALLOWED_SAVED_PAGES,
+                    OfflineReading.MAX_ALLOWED_BODY_CHARS).toString();
         }
         return serialized;
     }
