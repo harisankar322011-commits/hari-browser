@@ -19,7 +19,7 @@ The previously reported Android device-protection warning remains an unresolved 
 | Readability-based article extraction | Missing; current reader mode injects CSS into the source document. | Add licensed and tested article extraction. |
 | Persist tabs after process death | Missing; current pending URL restore supports theme recreation only. | Add bounded encrypted standard-mode tab restore; never persist private tabs into normal storage. |
 | External handling for non-HTTPS schemes | Missing; schemes are blocked. | Consider a strict allowlist and confirmation for safe schemes; never blindly launch arbitrary intent/file/custom URLs. |
-| Per-site fingerprint shield toggle | Missing; current protection is global/best-effort. | Add site-specific override and visible state, retaining global safeguards. |
+| Per-site fingerprint shield toggle | Feature branch; CI pending. Adds an exact-host override with explicit confirmation before reducing protection, a 128-host maximum and visible per-site state. Subdomains remain separate. | Validate script injection, settings behavior and reload of currently open pages before merge. |
 | Configurable offline-reading cap | Missing; fixed at 8 pages / 24,000 characters. | Add bounded preferences and hard maximums. |
 | In-app download scan history | Feature branch: bounded, sanitized last-20 result list and UI added; CI pending. | Verify private-profile separation and presentation; never label BASIC_CHECKS_ONLY as clean. |
 | Expose additional search engines | Partially missing; protection recognizes more providers than the visible picker exposes. | Test provider URL/SafeSearch behavior before exposing choices. |
