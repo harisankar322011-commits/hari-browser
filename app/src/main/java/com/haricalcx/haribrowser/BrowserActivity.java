@@ -1002,17 +1002,7 @@ public class BrowserActivity extends ComponentActivity {
             return null;
         }
         if (input.contains(" ") || !input.contains(".")) {
-            try {
-                String encoded = URLEncoder.encode(input, "UTF-8");
-                String engine = searchEngine();
-                if ("Startpage".equals(engine)) return "https://www.startpage.com/sp/search?query=" + encoded;
-                if ("Brave Search".equals(engine)) return "https://search.brave.com/search?q=" + encoded;
-                if ("Google".equals(engine)) return "https://www.google.co.in/search?q=" + encoded;
-                if ("Bing".equals(engine)) return "https://www.bing.com/search?q=" + encoded;
-                return "https://duckduckgo.com/?q=" + encoded;
-            } catch (Exception e) {
-                return "https://duckduckgo.com/";
-            }
+            return SearchEngineUrls.searchUrl(searchEngine(), input);
         }
         return "https://" + input;
     }
@@ -2963,7 +2953,8 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void showSearchEnginePicker() {
-        String[] engines = {"DuckDuckGo", "Startpage", "Brave Search", "Google", "Bing"};
+        String[] engines = {"DuckDuckGo", "Startpage", "Brave Search", "Google", "Bing",
+                "Ecosia", "Mojeek", "Qwant"};
         String current = searchEngine();
         int selected = 0;
         for (int i = 0; i < engines.length; i++) {
@@ -2971,6 +2962,7 @@ public class BrowserActivity extends ComponentActivity {
         }
         new AlertDialog.Builder(this)
                 .setTitle("Default search engine")
+                .setMessage("Teen Protection locally filters selected harmful queries on recognized search providers. Strict SafeSearch can only be forced where a verified provider URL control exists; Startpage, Ecosia, Mojeek and Qwant may require their own settings. Filtering is helpful but incomplete.")
                 .setSingleChoiceItems(engines, selected, (dialog, which) -> {
                     settings.edit().putString("search_engine", engines[which]).apply();
                     dialog.dismiss();
