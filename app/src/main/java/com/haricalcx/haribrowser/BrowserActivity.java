@@ -1198,7 +1198,8 @@ public class BrowserActivity extends ComponentActivity {
                 getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
                         .getBoolean("auto_urlhaus_enabled", false);
         SiteSafetyReportFormatter.Presentation presentation = SiteSafetyReportFormatter.format(
-                url, report, reputation, privateMode, automaticUrlhausEnabled);
+                url, report, reputation, privateMode, automaticUrlhausEnabled,
+                settings.getString("home_language", "en"));
 
         new AlertDialog.Builder(this)
                 .setTitle(presentation.title)
