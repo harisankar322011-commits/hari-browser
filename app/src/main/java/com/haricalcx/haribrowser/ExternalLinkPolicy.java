@@ -102,13 +102,8 @@ final class ExternalLinkPolicy {
         if (input == null || input.length() > MAX_INPUT_CHARS || hasControl(input) ||
                 hasEncodedLineBreak(input)) return null;
         String value = input.substring(input.indexOf(':') + 1);
-        // Discard URI parameters or fragments rather than passing them to another app.
-        int semicolon = value.indexOf(';');
-        if (semicolon >= 0) value = value.substring(0, semicolon);
-        int query = value.indexOf('?');
-        if (query >= 0) value = value.substring(0, query);
-        int fragment = value.indexOf('#');
-        if (fragment >= 0) value = value.substring(0, fragment);
+        // Keep the allowlist narrow: extensions, fragments, and query parameters are not forwarded.
+        if (value.indexOf(';') >= 0 || value.indexOf('?') >= 0 || value.indexOf('#') >= 0) return null;
         if (value.isEmpty()) return null;
 
         StringBuilder digits = new StringBuilder();
