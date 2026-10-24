@@ -3482,6 +3482,54 @@ public class BrowserActivity extends ComponentActivity {
     }
 
     private void openDownloads() {
+        JSONArray history = DownloadScanHistory.parse(settings.getString("download_scan_history", "[]"));
+        if (history.length() == 0) {
+            new AlertDialog.Builder(this).setTitle("Hari Browser download scan history")
+                    .setMessage("No scan reports are recorded yet. When a Hari Browser download completes, limited local checks are saved here. These checks do not prove a file is malware-free.")
+                    .setPositiveButton("Open system Downloads", (dialog, which) -> openSystemDownloads())
+                    .setNegativeButton("Close", null)
+                    .show();
+            return;
+        }
+
+        String[] labels = new String[history.length()];
+        for (int i = 0; i < history.length(); i++) {
+            JSONObject item = history.optJSONObject(i);
+            labels[i] = item == null ? "Scan report unavailable" :
+                    item.optString("filename", "Downloaded file") + " — " +
+                            item.optString("status", "SCAN_INCOMPLETE");
+        }
+        new AlertDialog.Builder(this)
+                .setTitle("Hari Browser download scans · last " + history.length())
+                .setItems(labels, (dialog, which) -> {
+                    JSONObject item = history.optJSONObject(which);
+                    if (item == null) {
+                        showToast("That scan report is unavailable.");
+                        return;
+                    }
+                    new AlertDialog.Builder(this)
+                            .setTitle(item.optString("filename", "Downloaded file") + " — " +
+                                    item.optString("status", "SCAN_INCOMPLETE"))
+                            .setMessage(DownloadScanHistory.format(item) +
+                                    "\n\nThese are limited local checks, not a complete antivirus verdict. Do not open a file you do not trust.")
+                            .setPositiveButton("Close", null)
+                            .show();
+                })
+                .setPositiveButton("Open system Downloads", (dialog, which) -> openSystemDownloads())
+                .setNeutralButton("Clear scan history", (dialog, which) ->
+                        new AlertDialog.Builder(this)
+                                .setTitle("Clear scan history?")
+                                .setMessage("This removes the saved scan reports from this browser profile. It does not delete downloaded files.")
+                                .setNegativeButton("Cancel", null)
+                                .setPositiveButton("Clear history", (confirm, selected) -> {
+                                    settings.edit().remove("download_scan_history").apply();
+                                    showToast("Download scan history cleared.");
+                                }).show())
+                .setNegativeButton("Close", null)
+                .show();
+    }
+
+    private void openSystemDownloads() {
         try {
             startActivity(new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS));
         } catch (ActivityNotFoundException ignored) {
