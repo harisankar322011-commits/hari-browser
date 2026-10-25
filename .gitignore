@@ -5,6 +5,9 @@ local.properties
 *.iml
 .DS_Store
 
+# Rust build output; generated Android .so files live under app/build.
+**/target/
+
 # Never commit signing keys, certificates with private keys, or local signing configuration.
 *.jks
 *.keystore
