@@ -3,7 +3,9 @@ name: Kotlin and Rust integration prototype
 on:
   push:
     branches:
+      - main
       - engineering/kotlin-rust-integration-2026-10-25
+      - security/strict-url-guard-2026-10-25
   pull_request:
     branches: [main]
   workflow_dispatch:
