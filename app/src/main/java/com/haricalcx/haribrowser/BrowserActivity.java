@@ -861,7 +861,7 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
-                runOnUiThread(() -> showToast("Blocked: the site's security certificate is invalid."));
+                runOnUiThread(() -> showToast(ui("Blocked: the site's security certificate is invalid.")));
             }
 
             @Override
