@@ -1,0 +1,14 @@
+[package]
+name = "hari_url_guard"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "Experimental URL-scheme classifier for Hari Browser Android"
+
+[lib]
+name = "hari_url_guard"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+jni = "=0.21.1"
+url = "=2.5.8"

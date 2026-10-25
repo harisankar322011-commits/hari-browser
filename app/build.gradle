@@ -1,5 +1,8 @@
 import javax.tools.ToolProvider
 
+def enableRustNativeBuild = providers.gradleProperty('enableRustNativeBuild').map { it.toBoolean() }.getOrElse(false)
+def rustJniLibsDirectory = layout.buildDirectory.dir('generated/rust/jniLibs')
+
 plugins {
     id 'com.android.application'
 }
@@ -8,12 +11,22 @@ android {
     namespace 'com.haricalcx.haribrowser'
     compileSdk 36
 
+    // AGP 9.x includes built-in Kotlin support; no separate kotlin-android plugin is needed.
+    enableKotlin = true
+
     defaultConfig {
         applicationId 'com.haricalcx.haribrowser'
         minSdk 28
         targetSdk 36
         versionCode 8
         versionName '2.4.0'
+    }
+
+    sourceSets {
+        main {
+            // Empty in ordinary builds; populated by the opt-in cargo-ndk task.
+            jniLibs.srcDir(rustJniLibsDirectory)
+        }
     }
 
     compileOptions {
@@ -82,6 +95,28 @@ tasks.register('generateOfflineWallpapers') {
     }
 }
 
+/*
+ * Rust is opt-in to protect existing builds until the native path passes CI
+ * and real-device verification:
+ * ./gradlew assembleDebug -PenableRustNativeBuild=true
+ */
+tasks.register('buildRustAndroid', Exec) {
+    group = 'build'
+    description = 'Build the experimental Rust URL classifier for Android via cargo-ndk.'
+    onlyIf { enableRustNativeBuild }
+    workingDir rootProject.file('rust/hari_url_guard')
+    commandLine 'cargo', 'ndk',
+            '-t', 'arm64-v8a',
+            '-t', 'armeabi-v7a',
+            '-t', 'x86_64',
+            '-p', '28',
+            '-o', rustJniLibsDirectory.get().asFile.absolutePath,
+            'build', '--release'
+}
+
 tasks.named('preBuild').configure {
     dependsOn(tasks.named('generateOfflineWallpapers'))
+    if (enableRustNativeBuild) {
+        dependsOn(tasks.named('buildRustAndroid'))
+    }
 }
