@@ -69,10 +69,7 @@ fn has_strict_web_authority(raw_url: &str, expected_scheme: &str) -> bool {
         return false;
     }
 
-    let authority = remainder
-        .split(['/', '?', '#'])
-        .next()
-        .unwrap_or_default();
+    let authority = remainder.split(['/', '?', '#']).next().unwrap_or_default();
     if authority.is_empty() {
         return false;
     }
@@ -110,7 +107,9 @@ fn has_strict_web_authority(raw_url: &str, expected_scheme: &str) -> bool {
 fn valid_port(value: &str) -> bool {
     !value.is_empty()
         && value.bytes().all(|byte| byte.is_ascii_digit())
-        && value.parse::<u32>().is_ok_and(|port| port <= u16::MAX as u32)
+        && value
+            .parse::<u32>()
+            .is_ok_and(|port| port <= u16::MAX as u32)
 }
 
 /// JNI implementation for RustUrlNativeBridge.classifyUrl(String).
