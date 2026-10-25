@@ -3,8 +3,14 @@
 ## Status
 
 This is a separate-branch prototype. The existing Java browser and the
-`main` branch remain unchanged. The initial Kotlin/Rust code is not wired into
-live browser navigation, site reputation checks, or the file scanner.
+`main` branch remain unchanged. The Kotlin/Rust classifier is wired into WebView main-frame navigation and
+main-frame request interception as a strict URL-input guard. It rejects
+malformed or ambiguous HTTP(S) syntax, bad ports, malformed percent escapes,
+and oversized URLs before a main-frame request proceeds. Valid internationalized
+domain names are supported. A Rust/Kotlin parser disagreement fails closed.
+
+This is still separate from website reputation, TLS validation, page-content
+analysis, and download/file malware scanning.
 
 ## Why Kotlin is configured this way
 
@@ -47,8 +53,11 @@ it does not commit compiled binaries.
    verify both JNI-backed classification and fallback behavior.
 5. Review crash behavior, native dependency notices, APK-size impact, and ABI
    coverage.
-6. Only after separate review, decide whether this classifier belongs in live
-   site-safety navigation. Its output is not a malware or safety verdict.
+6. Verify the new navigation guard on an actual supported Android device,
+   including HTTPS redirects, internationalized domains, the internal home
+   page, and allowed external-link confirmation.
+7. Its output is not a malware or safety verdict; do not label a URL safe solely
+   because it classifies as HTTPS.
 
 Do not merge this branch into `main` automatically. This pilot needs successful
 CI and device testing plus explicit review before promotion.

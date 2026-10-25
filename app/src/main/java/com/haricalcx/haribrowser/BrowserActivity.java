@@ -77,6 +77,10 @@ import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 
+import com.haricalcx.haribrowser.security.RustUrlValidator;
+import com.haricalcx.haribrowser.security.UrlClassification;
+import com.haricalcx.haribrowser.security.UrlSchemeClassification;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -738,6 +742,13 @@ public class BrowserActivity extends ComponentActivity {
             @Override
             public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
                 Uri requestUri = request.getUrl();
+                if (request.isForMainFrame()
+                        && RustUrlValidator.INSTANCE.classify(requestUri.toString()).getScheme()
+                                == UrlSchemeClassification.INVALID) {
+                    String blockedMessage = "Blocked an invalid or ambiguous website address.";
+                    return new WebResourceResponse("text/plain", "UTF-8",
+                            new ByteArrayInputStream(blockedMessage.getBytes(StandardCharsets.UTF_8)));
+                }
                 if (request.isForMainFrame() && teenProtectionEnabled()
                         && TeenProtection.isBlockedUrl(requestUri.toString())) {
                     runOnUiThread(() -> showToast("Teen Protection blocked this search or website."));
@@ -790,6 +801,11 @@ public class BrowserActivity extends ComponentActivity {
                         runOnUiThread(() -> showToast("Blocked an invalid internal browser action link."));
                     }
                     // Never send the synthetic home URL to the public internet.
+                    return true;
+                }
+                UrlClassification urlClassification = RustUrlValidator.INSTANCE.classify(url);
+                if (urlClassification.getScheme() == UrlSchemeClassification.INVALID) {
+                    runOnUiThread(() -> showToast("Blocked an invalid or ambiguous website address."));
                     return true;
                 }
                 if ("http".equalsIgnoreCase(scheme)) {
