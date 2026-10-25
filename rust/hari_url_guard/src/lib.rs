@@ -41,7 +41,7 @@ pub fn classify_url(raw_url: &str) -> jint {
 /// Keep this component isolated until Android-device runtime tests confirm
 /// that Kotlin/JNI signatures, packaging, and supported ABIs work as expected.
 #[no_mangle]
-pub extern "system" fn Java_com_haricalcx_h aribrowser_security_RustUrlNativeBridge_classifyUrl(
+pub extern "system" fn Java_com_haricalcx_haribrowser_security_RustUrlNativeBridge_classifyUrl(
     mut env: JNIEnv<'_>,
     _this: JObject<'_>,
     raw_url: JString<'_>,
