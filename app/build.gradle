@@ -1,11 +1,11 @@
 import javax.tools.ToolProvider
 
-def enableRustNativeBuild = providers.gradleProperty('enableRustNativeBuild').map { it.toBoolean() }.getOrElse(false)
-def rustJniLibsDirectory = layout.buildDirectory.dir('generated/rust/jniLibs')
-
 plugins {
     id 'com.android.application'
 }
+
+def enableRustNativeBuild = providers.gradleProperty('enableRustNativeBuild').map { it.toBoolean() }.getOrElse(false)
+def rustJniLibsDirectory = layout.buildDirectory.dir('generated/rust/jniLibs')
 
 android {
     namespace 'com.haricalcx.haribrowser'
