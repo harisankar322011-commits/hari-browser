@@ -25,7 +25,7 @@ android {
     sourceSets {
         main {
             // Empty in ordinary builds; populated by the opt-in cargo-ndk task.
-            jniLibs.srcDir(rustJniLibsDirectory)
+            jniLibs.srcDir(rustJniLibsDirectory.get().asFile)
         }
     }
 
