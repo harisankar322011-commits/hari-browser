@@ -77,6 +77,10 @@ import com.google.zxing.WriterException;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 
+import com.haricalcx.haribrowser.security.RustUrlValidator;
+import com.haricalcx.haribrowser.security.UrlClassification;
+import com.haricalcx.haribrowser.security.UrlSchemeClassification;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
