@@ -473,6 +473,14 @@ mod tests {
     }
 
     #[test]
+    fn rejects_unsupported_pseudo_class_selectors() {
+        assert_eq!(
+            StyleSheet::parse("p:hover { display: none; }"),
+            Err(CssError::UnsupportedSelector)
+        );
+    }
+
+    #[test]
     fn rejects_invalid_css_lengths() {
         assert_eq!(
             StyleSheet::parse("p { width: -2px; }"),
