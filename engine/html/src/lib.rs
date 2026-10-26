@@ -183,14 +183,16 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn current_raw_text_element(&self) -> Option<&str> {
+    fn current_raw_text_element(&self) -> Option<&'static str> {
         let index = *self.open_elements.last()?;
         match &self.nodes[index].kind {
-            NodeKind::Element { tag_name }
-                if matches!(tag_name.as_str(), "script" | "style" | "textarea" | "title") =>
-            {
-                Some(tag_name)
-            }
+            NodeKind::Element { tag_name } => match tag_name.as_str() {
+                "script" => Some("script"),
+                "style" => Some("style"),
+                "textarea" => Some("textarea"),
+                "title" => Some("title"),
+                _ => None,
+            },
             _ => None,
         }
     }
