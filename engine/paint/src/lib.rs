@@ -377,18 +377,8 @@ mod tests {
         assert_eq!(surface.width(), 240);
         assert_eq!(surface.height(), 160);
         assert!(surface.pixel(239, 159).is_some());
-        assert!(
-            surface
-                .pixels()
-                .iter()
-                .any(|pixel| *pixel == paint_options.text_color)
-        );
-        assert!(
-            surface
-                .pixels()
-                .iter()
-                .any(|pixel| *pixel == paint_options.background)
-        );
+        assert!(surface.pixels().contains(&paint_options.text_color));
+        assert!(surface.pixels().contains(&paint_options.background));
         assert!(surface.non_background_pixel_count() > 100);
     }
 
