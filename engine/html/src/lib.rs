@@ -733,4 +733,59 @@ mod tests {
         let document = parse_document(b"1 < 2", &HtmlLimits::default()).unwrap();
         assert_eq!(text(&document.children[0]), "1 < 2");
     }
+
+    #[test]
+    fn configured_depth_cannot_disable_hard_nesting_ceiling() {
+        let source = format!("{}{}", "<div>".repeat(257), "</div>".repeat(257));
+        let limits = HtmlLimits {
+            max_depth: usize::MAX,
+            ..HtmlLimits::default()
+        };
+        assert_eq!(
+            parse_document(source.as_bytes(), &limits),
+            Err(ParseError::DepthLimitExceeded)
+        );
+    }
+
+    #[test]
+    fn configured_node_budget_cannot_disable_hard_node_ceiling() {
+        let source = "<br/>".repeat(100_001);
+        let limits = HtmlLimits {
+            max_nodes: usize::MAX,
+            ..HtmlLimits::default()
+        };
+        assert_eq!(
+            parse_document(source.as_bytes(), &limits),
+            Err(ParseError::NodeLimitExceeded)
+        );
+    }
+
+    #[test]
+    fn configured_attribute_budget_cannot_disable_hard_attribute_ceiling() {
+        let attributes = (0..257)
+            .map(|index| format!(" a{index}='x'"))
+            .collect::<String>();
+        let source = format!("<p{attributes}></p>");
+        let limits = HtmlLimits {
+            max_attributes_per_element: usize::MAX,
+            ..HtmlLimits::default()
+        };
+        assert_eq!(
+            parse_document(source.as_bytes(), &limits),
+            Err(ParseError::AttributeLimitExceeded)
+        );
+    }
+
+    #[test]
+    fn configured_byte_budget_cannot_disable_hard_document_ceiling() {
+        let source = vec![b'a'; 1_048_577];
+        let limits = HtmlLimits {
+            max_document_bytes: usize::MAX,
+            ..HtmlLimits::default()
+        };
+        assert_eq!(
+            parse_document(&source, &limits),
+            Err(ParseError::Input(InputError::DocumentTooLarge))
+        );
+    }
 }
