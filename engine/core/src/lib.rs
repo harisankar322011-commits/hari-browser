@@ -54,7 +54,7 @@ pub fn validate_document_input<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_document_input, EngineLimits, InputError};
+    use super::{EngineLimits, InputError, validate_document_input};
 
     #[test]
     fn accepts_small_utf8_html_document() {
@@ -67,7 +67,9 @@ mod tests {
 
     #[test]
     fn rejects_document_over_configured_byte_limit() {
-        let limits = EngineLimits { max_document_bytes: 4 };
+        let limits = EngineLimits {
+            max_document_bytes: 4,
+        };
         assert_eq!(
             validate_document_input(b"<html>", &limits),
             Err(InputError::DocumentTooLarge)
