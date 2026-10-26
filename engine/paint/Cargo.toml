@@ -1,0 +1,13 @@
+[package]
+name = "hari-engine-paint"
+version = "0.1.0"
+edition = "2024"
+description = "Experimental deterministic software painter for HARI Engine layout boxes"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+hari-engine-dom = { path = "../dom" }
+hari-engine-layout = { path = "../layout" }
