@@ -1,7 +1,9 @@
 //! HARI DOM — an isolated, arena-backed tree model.
 //! This is a small project-specific DOM foundation, not a standards-compliant browser DOM.
 
-use hari_engine_html::{parse_document, Attribute, HtmlLimits, Node as HtmlNode, NodeKind, ParseError};
+use hari_engine_html::{
+    Attribute, HtmlLimits, Node as HtmlNode, NodeKind, ParseError, parse_document,
+};
 
 const HARD_MAX_NODES: usize = 100_000;
 const HARD_MAX_DEPTH: usize = 512;
@@ -19,7 +21,10 @@ pub struct DomLimits {
 
 impl Default for DomLimits {
     fn default() -> Self {
-        Self { max_nodes: HARD_MAX_NODES, max_depth: HARD_MAX_DEPTH }
+        Self {
+            max_nodes: HARD_MAX_NODES,
+            max_depth: HARD_MAX_DEPTH,
+        }
     }
 }
 
@@ -56,7 +61,9 @@ pub struct DomNode {
 }
 
 impl DomNode {
-    pub fn kind(&self) -> &NodeKind { &self.kind }
+    pub fn kind(&self) -> &NodeKind {
+        &self.kind
+    }
 
     pub fn tag_name(&self) -> Option<&str> {
         match &self.kind {
@@ -65,17 +72,24 @@ impl DomNode {
         }
     }
 
-    pub fn attributes(&self) -> &[Attribute] { &self.attributes }
+    pub fn attributes(&self) -> &[Attribute] {
+        &self.attributes
+    }
 
     pub fn attribute(&self, name: &str) -> Option<&str> {
-        self.attributes.iter()
+        self.attributes
+            .iter()
             .find(|attribute| attribute.name.eq_ignore_ascii_case(name))
             .map(|attribute| attribute.value.as_str())
     }
 
-    pub fn parent(&self) -> Option<NodeId> { self.parent }
+    pub fn parent(&self) -> Option<NodeId> {
+        self.parent
+    }
 
-    pub fn children(&self) -> &[NodeId] { &self.children }
+    pub fn children(&self) -> &[NodeId] {
+        &self.children
+    }
 
     pub fn text_content(&self, document: &DomDocument) -> String {
         fn append(node: &DomNode, document: &DomDocument, output: &mut String) {
@@ -130,9 +144,15 @@ impl DomDocument {
         Ok(document)
     }
 
-    pub fn root(&self) -> NodeId { NodeId(0) }
-    pub fn state(&self) -> DocumentState { self.state }
-    pub fn limits(&self) -> DomLimits { self.limits }
+    pub fn root(&self) -> NodeId {
+        NodeId(0)
+    }
+    pub fn state(&self) -> DocumentState {
+        self.state
+    }
+    pub fn limits(&self) -> DomLimits {
+        self.limits
+    }
 
     pub fn node(&self, id: NodeId) -> Result<&DomNode, DomError> {
         self.nodes.get(id.0).ok_or(DomError::InvalidNode)
@@ -145,14 +165,16 @@ impl DomDocument {
     pub fn create_element(&mut self, name: &str) -> Result<NodeId, DomError> {
         if name.is_empty()
             || name.len() > 256
-            || !name.bytes().all(|byte| {
-                byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':')
-            })
+            || !name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':'))
         {
             return Err(DomError::InvalidName);
         }
         self.create_node(
-            NodeKind::Element { tag_name: name.to_ascii_lowercase() },
+            NodeKind::Element {
+                tag_name: name.to_ascii_lowercase(),
+            },
             Vec::new(),
         )
     }
@@ -202,7 +224,10 @@ impl DomDocument {
         if child == self.root() || matches!(&child_node.kind, NodeKind::Document) {
             return Err(DomError::CannotMoveDocumentRoot);
         }
-        if !matches!(&parent_node.kind, NodeKind::Document | NodeKind::Element { .. }) {
+        if !matches!(
+            &parent_node.kind,
+            NodeKind::Document | NodeKind::Element { .. }
+        ) {
             return Err(DomError::CannotHaveChildren);
         }
         if child == parent {
@@ -228,7 +253,8 @@ impl DomDocument {
 
         if let Some(old_parent) = self.nodes[child.0].parent {
             let old_children = &mut self.nodes[old_parent.0].children;
-            let old_index = old_children.iter()
+            let old_index = old_children
+                .iter()
                 .position(|candidate| *candidate == child)
                 .ok_or(DomError::InvariantViolation)?;
             old_children.remove(old_index);
@@ -251,7 +277,8 @@ impl DomDocument {
         }
 
         let children = &mut self.nodes[parent.0].children;
-        let position = children.iter()
+        let position = children
+            .iter()
             .position(|candidate| *candidate == child)
             .ok_or(DomError::InvariantViolation)?;
         children.remove(position);
@@ -352,9 +379,8 @@ impl DomDocument {
             let node = document.node(id)?;
             let mut max_child_height = 0usize;
             for child in &node.children {
-                max_child_height = max_child_height.max(
-                    height(document, *child, traversed)?.saturating_add(1),
-                );
+                max_child_height =
+                    max_child_height.max(height(document, *child, traversed)?.saturating_add(1));
             }
             Ok(max_child_height)
         }
@@ -366,11 +392,15 @@ impl DomDocument {
 
 #[cfg(test)]
 mod tests {
-    use super::{DomDocument, DomError, DomLimits, DocumentState, NodeId};
+    use super::{DocumentState, DomDocument, DomError, DomLimits, NodeId};
     use hari_engine_html::NodeKind;
 
     fn child_tag(document: &DomDocument, parent: NodeId, expected: &str) -> NodeId {
-        document.children(parent).unwrap().iter().copied()
+        document
+            .children(parent)
+            .unwrap()
+            .iter()
+            .copied()
             .find(|id| document.node(*id).unwrap().tag_name() == Some(expected))
             .unwrap_or_else(|| panic!("missing child element {expected}"))
     }
@@ -380,13 +410,17 @@ mod tests {
         let document = DomDocument::from_html(
             b"<html><body><h1>Hello</h1><p>World</p></body></html>",
             &DomLimits::default(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(document.state(), DocumentState::Ready);
         let root = document.root();
         let html = child_tag(&document, root, "html");
         let body = child_tag(&document, html, "body");
         let heading = child_tag(&document, body, "h1");
-        assert_eq!(document.node(heading).unwrap().text_content(&document), "Hello");
+        assert_eq!(
+            document.node(heading).unwrap().text_content(&document),
+            "Hello"
+        );
         assert_eq!(document.node(heading).unwrap().parent(), Some(body));
         document.validate_invariants().unwrap();
     }
@@ -402,7 +436,10 @@ mod tests {
         document.remove_child(body, text).unwrap();
         assert_eq!(document.node(text).unwrap().parent(), None);
         assert!(document.children(body).unwrap().is_empty());
-        assert_eq!(document.node(text).unwrap().text_content(&document), "Hello");
+        assert_eq!(
+            document.node(text).unwrap().text_content(&document),
+            "Hello"
+        );
         document.validate_invariants().unwrap();
     }
 
@@ -429,8 +466,14 @@ mod tests {
         let child = document.create_element("child").unwrap();
         document.append_child(document.root(), parent).unwrap();
         document.append_child(parent, child).unwrap();
-        assert_eq!(document.append_child(child, parent), Err(DomError::CycleDetected));
-        assert_eq!(document.node(parent).unwrap().parent(), Some(document.root()));
+        assert_eq!(
+            document.append_child(child, parent),
+            Err(DomError::CycleDetected)
+        );
+        assert_eq!(
+            document.node(parent).unwrap().parent(),
+            Some(document.root())
+        );
         assert_eq!(document.node(child).unwrap().parent(), Some(parent));
         document.validate_invariants().unwrap();
     }
@@ -440,16 +483,25 @@ mod tests {
         let mut document = DomDocument::new(DomLimits::default());
         let text = document.create_text("text").unwrap();
         let element = document.create_element("p").unwrap();
-        assert_eq!(document.append_child(element, document.root()), Err(DomError::CannotMoveDocumentRoot));
+        assert_eq!(
+            document.append_child(element, document.root()),
+            Err(DomError::CannotMoveDocumentRoot)
+        );
         document.append_child(document.root(), element).unwrap();
         document.append_child(document.root(), text).unwrap();
-        assert_eq!(document.append_child(text, element), Err(DomError::CannotHaveChildren));
+        assert_eq!(
+            document.append_child(text, element),
+            Err(DomError::CannotHaveChildren)
+        );
     }
 
     #[test]
     fn rejects_invalid_node_ids() {
         let document = DomDocument::new(DomLimits::default());
-        assert_eq!(document.node(NodeId(999)).map(|n| n.kind()), Err(DomError::InvalidNode));
+        assert_eq!(
+            document.node(NodeId(999)).map(|n| n.kind()),
+            Err(DomError::InvalidNode)
+        );
         assert_eq!(document.children(NodeId(999)), Err(DomError::InvalidNode));
     }
 
@@ -463,22 +515,34 @@ mod tests {
 
     #[test]
     fn enforces_node_limit() {
-        let limits = DomLimits { max_nodes: 2, ..DomLimits::default() };
+        let limits = DomLimits {
+            max_nodes: 2,
+            ..DomLimits::default()
+        };
         let mut document = DomDocument::new(limits);
         document.create_element("one").unwrap();
-        assert_eq!(document.create_text("too many"), Err(DomError::NodeLimitExceeded));
+        assert_eq!(
+            document.create_text("too many"),
+            Err(DomError::NodeLimitExceeded)
+        );
     }
 
     #[test]
     fn enforces_depth_limit_when_appending_subtree() {
-        let limits = DomLimits { max_depth: 2, ..DomLimits::default() };
+        let limits = DomLimits {
+            max_depth: 2,
+            ..DomLimits::default()
+        };
         let mut document = DomDocument::new(limits);
         let first = document.create_element("a").unwrap();
         let second = document.create_element("b").unwrap();
         let third = document.create_element("c").unwrap();
         document.append_child(document.root(), first).unwrap();
         document.append_child(first, second).unwrap();
-        assert_eq!(document.append_child(second, third), Err(DomError::DepthLimitExceeded));
+        assert_eq!(
+            document.append_child(second, third),
+            Err(DomError::DepthLimitExceeded)
+        );
     }
 
     #[test]
@@ -492,6 +556,9 @@ mod tests {
     #[test]
     fn rejects_invalid_element_names() {
         let mut document = DomDocument::new(DomLimits::default());
-        assert_eq!(document.create_element("not>valid"), Err(DomError::InvalidName));
+        assert_eq!(
+            document.create_element("not>valid"),
+            Err(DomError::InvalidName)
+        );
     }
 }
