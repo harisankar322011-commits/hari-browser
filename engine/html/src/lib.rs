@@ -202,8 +202,10 @@ impl<'a> Parser<'a> {
                 self.position = end;
                 self.add_node(NodeKind::Text(value), Vec::new())?;
             } else {
-                // The next loop iteration will consume the closing tag.
-                self.position = end;
+                // A closing tag at the current position must be handled now,
+                // otherwise an empty raw-text element would loop forever.
+                self.parse_end_tag();
+                return Ok(());
             }
         } else {
             let value = self.source[self.position..].to_owned();
@@ -444,7 +446,7 @@ impl<'a> Parser<'a> {
     }
 
     fn starts_comment(&self, index: usize) -> bool {
-        self.bytes.get(index..index + 4) == Some(b"<!--")
+        self.bytes.get(index..index + 4).is_some_and(|bytes| bytes == b"<!--")
     }
 
     fn starts_doctype(&self, index: usize) -> bool {
@@ -458,13 +460,13 @@ impl<'a> Parser<'a> {
 
     fn is_start_tag_start(&self, index: usize) -> bool {
         self.bytes.get(index) == Some(&b'<')
-            && self.bytes.get(index + 1).is_some_and(u8::is_ascii_alphabetic)
+            && self.bytes.get(index + 1).is_some_and(|byte| byte.is_ascii_alphabetic())
     }
 
     fn is_end_tag_start(&self, index: usize) -> bool {
         self.bytes.get(index) == Some(&b'<')
             && self.bytes.get(index + 1) == Some(&b'/')
-            && self.bytes.get(index + 2).is_some_and(u8::is_ascii_alphabetic)
+            && self.bytes.get(index + 2).is_some_and(|byte| byte.is_ascii_alphabetic())
     }
 
     fn add_node(
@@ -626,6 +628,15 @@ mod tests {
         let script = element(&document.children[0], "script");
         assert_eq!(text(&script.children[0]), "if (a < b) { c(); }");
         assert_eq!(element(&document.children[1], "p").children.len(), 1);
+    }
+
+    #[test]
+    fn handles_empty_raw_text_elements_without_stalling() {
+        let document =
+            parse_document(b"<script></script><p>done</p>", &HtmlLimits::default()).unwrap();
+
+        assert!(element(&document.children[0], "script").children.is_empty());
+        assert_eq!(text(&element(&document.children[1], "p").children[0]), "done");
     }
 
     #[test]
