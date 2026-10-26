@@ -6,6 +6,11 @@
 
 use hari_engine_core::{EngineLimits, InputError, validate_document_input};
 
+const HARD_MAX_DOCUMENT_BYTES: usize = 1_048_576;
+const HARD_MAX_NODES: usize = 100_000;
+const HARD_MAX_DEPTH: usize = 256;
+const HARD_MAX_ATTRIBUTES_PER_ELEMENT: usize = 256;
+
 /// Hard limits applied before and during parsing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HtmlLimits {
@@ -18,10 +23,10 @@ pub struct HtmlLimits {
 impl Default for HtmlLimits {
     fn default() -> Self {
         Self {
-            max_document_bytes: 1_048_576,
-            max_nodes: 100_000,
-            max_depth: 256,
-            max_attributes_per_element: 256,
+            max_document_bytes: HARD_MAX_DOCUMENT_BYTES,
+            max_nodes: HARD_MAX_NODES,
+            max_depth: HARD_MAX_DEPTH,
+            max_attributes_per_element: HARD_MAX_ATTRIBUTES_PER_ELEMENT,
         }
     }
 }
@@ -119,15 +124,25 @@ impl TempNode {
 /// JavaScript execution or networking. Callers must not treat successful parsing as
 /// a content-safety verdict.
 pub fn parse_document(bytes: &[u8], limits: &HtmlLimits) -> Result<Node, ParseError> {
+    // Callers may tighten these limits but cannot raise the absolute safety ceilings.
+    let effective_limits = HtmlLimits {
+        max_document_bytes: limits.max_document_bytes.min(HARD_MAX_DOCUMENT_BYTES),
+        max_nodes: limits.max_nodes.min(HARD_MAX_NODES),
+        max_depth: limits.max_depth.min(HARD_MAX_DEPTH),
+        max_attributes_per_element: limits
+            .max_attributes_per_element
+            .min(HARD_MAX_ATTRIBUTES_PER_ELEMENT),
+    };
+
     let source = validate_document_input(
         bytes,
         &EngineLimits {
-            max_document_bytes: limits.max_document_bytes,
+            max_document_bytes: effective_limits.max_document_bytes,
         },
     )
     .map_err(ParseError::Input)?;
 
-    let mut parser = Parser::new(source, limits);
+    let mut parser = Parser::new(source, &effective_limits);
     parser.parse()?;
     Ok(materialize(0, &parser.nodes))
 }
