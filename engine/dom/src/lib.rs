@@ -119,7 +119,7 @@ pub struct DomDocument {
 impl DomDocument {
     pub fn new(limits: DomLimits) -> Self {
         let limits = DomLimits {
-            max_nodes: limits.max_nodes.min(HARD_MAX_NODES).max(1),
+            max_nodes: limits.max_nodes.clamp(1, HARD_MAX_NODES),
             max_depth: limits.max_depth.min(HARD_MAX_DEPTH),
         };
         Self {
@@ -330,10 +330,10 @@ impl DomDocument {
                 }
             }
 
-            if let Some(parent) = node.parent {
-                if !self.node(parent)?.children.contains(&id) {
-                    return Err(DomError::InvariantViolation);
-                }
+            if let Some(parent) = node.parent
+                && !self.node(parent)?.children.contains(&id)
+            {
+                return Err(DomError::InvariantViolation);
             }
             if self.depth_of(id)? > self.limits.max_depth {
                 return Err(DomError::DepthLimitExceeded);
