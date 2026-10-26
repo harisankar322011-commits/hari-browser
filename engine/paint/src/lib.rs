@@ -413,8 +413,13 @@ mod tests {
         )
         .unwrap();
         let second = render_html_to_surface(
-            html, "", &DomLimits::default(), &layout_options, &paint_options,
-        ).unwrap();
+            html,
+            "",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
         assert_eq!(first, second);
     }
 
@@ -444,7 +449,8 @@ mod tests {
             &hari_engine_dom::DomDocument::from_html(b"<p>x</p>", &DomLimits::default()).unwrap(),
             &StyleSheet::default(),
             &LayoutOptions::default(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
             paint_layout(
                 &layout,
