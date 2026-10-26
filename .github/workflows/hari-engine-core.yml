@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   core:
-    name: Format, test, and lint HARI Core
+    name: Format, test, and lint HARI Engine crates
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -25,9 +25,15 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Check formatting
+      - name: Check Core formatting
         run: cargo fmt --manifest-path engine/core/Cargo.toml -- --check
-      - name: Run unit tests
+      - name: Test Core
         run: cargo test --manifest-path engine/core/Cargo.toml
-      - name: Run Clippy
+      - name: Lint Core
         run: cargo clippy --manifest-path engine/core/Cargo.toml --all-targets -- -D warnings
+      - name: Check HTML formatting
+        run: cargo fmt --manifest-path engine/html/Cargo.toml -- --check
+      - name: Test HTML parser and Core dependency
+        run: cargo test --manifest-path engine/html/Cargo.toml
+      - name: Lint HTML parser
+        run: cargo clippy --manifest-path engine/html/Cargo.toml --all-targets -- -D warnings
