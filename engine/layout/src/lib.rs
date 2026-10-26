@@ -5,7 +5,7 @@
 //! collapse whitespace, lay out inline formatting contexts, or support selectors
 //! beyond type selectors.
 
-use hari_engine_dom::{DomDocument, DomError, DocumentState, NodeId};
+use hari_engine_dom::{DocumentState, DomDocument, DomError, NodeId};
 use hari_engine_html::NodeKind;
 
 const HARD_MAX_LAYOUT_BOXES: usize = 100_000;
@@ -119,9 +119,9 @@ impl StyleSheet {
             let open = remaining.find('{').ok_or(CssError::InvalidRule)?;
             let selector = remaining[..open].trim();
             if selector.is_empty()
-                || !selector.bytes().all(|byte| {
-                    byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':')
-                })
+                || !selector
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':'))
             {
                 return Err(CssError::UnsupportedSelector);
             }
@@ -133,7 +133,11 @@ impl StyleSheet {
             let declarations = &remaining[open + 1..close];
             let mut style = ElementStyle::default();
 
-            for declaration in declarations.split(';').map(str::trim).filter(|item| !item.is_empty()) {
+            for declaration in declarations
+                .split(';')
+                .map(str::trim)
+                .filter(|item| !item.is_empty())
+            {
                 let (property, value) = declaration.split_once(':').ok_or(CssError::InvalidRule)?;
                 let property = property.trim().to_ascii_lowercase();
                 let value = value.trim().to_ascii_lowercase();
@@ -190,7 +194,10 @@ impl StyleSheet {
 }
 
 fn parse_px(value: &str) -> Result<u32, CssError> {
-    let number = value.strip_suffix("px").ok_or(CssError::InvalidValue)?.trim();
+    let number = value
+        .strip_suffix("px")
+        .ok_or(CssError::InvalidValue)?
+        .trim();
     if number.is_empty() || !number.bytes().all(|byte| byte.is_ascii_digit()) {
         return Err(CssError::InvalidValue);
     }
@@ -254,13 +261,7 @@ fn layout_node(
     }
 
     let (box_kind, display, width, height, margin) = match kind {
-        NodeKind::Document => (
-            BoxKind::Document,
-            Display::Block,
-            containing_width,
-            None,
-            0,
-        ),
+        NodeKind::Document => (BoxKind::Document, Display::Block, containing_width, None, 0),
         NodeKind::Element { tag_name } => {
             let style = stylesheet.style_for(&tag_name);
             let display = style.display.unwrap_or(Display::Block);
@@ -305,7 +306,10 @@ fn layout_node(
     let content_width = width.max(1);
     let mut children = Vec::new();
     let mut cursor_y = box_y;
-    let child_ids = document.children(node_id).map_err(LayoutError::Dom)?.to_vec();
+    let child_ids = document
+        .children(node_id)
+        .map_err(LayoutError::Dom)?
+        .to_vec();
 
     for child_id in child_ids {
         if let Some(child) = layout_node(
@@ -361,7 +365,7 @@ fn measure_text_height(value: &str, width: u32, character_width: u32, line_heigh
 #[cfg(test)]
 mod tests {
     use super::{
-        compute_layout, BoxKind, CssError, Display, LayoutError, LayoutOptions, Rect, StyleSheet,
+        BoxKind, CssError, Display, LayoutError, LayoutOptions, Rect, StyleSheet, compute_layout,
     };
     use hari_engine_dom::{DomDocument, DomLimits, NodeId};
 
@@ -369,43 +373,69 @@ mod tests {
         DomDocument::from_html(
             b"<html><body><h1>Hello</h1><p>World</p></body></html>",
             &DomLimits::default(),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn find_tag<'a>(layout: &'a super::LayoutBox, name: &str) -> Option<&'a super::LayoutBox> {
         if matches!(&layout.kind, BoxKind::Element { tag_name } if tag_name == name) {
             return Some(layout);
         }
-        layout.children.iter().find_map(|child| find_tag(child, name))
+        layout
+            .children
+            .iter()
+            .find_map(|child| find_tag(child, name))
     }
 
     #[test]
     fn lays_out_basic_document_in_vertical_block_flow() {
         let document = fixture();
-        let layout = compute_layout(&document, &StyleSheet::default(), &LayoutOptions {
-            viewport_width: 320,
-            ..LayoutOptions::default()
-        }).unwrap();
+        let layout = compute_layout(
+            &document,
+            &StyleSheet::default(),
+            &LayoutOptions {
+                viewport_width: 320,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
         assert_eq!(layout.node_id, document.root());
         assert_eq!(layout.rect.width, 320);
         let body = find_tag(&layout, "body").unwrap();
         let heading = find_tag(&layout, "h1").unwrap();
         let paragraph = find_tag(&layout, "p").unwrap();
         assert_eq!(heading.rect.y, body.rect.y);
-        assert_eq!(paragraph.rect.y, heading.rect.y + heading.rect.height as i32);
+        assert_eq!(
+            paragraph.rect.y,
+            heading.rect.y + heading.rect.height as i32
+        );
         assert!(layout.rect.height as i32 >= paragraph.rect.y + paragraph.rect.height as i32);
     }
 
     #[test]
     fn applies_tag_rules_for_width_height_and_margin() {
         let document = fixture();
-        let stylesheet = StyleSheet::parse("body { width: 280px; height: 90px; margin: 4px; }").unwrap();
-        let layout = compute_layout(&document, &stylesheet, &LayoutOptions {
-            viewport_width: 320,
-            ..LayoutOptions::default()
-        }).unwrap();
+        let stylesheet =
+            StyleSheet::parse("body { width: 280px; height: 90px; margin: 4px; }").unwrap();
+        let layout = compute_layout(
+            &document,
+            &stylesheet,
+            &LayoutOptions {
+                viewport_width: 320,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
         let body = find_tag(&layout, "body").unwrap();
-        assert_eq!(body.rect, Rect { x: 4, y: 4, width: 280, height: 90 });
+        assert_eq!(
+            body.rect,
+            Rect {
+                x: 4,
+                y: 4,
+                width: 280,
+                height: 90
+            }
+        );
     }
 
     #[test]
@@ -420,12 +450,17 @@ mod tests {
     #[test]
     fn wraps_text_to_available_width_using_configured_metrics() {
         let document = DomDocument::from_html(b"<p>abcde</p>", &DomLimits::default()).unwrap();
-        let layout = compute_layout(&document, &StyleSheet::default(), &LayoutOptions {
-            viewport_width: 16,
-            character_width: 8,
-            default_line_height: 18,
-            ..LayoutOptions::default()
-        }).unwrap();
+        let layout = compute_layout(
+            &document,
+            &StyleSheet::default(),
+            &LayoutOptions {
+                viewport_width: 16,
+                character_width: 8,
+                default_line_height: 18,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
         let paragraph = find_tag(&layout, "p").unwrap();
         assert_eq!(paragraph.rect.height, 54);
     }
@@ -440,16 +475,26 @@ mod tests {
 
     #[test]
     fn rejects_invalid_css_lengths() {
-        assert_eq!(StyleSheet::parse("p { width: -2px; }"), Err(CssError::InvalidValue));
+        assert_eq!(
+            StyleSheet::parse("p { width: -2px; }"),
+            Err(CssError::InvalidValue)
+        );
     }
 
     #[test]
     fn rejects_zero_viewport_and_closed_documents() {
         let document = fixture();
-        assert_eq!(compute_layout(&document, &StyleSheet::default(), &LayoutOptions {
-            viewport_width: 0,
-            ..LayoutOptions::default()
-        }), Err(LayoutError::InvalidViewport));
+        assert_eq!(
+            compute_layout(
+                &document,
+                &StyleSheet::default(),
+                &LayoutOptions {
+                    viewport_width: 0,
+                    ..LayoutOptions::default()
+                }
+            ),
+            Err(LayoutError::InvalidViewport)
+        );
         let mut closed = fixture();
         closed.close().unwrap();
         assert_eq!(
@@ -460,12 +505,17 @@ mod tests {
 
     #[test]
     fn respects_maximum_generated_layout_box_count() {
-        let document = DomDocument::from_html(b"<div><p>x</p></div>", &DomLimits::default()).unwrap();
+        let document =
+            DomDocument::from_html(b"<div><p>x</p></div>", &DomLimits::default()).unwrap();
         assert_eq!(
-            compute_layout(&document, &StyleSheet::default(), &LayoutOptions {
-                max_layout_boxes: 2,
-                ..LayoutOptions::default()
-            }),
+            compute_layout(
+                &document,
+                &StyleSheet::default(),
+                &LayoutOptions {
+                    max_layout_boxes: 2,
+                    ..LayoutOptions::default()
+                }
+            ),
             Err(LayoutError::BoxLimitExceeded)
         );
     }
@@ -473,7 +523,8 @@ mod tests {
     #[test]
     fn box_nodes_retain_source_dom_ids() {
         let document = fixture();
-        let layout = compute_layout(&document, &StyleSheet::default(), &LayoutOptions::default()).unwrap();
+        let layout =
+            compute_layout(&document, &StyleSheet::default(), &LayoutOptions::default()).unwrap();
         assert_eq!(layout.node_id, NodeId(0));
         assert!(matches!(layout.kind, BoxKind::Document));
         assert!(matches!(layout.display, Display::Block));
