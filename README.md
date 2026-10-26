@@ -5,7 +5,7 @@
 Hari Browser is an open-source Android browser built on **Android System WebView** for private family use. It combines everyday browsing tools with privacy-conscious defaults, optional Teen Protection, local URL checks, file-inspection tools, and an optional Hari AI assistant. This project is not being prepared for Google Play publishing; family sideloading still requires a verified, trusted APK.
 
 > [!IMPORTANT]
-> **Release caution:** The previously tested `HariBrowser-2.3.0(2).apk` was reported as triggering Android device protection (“malware detected”). Static inspection found the standard EICAR antivirus test marker in that APK's compiled code; source history confirms that the production marker was later removed and CI now rejects it in compiled DEX files. This is a strong likely explanation for that specific warning, but it does not prove the marker was the only cause or establish that every future build is safe. The newer CI validation artifact was unsigned, so it is not a release candidate. Review [the inspection evidence](docs/REVIEW_AUDIT_2026-10-24.md) and [stable signing instructions](docs/RELEASE_SIGNING.md); scan the exact APK you intend to install and do not bypass an Android protection warning.
+> **Device-test update (2026-10-26):** The maintainer reports that a newer one-time-signed owner-test APK installed successfully on an Android device. This is encouraging for that specific test, but it is not independent malware clearance or proof that every build is safe. Static inspection of the older `HariBrowser-2.3.0(2).apk` found the standard EICAR antivirus test marker in compiled code; the marker was removed from production scanner bytecode and CI now rejects it in compiled DEX files. Samsung has not confirmed the original warning's cause. Review [the inspection evidence](docs/REVIEW_AUDIT_2026-10-24.md) and [stable signing instructions](docs/RELEASE_SIGNING.md), verify the exact APK you install, and never bypass a new Android protection warning. A one-time test signature is not a stable release-signing identity for future updates.
 
 ## At a glance
 
@@ -72,7 +72,7 @@ Optional URLhaus reputation checks are available after explicit user confirmatio
 
 ### Hari Antivirus and download checks
 
-Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker was removed from production scanner bytecode as a precaution after a device-protection warning; Samsung has not confirmed the warning's cause, so this change alone does not establish that the alert is resolved. This does not make the scanner a full antivirus engine.
+Hari Browser includes file-inspection features for files downloaded through the browser and files selected by the user. Depending on the scan path, checks include SHA-256 calculation, file-format mismatches, executable or active file types, bounded archive inspection, APK metadata and signer-certificate details, and a small multi-pattern rule engine. The standard antivirus test marker was removed from production scanner bytecode as a precaution after a device-protection warning. The maintainer's successful installation of a newer test APK is useful device-level evidence, but Samsung has not confirmed the original warning's cause. This does not make the scanner a full antivirus engine.
 
 Optional MalwareBazaar hash reputation can send a file's SHA-256 hash to the service when the user configures an Auth-Key. The file contents and filename are not uploaded for that lookup. Optional URLhaus checks share only the URL being checked. These online checks are off until configured or explicitly enabled, and private browsing does not send hashes or URLs for reputation checks.
 
@@ -102,21 +102,21 @@ Hari Browser is intended for family use and reduces some common risks, but it do
 - Private mode helps separate browser data, but cannot erase downloads you explicitly save, screenshots, network/provider logs, or every trace outside the app's control. Exit cleanup is best-effort.
 - JavaScript is enabled by default for compatibility and can be disabled in Settings. Blocking HTTP may prevent older sites from loading.
 - URL checks, Teen Protection, and file scanning can miss threats or generate false positives. None should be treated as a security certification.
-- A previously tested APK has an unresolved Android device-protection alert, as noted above. Investigate that alert before distributing or recommending the affected artifact.
+- A historical device-protection warning affected an older 2.3.0 APK. The maintainer reports that a newer one-time-signed update installed successfully on 2026-10-26; this is a smoke test for that artifact and device, not a guarantee for other builds.
 
 ## Get the app
 
 Use only builds linked from the official [Hari Browser repository](https://github.com/harisankar322011-commits/hari-browser).
 
-The repository's release workflow can produce a build artifact for family testing/sideloading. This is not a Google Play publishing workflow. Because the previously tested APK triggered a device-protection warning, do not install it or assume a newly built APK is safe until the exact artifact has been investigated and verified.
+The repository is maintained for family use and sideloading, not Google Play publishing. The maintainer reports that a newer one-time-signed owner-test APK installed successfully on 2026-10-26. Treat that as a limited test of that exact artifact on that device, not as independent malware certification; verify the specific APK and never ignore a new Android protection warning.
 
-1. Open the repository's **Actions** tab.
-2. Open the latest successful **Build Hari Browser Release APK** workflow run on `main` after the 2.4.0 change has merged.
-3. Download the `hari-browser-2.4.0-release-apk` artifact and read the artifact's notes.
-4. Check the APK filename and signing status before installation. An APK named `*-unsigned.apk` is not ready to install.
-5. Do not install or redistribute the previously flagged 2.3.0 APK until the Android device-protection alert has been investigated.
+1. Open the repository's **Actions** tab and locate **Build a one-time-signed APK for owner testing** if you need to review the owner-test build.
+2. Treat a one-time-signed APK as a test artifact, not a permanent release. Android requires a matching signing certificate for an in-place update; if the temporary signing key is not retained, a future differently signed build will not update this installation and reinstalling may erase local app data.
+3. For ongoing family updates, use an installable release APK built from `main` only after the stable release key and pinned certificate fingerprint checks are configured and pass.
+4. Never install an artifact named `*-unsigned.apk`; unsigned validation artifacts are not installable release builds.
+5. Do not reuse the older `HariBrowser-2.3.0(2).apk`; use the exact newer artifact that you verified.
 
-For releases intended to be updated in place, maintainers must sign every version with the same private release key. CI must never generate a disposable key; without the stable signing secrets it should publish only an unsigned validation artifact that cannot be installed. Never commit a keystore or signing passwords to source control. CI also pins the expected signing certificate SHA-256 fingerprint; see [release signing setup](docs/RELEASE_SIGNING.md) before configuring the five protected Actions secrets.
+For releases intended to be updated in place, maintainers must sign every version with the same private release key. CI must never generate a disposable key; if the stable signing secrets are absent, the release workflow should fail instead of publishing an installable release APK. Never commit a keystore or signing passwords to source control. CI also pins the expected signing certificate SHA-256 fingerprint; see [release signing setup](docs/RELEASE_SIGNING.md) before configuring the five protected Actions secrets.
 
 A successful build, CI check, or third-party review does not by itself prove an APK is malware-free. Verify the release artifact, signature, and source before installing it.
 
@@ -146,7 +146,7 @@ cd hari-browser
 ./gradlew :app:lintRelease
 ```
 
-Gradle writes APKs under `app/build/outputs/apk/`. A locally built APK should not be assumed to be signed for installation or for future updates. The family-use install candidate must be signed with the same stable, privately stored key on every update; never commit a keystore or signing password to source control. Do not install the previously flagged 2.3.0 APK while its device-protection warning remains unresolved.
+Gradle writes APKs under `app/build/outputs/apk/`. A locally built APK should not be assumed to be signed for installation or for future updates. Every ongoing update must use the same stable, privately stored release key; never commit a keystore or signing password to source control. The one-time test key may not be available for future updates, so plan the stable key before relying on in-place upgrades.
 
 The repository's GitHub Actions workflow also runs release-build checks, Android lint, Teen Protection unit tests, and source-level security regression checks. Passing these checks improves quality but cannot establish that the app is vulnerability-free.
 
