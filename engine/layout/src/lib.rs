@@ -5,8 +5,7 @@
 //! collapse whitespace, lay out inline formatting contexts, or support selectors
 //! beyond type selectors.
 
-use hari_engine_dom::{DocumentState, DomDocument, DomError, NodeId};
-use hari_engine_html::NodeKind;
+use hari_engine_dom::{DocumentState, DomDocument, DomError, NodeId, NodeKind};
 
 const HARD_MAX_LAYOUT_BOXES: usize = 100_000;
 const HARD_MAX_CSS_PX: u32 = 1_000_000;
@@ -359,7 +358,7 @@ fn measure_text_height(value: &str, width: u32, character_width: u32, line_heigh
         })
         .sum::<usize>()
         .max(1);
-    (lines.min(u32::MAX as usize / line_height) as u32) * line_height
+    (lines.min((u32::MAX / line_height) as usize) as u32) * line_height
 }
 
 #[cfg(test)]
