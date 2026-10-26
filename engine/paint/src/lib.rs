@@ -76,11 +76,7 @@ impl Surface {
         background: [u8; 4],
         max_pixels: usize,
     ) -> Result<Self, PaintError> {
-        if width == 0
-            || height == 0
-            || width > HARD_MAX_DIMENSION
-            || height > HARD_MAX_DIMENSION
-        {
+        if width == 0 || height == 0 || width > HARD_MAX_DIMENSION || height > HARD_MAX_DIMENSION {
             return Err(PaintError::InvalidSurfaceDimensions);
         }
         let pixel_count = (width as usize)
@@ -145,12 +141,8 @@ impl Surface {
 }
 
 /// Paints a computed HARI layout tree to a bounded in-memory RGBA surface.
-pub fn paint_layout(
-    layout: &LayoutBox,
-    options: &PaintOptions,
-) -> Result<Surface, PaintError> {
-    if options.character_width < GLYPH_WIDTH as u32 + 1
-        || options.line_height < GLYPH_HEIGHT as u32
+pub fn paint_layout(layout: &LayoutBox, options: &PaintOptions) -> Result<Surface, PaintError> {
+    if options.character_width < GLYPH_WIDTH as u32 + 1 || options.line_height < GLYPH_HEIGHT as u32
     {
         return Err(PaintError::InvalidMetrics);
     }
@@ -181,8 +173,7 @@ pub fn render_html_to_surface(
         return Err(RenderError::Paint(PaintError::ConfigurationMismatch));
     }
 
-    let document =
-        DomDocument::from_html(html, dom_limits).map_err(RenderError::Dom)?;
+    let document = DomDocument::from_html(html, dom_limits).map_err(RenderError::Dom)?;
     let stylesheet = StyleSheet::parse(css).map_err(RenderError::Css)?;
     let layout =
         compute_layout(&document, &stylesheet, layout_options).map_err(RenderError::Layout)?;
@@ -194,7 +185,14 @@ fn paint_node(node: &LayoutBox, surface: &mut Surface, options: &PaintOptions) {
         BoxKind::Document => {}
         BoxKind::Element { .. } => {
             if options.draw_element_outlines {
-                draw_outline(surface, node.rect.x, node.rect.y, node.rect.width, node.rect.height, options.outline_color);
+                draw_outline(
+                    surface,
+                    node.rect.x,
+                    node.rect.y,
+                    node.rect.width,
+                    node.rect.height,
+                    options.outline_color,
+                );
             }
         }
         BoxKind::Text(text) => draw_text(surface, text, node, options),
@@ -205,26 +203,27 @@ fn paint_node(node: &LayoutBox, surface: &mut Surface, options: &PaintOptions) {
     }
 }
 
-fn draw_outline(
-    surface: &mut Surface,
-    x: i32,
-    y: i32,
-    width: u32,
-    height: u32,
-    color: [u8; 4],
-) {
+fn draw_outline(surface: &mut Surface, x: i32, y: i32, width: u32, height: u32, color: [u8; 4]) {
     if width == 0 || height == 0 {
         return;
     }
     for dx in 0..width {
         let px = x.saturating_add(dx.min(i32::MAX as u32) as i32);
         surface.set_pixel(px, y, color);
-        surface.set_pixel(px, y.saturating_add(height.saturating_sub(1).min(i32::MAX as u32) as i32), color);
+        surface.set_pixel(
+            px,
+            y.saturating_add(height.saturating_sub(1).min(i32::MAX as u32) as i32),
+            color,
+        );
     }
     for dy in 0..height {
         let py = y.saturating_add(dy.min(i32::MAX as u32) as i32);
         surface.set_pixel(x, py, color);
-        surface.set_pixel(x.saturating_add(width.saturating_sub(1).min(i32::MAX as u32) as i32), py, color);
+        surface.set_pixel(
+            x.saturating_add(width.saturating_sub(1).min(i32::MAX as u32) as i32),
+            py,
+            color,
+        );
     }
 }
 
@@ -255,7 +254,10 @@ fn draw_text(surface: &mut Surface, text: &str, node: &LayoutBox, options: &Pain
                 .saturating_mul(options.character_width)
                 .min(i32::MAX as u32) as i32,
         );
-        let origin_y = node.rect.y.saturating_add(line_offset.min(i32::MAX as u32) as i32);
+        let origin_y = node
+            .rect
+            .y
+            .saturating_add(line_offset.min(i32::MAX as u32) as i32);
         draw_glyph(surface, origin_x, origin_y, character, options.text_color);
         column = column.saturating_add(1);
     }
@@ -271,7 +273,7 @@ fn draw_glyph(
     let rows = glyph_rows(character.to_ascii_uppercase());
     for (row_index, bits) in rows.iter().enumerate() {
         for column in 0..GLYPH_WIDTH {
-            if bits & (1 << (GLYPH_WIDTH - 1 - column)) != 0 {
+            if *bits & (1 << (GLYPH_WIDTH - 1 - column)) != 0 {
                 surface.set_pixel(
                     origin_x.saturating_add(column as i32),
                     origin_y.saturating_add(row_index as i32),
@@ -343,7 +345,7 @@ fn glyph_rows(character: char) -> [u8; GLYPH_HEIGHT] {
 #[cfg(test)]
 mod tests {
     use super::{
-        paint_layout, render_html_to_surface, PaintError, PaintOptions, RenderError, Surface,
+        PaintError, PaintOptions, RenderError, Surface, paint_layout, render_html_to_surface,
     };
     use hari_engine_dom::DomLimits;
     use hari_engine_layout::{LayoutOptions, StyleSheet};
@@ -375,19 +377,41 @@ mod tests {
         assert_eq!(surface.width(), 240);
         assert_eq!(surface.height(), 160);
         assert!(surface.pixel(239, 159).is_some());
-        assert!(surface.pixels().iter().any(|pixel| *pixel == paint_options.text_color));
-        assert!(surface.pixels().iter().any(|pixel| *pixel == paint_options.background));
+        assert!(
+            surface
+                .pixels()
+                .iter()
+                .any(|pixel| *pixel == paint_options.text_color)
+        );
+        assert!(
+            surface
+                .pixels()
+                .iter()
+                .any(|pixel| *pixel == paint_options.background)
+        );
         assert!(surface.non_background_pixel_count() > 100);
     }
 
     #[test]
     fn painting_is_deterministic_for_the_same_layout_and_options() {
-        let layout_options = LayoutOptions { viewport_width: 96, ..LayoutOptions::default() };
-        let paint_options = PaintOptions { width: 96, height: 80, ..PaintOptions::default() };
+        let layout_options = LayoutOptions {
+            viewport_width: 96,
+            ..LayoutOptions::default()
+        };
+        let paint_options = PaintOptions {
+            width: 96,
+            height: 80,
+            ..PaintOptions::default()
+        };
         let html = b"<p>HARI</p>";
         let first = render_html_to_surface(
-            html, "", &DomLimits::default(), &layout_options, &paint_options,
-        ).unwrap();
+            html,
+            "",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
         let second = render_html_to_surface(
             html, "", &DomLimits::default(), &layout_options, &paint_options,
         ).unwrap();
@@ -400,9 +424,16 @@ mod tests {
             &hari_engine_dom::DomDocument::from_html(b"<p>x</p>", &DomLimits::default()).unwrap(),
             &StyleSheet::default(),
             &LayoutOptions::default(),
-        ).unwrap();
+        )
+        .unwrap();
         assert_eq!(
-            paint_layout(&layout, &PaintOptions { width: 0, ..PaintOptions::default() }),
+            paint_layout(
+                &layout,
+                &PaintOptions {
+                    width: 0,
+                    ..PaintOptions::default()
+                }
+            ),
             Err(PaintError::InvalidSurfaceDimensions)
         );
     }
@@ -415,12 +446,15 @@ mod tests {
             &LayoutOptions::default(),
         ).unwrap();
         assert_eq!(
-            paint_layout(&layout, &PaintOptions {
-                width: 100,
-                height: 100,
-                max_pixels: 1,
-                ..PaintOptions::default()
-            }),
+            paint_layout(
+                &layout,
+                &PaintOptions {
+                    width: 100,
+                    height: 100,
+                    max_pixels: 1,
+                    ..PaintOptions::default()
+                }
+            ),
             Err(PaintError::PixelLimitExceeded)
         );
     }
@@ -432,8 +466,14 @@ mod tests {
                 b"<p>HARI</p>",
                 "",
                 &DomLimits::default(),
-                &LayoutOptions { viewport_width: 100, ..LayoutOptions::default() },
-                &PaintOptions { width: 101, ..PaintOptions::default() },
+                &LayoutOptions {
+                    viewport_width: 100,
+                    ..LayoutOptions::default()
+                },
+                &PaintOptions {
+                    width: 101,
+                    ..PaintOptions::default()
+                },
             ),
             Err(RenderError::Paint(PaintError::ConfigurationMismatch))
         );
