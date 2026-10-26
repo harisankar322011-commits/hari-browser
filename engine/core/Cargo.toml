@@ -1,0 +1,13 @@
+[package]
+name = "hari-engine-core"
+version = "0.1.0"
+edition = "2024"
+description = "Experimental, isolated core foundation for the HARI browser engine"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+
+[dev-dependencies]
