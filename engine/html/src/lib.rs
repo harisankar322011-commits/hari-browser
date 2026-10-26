@@ -750,6 +750,37 @@ mod tests {
     }
 
     #[test]
+    fn preserves_unicode_text_and_attribute_values() {
+        let source = "<p title=\"café 😀\">മലയാളം 中文</p>";
+        let document = parse_document(source.as_bytes(), &HtmlLimits::default()).unwrap();
+        let paragraph = element(&document.children[0], "p");
+
+        assert_eq!(paragraph.attribute("title"), Some("café 😀"));
+        assert_eq!(paragraph.text_content(), "മലയാളം 中文");
+    }
+
+    #[test]
+    fn malformed_markup_corpus_is_handled_without_panicking() {
+        let samples = [
+            "<div",
+            "<p title='unterminated",
+            "<!-- unterminated comment",
+            "<!doctype html",
+            "<script>if (left < right) {",
+            "<div><p>before</div></p>",
+            "<textarea>unclosed <b>looks like text",
+            "<p a=one a=two>duplicate attribute</p>",
+        ];
+
+        for source in samples {
+            assert!(
+                parse_document(source.as_bytes(), &HtmlLimits::default()).is_ok(),
+                "the bounded parser should recover from this malformed input: {source:?}"
+            );
+        }
+    }
+
+    #[test]
     fn configured_depth_cannot_disable_hard_nesting_ceiling() {
         let source = format!("{}{}", "<div>".repeat(257), "</div>".repeat(257));
         let limits = HtmlLimits {
