@@ -4,7 +4,7 @@
 //! fetch subresources, decode character references, or implement browser layout.
 //! It builds a simple tree so later DOM/layout work can begin behind tests.
 
-use hari_engine_core::{validate_document_input, EngineLimits, InputError};
+use hari_engine_core::{EngineLimits, InputError, validate_document_input};
 
 /// Hard limits applied before and during parsing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -226,7 +226,9 @@ impl<'a> Parser<'a> {
                     .eq_ignore_ascii_case(tag_name.as_bytes())
             {
                 let boundary = self.bytes.get(index + 2 + tag_name.len()).copied();
-                if boundary.is_none_or(|byte| byte.is_ascii_whitespace() || byte == b'>' || byte == b'/') {
+                if boundary
+                    .is_none_or(|byte| byte.is_ascii_whitespace() || byte == b'>' || byte == b'/')
+                {
                     return Some(index);
                 }
             }
@@ -326,8 +328,7 @@ impl<'a> Parser<'a> {
                 self.position += 1;
                 break;
             }
-            if self.bytes[self.position] == b'/'
-                && self.bytes.get(self.position + 1) == Some(&b'>')
+            if self.bytes[self.position] == b'/' && self.bytes.get(self.position + 1) == Some(&b'>')
             {
                 self.position += 2;
                 self_closing = true;
@@ -389,7 +390,10 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            if !attributes.iter().any(|attribute: &Attribute| attribute.name == name) {
+            if !attributes
+                .iter()
+                .any(|attribute: &Attribute| attribute.name == name)
+            {
                 attributes.push(Attribute { name, value });
             }
         }
@@ -446,7 +450,9 @@ impl<'a> Parser<'a> {
     }
 
     fn starts_comment(&self, index: usize) -> bool {
-        self.bytes.get(index..index + 4).is_some_and(|bytes| bytes == b"<!--")
+        self.bytes
+            .get(index..index + 4)
+            .is_some_and(|bytes| bytes == b"<!--")
     }
 
     fn starts_doctype(&self, index: usize) -> bool {
@@ -455,18 +461,26 @@ impl<'a> Parser<'a> {
         };
         tail.len() >= 9
             && tail[..9].eq_ignore_ascii_case(b"<!doctype")
-            && tail.get(9).is_none_or(|byte| byte.is_ascii_whitespace() || *byte == b'>')
+            && tail
+                .get(9)
+                .is_none_or(|byte| byte.is_ascii_whitespace() || *byte == b'>')
     }
 
     fn is_start_tag_start(&self, index: usize) -> bool {
         self.bytes.get(index) == Some(&b'<')
-            && self.bytes.get(index + 1).is_some_and(|byte| byte.is_ascii_alphabetic())
+            && self
+                .bytes
+                .get(index + 1)
+                .is_some_and(|byte| byte.is_ascii_alphabetic())
     }
 
     fn is_end_tag_start(&self, index: usize) -> bool {
         self.bytes.get(index) == Some(&b'<')
             && self.bytes.get(index + 1) == Some(&b'/')
-            && self.bytes.get(index + 2).is_some_and(|byte| byte.is_ascii_alphabetic())
+            && self
+                .bytes
+                .get(index + 2)
+                .is_some_and(|byte| byte.is_ascii_alphabetic())
     }
 
     fn add_node(
@@ -506,7 +520,11 @@ fn is_void_element(tag_name: &str) -> bool {
 }
 
 fn find_byte(bytes: &[u8], from: usize, target: u8) -> Option<usize> {
-    bytes.get(from..)?.iter().position(|byte| *byte == target).map(|offset| from + offset)
+    bytes
+        .get(from..)?
+        .iter()
+        .position(|byte| *byte == target)
+        .map(|offset| from + offset)
 }
 
 fn find_bytes(bytes: &[u8], from: usize, target: &[u8]) -> Option<usize> {
@@ -535,7 +553,7 @@ fn materialize(index: usize, nodes: &[TempNode]) -> Node {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_document, Attribute, HtmlLimits, Node, NodeKind, ParseError};
+    use super::{Attribute, HtmlLimits, Node, NodeKind, ParseError, parse_document};
     use hari_engine_core::InputError;
 
     fn element<'a>(node: &'a Node, expected: &str) -> &'a Node {
@@ -585,9 +603,18 @@ mod tests {
         assert_eq!(
             image.attributes,
             vec![
-                Attribute { name: "alt".into(), value: "tiny cat".into() },
-                Attribute { name: "src".into(), value: "/cat.png".into() },
-                Attribute { name: "disabled".into(), value: String::new() },
+                Attribute {
+                    name: "alt".into(),
+                    value: "tiny cat".into()
+                },
+                Attribute {
+                    name: "src".into(),
+                    value: "/cat.png".into()
+                },
+                Attribute {
+                    name: "disabled".into(),
+                    value: String::new()
+                },
             ]
         );
         assert!(element(&document.children[1], "br").children.is_empty());
@@ -596,19 +623,24 @@ mod tests {
 
     #[test]
     fn closing_tag_unwinds_to_matching_open_element() {
-        let document = parse_document(b"<div><p>one</div><span>two", &HtmlLimits::default())
-            .unwrap();
+        let document =
+            parse_document(b"<div><p>one</div><span>two", &HtmlLimits::default()).unwrap();
 
         let div = element(&document.children[0], "div");
         assert_eq!(text(&element(&div.children[0], "p").children[0]), "one");
-        assert_eq!(text(&element(&document.children[1], "span").children[0]), "two");
+        assert_eq!(
+            text(&element(&document.children[1], "span").children[0]),
+            "two"
+        );
     }
 
     #[test]
     fn preserves_comments_and_doctype_as_distinct_nodes() {
-        let document =
-            parse_document(b"<!doctype html><!--safe note--><p>x</p>", &HtmlLimits::default())
-                .unwrap();
+        let document = parse_document(
+            b"<!doctype html><!--safe note--><p>x</p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
 
         assert!(matches!(document.children[0].kind, NodeKind::Doctype(_)));
         assert!(matches!(
@@ -636,12 +668,18 @@ mod tests {
             parse_document(b"<script></script><p>done</p>", &HtmlLimits::default()).unwrap();
 
         assert!(element(&document.children[0], "script").children.is_empty());
-        assert_eq!(text(&element(&document.children[1], "p").children[0]), "done");
+        assert_eq!(
+            text(&element(&document.children[1], "p").children[0]),
+            "done"
+        );
     }
 
     #[test]
     fn rejects_input_over_byte_limit() {
-        let limits = HtmlLimits { max_document_bytes: 3, ..HtmlLimits::default() };
+        let limits = HtmlLimits {
+            max_document_bytes: 3,
+            ..HtmlLimits::default()
+        };
         assert_eq!(
             parse_document(b"<p>x</p>", &limits),
             Err(ParseError::Input(InputError::DocumentTooLarge))
@@ -662,7 +700,10 @@ mod tests {
 
     #[test]
     fn refuses_more_nodes_than_configured() {
-        let limits = HtmlLimits { max_nodes: 1, ..HtmlLimits::default() };
+        let limits = HtmlLimits {
+            max_nodes: 1,
+            ..HtmlLimits::default()
+        };
         assert_eq!(
             parse_document(b"<p>text</p>", &limits),
             Err(ParseError::NodeLimitExceeded)
@@ -671,7 +712,10 @@ mod tests {
 
     #[test]
     fn refuses_element_nesting_beyond_limit() {
-        let limits = HtmlLimits { max_depth: 2, ..HtmlLimits::default() };
+        let limits = HtmlLimits {
+            max_depth: 2,
+            ..HtmlLimits::default()
+        };
         assert_eq!(
             parse_document(b"<a><b><c>x</c></b></a>", &limits),
             Err(ParseError::DepthLimitExceeded)
