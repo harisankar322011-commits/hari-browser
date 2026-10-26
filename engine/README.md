@@ -1,27 +1,40 @@
 # HARI Engine (experimental)
 
-HARI Engine is a new, experimental browser-engine project being developed alongside Hari Browser. It is **not** the current production renderer and is not wired into the app.
+HARI Engine is a new, experimental browser-engine project being developed alongside Hari Browser. It is **not** the current production renderer and is not wired into the Android app.
 
-## First milestone
+## Implemented foundations
 
-The first crate is `core/`, a dependency-free Rust library establishing a narrow document-input boundary. It currently checks:
+### Core input boundary (`engine/core/`)
+A dependency-free Rust library that checks:
 
 - maximum source byte length (default 1 MiB);
 - valid UTF-8;
-- forbidden control characters, while allowing HTML whitespace (LF, CR, TAB).
+- forbidden control characters, while allowing normal HTML whitespace (LF, CR, TAB).
 
-These checks are not an HTML parser, sanitizer, malware detector, or complete security boundary. Untrusted input still requires robust parsing, resource limits throughout the pipeline, origin isolation, safe networking, and extensive adversarial testing.
+### Initial HTML tokenizer/tree parser (`engine/html/`)
+The parser currently supports:
 
-## Planned stages
+- nested element nodes and basic end-tag unwinding;
+- HTML comments and doctypes;
+- quoted, unquoted, and boolean attributes;
+- common void elements such as `img`, `br`, and `meta`;
+- raw-text handling for `script`, `style`, `textarea`, and `title`;
+- configurable byte, node, nesting-depth, and per-element attribute limits;
+- deterministic errors for rejected input.
 
-1. **Core and security contracts** — input limits, typed errors, deterministic behavior, test harness, threat model.
-2. **HTML tokenizer/parser** — incremental parsing, bounded depth/nodes, malformed-input tests.
-3. **DOM model** — ownership, mutation rules, document lifecycle.
-4. **CSS subset and layout** — start with a deliberately small, documented subset.
-5. **Text and graphics output** — bounded rendering and deterministic visual fixtures.
-6. **Networking and storage** — origin model, TLS policy, cache/cookie isolation, safe redirects and downloads.
-7. **JavaScript** — decide explicitly whether a maintained external runtime is required; disclose any reuse rather than claiming it was built from scratch.
-8. **Android integration** — a separate opt-in prototype behind an explicit feature boundary.
+It builds a simple HARI-owned tree, **not a standards-compliant browser DOM**. It does not decode HTML character references, execute JavaScript, fetch resources, implement CSS, lay out pages, or render pixels. Malformed-HTML recovery is intentionally limited and will need a much larger conformance test suite before it can be used for real browsing.
+
+Successful parsing is not a content-safety or malware verdict. Do not render untrusted documents in a privileged context based on this parser alone.
+
+## Next stages
+
+1. **Expand parser tests and tokenizer behavior** — malformed inputs, duplicate attributes, comments, raw-text cases, Unicode, and resource-limit stress cases.
+2. **DOM model** — ownership, mutation rules, document lifecycle, parent/child invariants.
+3. **CSS subset and layout** — start with a small, explicitly documented subset.
+4. **Text and graphics output** — bounded rendering and deterministic visual fixtures.
+5. **Networking and storage** — origin model, TLS policy, cache/cookie isolation, safe redirects and downloads.
+6. **JavaScript** — make an explicit decision about whether a maintained external runtime is required; disclose all reuse.
+7. **Android integration** — separate opt-in prototype behind an explicit feature boundary.
 
 ## Safety and compatibility rules
 
@@ -40,6 +53,10 @@ From the repository root:
 cargo fmt --manifest-path engine/core/Cargo.toml -- --check
 cargo test --manifest-path engine/core/Cargo.toml
 cargo clippy --manifest-path engine/core/Cargo.toml --all-targets -- -D warnings
+
+cargo fmt --manifest-path engine/html/Cargo.toml -- --check
+cargo test --manifest-path engine/html/Cargo.toml
+cargo clippy --manifest-path engine/html/Cargo.toml --all-targets -- -D warnings
 ```
 
-The repository's Android build and tests remain separate from these engine checks.
+A dedicated GitHub Actions workflow runs these checks for engine changes. The Android app's existing build and tests remain separate.
