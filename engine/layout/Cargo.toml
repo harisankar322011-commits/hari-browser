@@ -1,0 +1,12 @@
+[package]
+name = "hari-engine-layout"
+version = "0.1.0"
+edition = "2024"
+description = "Experimental CSS subset and block-flow layout for HARI Engine"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+hari-engine-dom = { path = "../dom" }
