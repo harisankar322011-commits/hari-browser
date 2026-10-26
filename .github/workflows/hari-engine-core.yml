@@ -37,3 +37,15 @@ jobs:
         run: cargo test --manifest-path engine/html/Cargo.toml
       - name: Lint HTML parser
         run: cargo clippy --manifest-path engine/html/Cargo.toml --all-targets -- -D warnings
+      - name: Check DOM formatting
+        run: cargo fmt --manifest-path engine/dom/Cargo.toml -- --check
+      - name: Test DOM tree invariants
+        run: cargo test --manifest-path engine/dom/Cargo.toml
+      - name: Lint DOM
+        run: cargo clippy --manifest-path engine/dom/Cargo.toml --all-targets -- -D warnings
+      - name: Check layout formatting
+        run: cargo fmt --manifest-path engine/layout/Cargo.toml -- --check
+      - name: Test CSS subset and layout
+        run: cargo test --manifest-path engine/layout/Cargo.toml
+      - name: Lint layout
+        run: cargo clippy --manifest-path engine/layout/Cargo.toml --all-targets -- -D warnings
