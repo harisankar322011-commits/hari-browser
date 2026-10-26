@@ -22,7 +22,7 @@ The parser currently supports:
 - configurable byte, node, nesting-depth, and per-element attribute limits;
 - deterministic errors for rejected input.
 
-It builds a simple HARI-owned tree, **not a standards-compliant browser DOM**. It does not decode HTML character references, execute JavaScript, fetch resources, implement CSS, lay out pages, or render pixels. Malformed-HTML recovery is intentionally limited and will need a much larger conformance test suite before it can be used for real browsing.
+The default ceilings are 1 MiB of source, 100,000 nodes, 256 nested elements, and 256 attributes per element. Callers may tighten these limits, but configuration cannot raise the absolute ceilings. The parser builds a simple HARI-owned tree, **not a standards-compliant browser DOM**. It does not decode HTML character references, execute JavaScript, fetch resources, implement CSS, lay out pages, or render pixels. Malformed-HTML recovery is intentionally limited and will need a much larger conformance test suite before it can be used for real browsing.
 
 Successful parsing is not a content-safety or malware verdict. Do not render untrusted documents in a privileged context based on this parser alone.
 
