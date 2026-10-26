@@ -61,14 +61,6 @@ pub struct Node {
 }
 
 impl Node {
-    fn new(kind: NodeKind, attributes: Vec<Attribute>) -> Self {
-        Self {
-            kind,
-            attributes,
-            children: Vec::new(),
-        }
-    }
-
     /// Returns the normalized element tag name, if this is an element.
     pub fn tag_name(&self) -> Option<&str> {
         match &self.kind {
