@@ -49,3 +49,9 @@ jobs:
         run: cargo test --manifest-path engine/layout/Cargo.toml
       - name: Lint layout
         run: cargo clippy --manifest-path engine/layout/Cargo.toml --all-targets -- -D warnings
+      - name: Check paint formatting
+        run: cargo fmt --manifest-path engine/paint/Cargo.toml -- --check
+      - name: Test software painter
+        run: cargo test --manifest-path engine/paint/Cargo.toml
+      - name: Lint software painter
+        run: cargo clippy --manifest-path engine/paint/Cargo.toml --all-targets -- -D warnings
