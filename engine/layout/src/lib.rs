@@ -120,7 +120,7 @@ impl StyleSheet {
             if selector.is_empty()
                 || !selector
                     .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':'))
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
             {
                 return Err(CssError::UnsupportedSelector);
             }
