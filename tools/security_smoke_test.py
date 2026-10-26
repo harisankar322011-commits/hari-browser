@@ -430,9 +430,10 @@ try:
           "[one-time-release-sign]" not in build_workflow and
           "hari-browser-one-time-release" not in build_workflow and
           "keytool -genkeypair" not in build_workflow)
-    check("Missing stable signer produces only an unsigned validation artifact",
-          "dist/HariBrowser-2.4.0-unsigned.apk" in build_workflow and
-          "cannot be installed until signed with a stable release key" in build_workflow)
+    check("Missing stable signer fails release build instead of publishing unsigned APK",
+          "Stable release signing is required." in build_workflow and
+          "dist/HariBrowser-2.4.0-unsigned.apk" not in build_workflow and
+          'publish_apk="dist/HariBrowser-2.4.0.apk"' in build_workflow)
     secret_scan_workflow = read(".github/workflows/secret-scan.yml")
     check("Secret scanner uses complete Git history", "fetch-depth: 0" in secret_scan_workflow)
     check("Secret scanner does not persist checkout credentials",
