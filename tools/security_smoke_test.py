@@ -426,10 +426,14 @@ try:
           'apksigner" sign' in build_workflow and "--ks-key-alias" in build_workflow and
           "certificate SHA-256 digest" in build_workflow and
           'actual_fingerprint" != "$expected_fingerprint"' in build_workflow)
-    check("CI never creates and discards a temporary release key",
-          "[one-time-release-sign]" not in build_workflow and
-          "hari-browser-one-time-release" not in build_workflow and
-          "keytool -genkeypair" not in build_workflow)
+    check("One-time signing is restricted to same-repository PR owner testing",
+          "One-time sign release APK for owner testing" in build_workflow and
+          "if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository" in build_workflow and
+          "hari-browser-one-time-$GITHUB_RUN_ID.jks" in build_workflow and
+          "keytool -genkeypair" in build_workflow and
+          "Upload one-time-signed release APK for owner testing" in build_workflow and
+          "retention-days: 3" in build_workflow and
+          "Stable release signing is required." in build_workflow)
     check("Missing stable signer fails release build instead of publishing unsigned APK",
           "Stable release signing is required." in build_workflow and
           "dist/HariBrowser-2.4.0-unsigned.apk" not in build_workflow and
