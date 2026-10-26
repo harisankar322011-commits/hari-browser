@@ -94,6 +94,60 @@ jobs:
             exit 1
           fi
 
+      # Same-repository pull requests may get a one-time-signed release APK for the owner to test.
+      # The signing key exists only on the runner and is never uploaded. Do not use it for upgrades.
+      - name: One-time sign release APK for owner testing
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          unsigned="app/build/outputs/apk/release/app-release-unsigned.apk"
+          signed="dist/HariBrowser-2.4.0-one-time-signed.apk"
+          temp_keystore="$RUNNER_TEMP/hari-browser-one-time-$GITHUB_RUN_ID.jks"
+          signing_password="$(openssl rand -hex 32)"
+          trap 'rm -f "$temp_keystore"; unset signing_password' EXIT
+          mkdir -p dist
+          keytool -genkeypair -noprompt -v \
+            -keystore "$temp_keystore" \
+            -storetype JKS \
+            -storepass "$signing_password" \
+            -keypass "$signing_password" \
+            -alias hari-browser-one-time \
+            -keyalg RSA \
+            -keysize 3072 \
+            -validity 3650 \
+            -dname "CN=Hari Browser One-Time Test, OU=Temporary, O=Hari Browser, C=IN"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
+            --ks "$temp_keystore" \
+            --ks-key-alias hari-browser-one-time \
+            --ks-pass "pass:$signing_password" \
+            --key-pass "pass:$signing_password" \
+            --out "$signed" "$unsigned"
+          verify_output="$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$signed")"
+          printf '%s\n' "$verify_output"
+          fingerprint="$(printf '%s\n' "$verify_output" | sed -nE 's/.*certificate SHA-256 digest: ([[:xdigit:]:]+).*/\1/p' | head -n 1 | tr -d ':' | tr '[:upper:]' '[:lower:]')"
+          test -n "$fingerprint" || { echo "::error::One-time APK signature certificate could not be verified."; exit 1; }
+          printf '%s  %s\n' "$(sha256sum "$signed" | cut -d ' ' -f1)" "$(basename "$signed")" > "$signed.sha256"
+          {
+            echo "### One-time signed owner test APK"
+            echo "APK signature verified by apksigner."
+            echo "Certificate SHA-256: $fingerprint"
+            echo "This APK was signed with a temporary key that is not retained. It cannot update an installation signed with another key and cannot be used for future upgrades."
+            echo "APK SHA-256: $(sha256sum "$signed" | cut -d ' ' -f1)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload one-time-signed release APK for owner testing
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: hari-browser-2.4.0-one-time-signed-pr-${{ github.event.pull_request.number }}
+          path: |
+            dist/HariBrowser-2.4.0-one-time-signed.apk
+            dist/HariBrowser-2.4.0-one-time-signed.apk.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 3
+
       # Pull requests get a separate installable debug APK for owner-only device testing.
       # It is never included in the release artifact or published from main.
       - name: Build installable debug APK for pull-request testing
