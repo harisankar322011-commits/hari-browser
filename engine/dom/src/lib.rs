@@ -1,9 +1,8 @@
 //! HARI DOM — an isolated, arena-backed tree model.
 //! This is a small project-specific DOM foundation, not a standards-compliant browser DOM.
 
-use hari_engine_html::{
-    Attribute, HtmlLimits, Node as HtmlNode, NodeKind, ParseError, parse_document,
-};
+pub use hari_engine_html::NodeKind;
+use hari_engine_html::{Attribute, HtmlLimits, Node as HtmlNode, ParseError, parse_document};
 
 const HARD_MAX_NODES: usize = 100_000;
 const HARD_MAX_DEPTH: usize = 512;
