@@ -1,0 +1,12 @@
+[package]
+name = "hari-engine-html"
+version = "0.1.0"
+edition = "2024"
+description = "Bounded experimental HTML tokenizer and tree parser for HARI Engine"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+hari-engine-core = { path = "../core" }
