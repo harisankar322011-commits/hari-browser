@@ -144,8 +144,12 @@ impl Surface {
         let surface_height = i64::from(self.height);
         let left = i64::from(x).clamp(0, surface_width);
         let top = i64::from(y).clamp(0, surface_height);
-        let right = i64::from(x).saturating_add(i64::from(width)).clamp(0, surface_width);
-        let bottom = i64::from(y).saturating_add(i64::from(height)).clamp(0, surface_height);
+        let right = i64::from(x)
+            .saturating_add(i64::from(width))
+            .clamp(0, surface_width);
+        let bottom = i64::from(y)
+            .saturating_add(i64::from(height))
+            .clamp(0, surface_height);
         if right <= left || bottom <= top {
             return;
         }
