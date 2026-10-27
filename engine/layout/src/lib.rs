@@ -536,11 +536,8 @@ mod tests {
 
     #[test]
     fn cascades_basic_text_colors_and_keeps_backgrounds_non_inherited() {
-        let document = DomDocument::from_html(
-            b"<body><p>HARI</p></body>",
-            &DomLimits::default(),
-        )
-        .unwrap();
+        let document =
+            DomDocument::from_html(b"<body><p>HARI</p></body>", &DomLimits::default()).unwrap();
         let stylesheet = StyleSheet::parse(
             "body { color: #336699; background-color: #eee; } p { background-color: orange; }",
         )
@@ -553,7 +550,10 @@ mod tests {
         assert_eq!(body.background_color, Some([0xEE, 0xEE, 0xEE, 255]));
         assert_eq!(paragraph.text_color, Some([0x33, 0x66, 0x99, 255]));
         assert_eq!(paragraph.background_color, Some([255, 165, 0, 255]));
-        assert_eq!(paragraph.children[0].text_color, Some([0x33, 0x66, 0x99, 255]));
+        assert_eq!(
+            paragraph.children[0].text_color,
+            Some([0x33, 0x66, 0x99, 255])
+        );
         assert_eq!(paragraph.children[0].background_color, None);
     }
 
