@@ -138,6 +138,27 @@ impl Surface {
             *pixel = color;
         }
     }
+
+    fn fill_rect(&mut self, x: i32, y: i32, width: u32, height: u32, color: [u8; 4]) {
+        let surface_width = i64::from(self.width);
+        let surface_height = i64::from(self.height);
+        let left = i64::from(x).clamp(0, surface_width);
+        let top = i64::from(y).clamp(0, surface_height);
+        let right = i64::from(x).saturating_add(i64::from(width)).clamp(0, surface_width);
+        let bottom = i64::from(y).saturating_add(i64::from(height)).clamp(0, surface_height);
+        if right <= left || bottom <= top {
+            return;
+        }
+
+        let row_width = (right - left) as usize;
+        for row in top as usize..bottom as usize {
+            let start = row * self.width as usize + left as usize;
+            let end = start + row_width;
+            if let Some(pixels) = self.pixels.get_mut(start..end) {
+                pixels.fill(color);
+            }
+        }
+    }
 }
 
 /// Paints a computed HARI layout tree to a bounded in-memory RGBA surface.
@@ -184,6 +205,15 @@ fn paint_node(node: &LayoutBox, surface: &mut Surface, options: &PaintOptions) {
     match &node.kind {
         BoxKind::Document => {}
         BoxKind::Element { .. } => {
+            if let Some(background_color) = node.background_color {
+                surface.fill_rect(
+                    node.rect.x,
+                    node.rect.y,
+                    node.rect.width,
+                    node.rect.height,
+                    background_color,
+                );
+            }
             if options.draw_element_outlines {
                 draw_outline(
                     surface,
@@ -258,7 +288,13 @@ fn draw_text(surface: &mut Surface, text: &str, node: &LayoutBox, options: &Pain
             .rect
             .y
             .saturating_add(line_offset.min(i32::MAX as u32) as i32);
-        draw_glyph(surface, origin_x, origin_y, character, options.text_color);
+        draw_glyph(
+            surface,
+            origin_x,
+            origin_y,
+            character,
+            node.text_color.unwrap_or(options.text_color),
+        );
         column = column.saturating_add(1);
     }
 }
