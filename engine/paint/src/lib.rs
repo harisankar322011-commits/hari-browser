@@ -2,8 +2,9 @@
 //!
 //! The renderer uses a tiny built-in 5x7 bitmap font for ASCII text and draws
 //! optional element outlines. It is a proof-of-pipeline renderer, not a browser
-//! quality graphics stack: no font shaping, anti-aliasing, images, compositing,
-//! CSS colors, transforms, or device scale support is provided.
+//! quality graphics stack: no font shaping, anti-aliasing, image decoding, alpha
+//! compositing, transforms, or device-scale behavior is provided. The supported
+//! opaque CSS colors are handled by the bounded layout and paint pipeline.
 
 use hari_engine_dom::{DomDocument, DomError, DomLimits};
 use hari_engine_layout::{
