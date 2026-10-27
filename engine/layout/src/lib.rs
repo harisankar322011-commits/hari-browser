@@ -438,6 +438,41 @@ mod tests {
     }
 
     #[test]
+    fn cascades_basic_text_colors_and_keeps_backgrounds_non_inherited() {
+        let document = DomDocument::from_html(
+            b"<body><p>HARI</p></body>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse(
+            "body { color: #336699; background-color: #eee; } p { background-color: orange; }",
+        )
+        .unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+        let body = find_tag(&layout, "body").unwrap();
+        let paragraph = find_tag(&layout, "p").unwrap();
+
+        assert_eq!(body.text_color, Some([0x33, 0x66, 0x99, 255]));
+        assert_eq!(body.background_color, Some([0xEE, 0xEE, 0xEE, 255]));
+        assert_eq!(paragraph.text_color, Some([0x33, 0x66, 0x99, 255]));
+        assert_eq!(paragraph.background_color, Some([255, 165, 0, 255]));
+        assert_eq!(paragraph.children[0].text_color, Some([0x33, 0x66, 0x99, 255]));
+        assert_eq!(paragraph.children[0].background_color, None);
+    }
+
+    #[test]
+    fn rejects_invalid_css_colors_instead_of_ignoring_them() {
+        assert_eq!(
+            StyleSheet::parse("p { color: #12ab; }"),
+            Err(CssError::InvalidValue)
+        );
+        assert_eq!(
+            StyleSheet::parse("p { background-color: url(image.png); }"),
+            Err(CssError::InvalidValue)
+        );
+    }
+
+    #[test]
     fn display_none_excludes_element_and_descendants_from_layout() {
         let document = fixture();
         let stylesheet = StyleSheet::parse("h1 { display: none; }").unwrap();
