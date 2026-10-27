@@ -510,7 +510,6 @@ impl<'a> Parser<'a> {
     }
 }
 
-
 /// Decodes the character references deliberately supported by this prototype.
 /// Named references are an explicitly small subset; this is not the complete HTML table.
 fn decode_character_references(input: &str) -> String {
@@ -641,10 +640,7 @@ fn decode_named_reference(input: &str, ampersand: usize) -> Option<(char, usize)
     let bytes = input.as_bytes();
     let mut end = ampersand + 1;
 
-    while end < bytes.len()
-        && end - ampersand <= 33
-        && bytes[end].is_ascii_alphanumeric()
-    {
+    while end < bytes.len() && end - ampersand <= 33 && bytes[end].is_ascii_alphanumeric() {
         end += 1;
     }
 
@@ -969,7 +965,10 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(document.children[0].text_content(), "& < > \" ' \u{00A0} © &");
+        assert_eq!(
+            document.children[0].text_content(),
+            "& < > \" ' \u{00A0} © &"
+        );
     }
 
     #[test]
@@ -980,8 +979,14 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(element(&document.children[0], "title").text_content(), "Fish & Chips");
-        assert_eq!(element(&document.children[1], "textarea").text_content(), "<b>hi</b>");
+        assert_eq!(
+            element(&document.children[0], "title").text_content(),
+            "Fish & Chips"
+        );
+        assert_eq!(
+            element(&document.children[1], "textarea").text_content(),
+            "<b>hi</b>"
+        );
         assert_eq!(
             element(&document.children[2], "script").text_content(),
             "if (a &amp;&amp; b < c)"
