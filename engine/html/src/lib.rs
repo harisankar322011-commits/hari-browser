@@ -1,8 +1,8 @@
 //! A deliberately small, bounded HTML parser for the experimental HARI Engine.
 //!
-//! This is not an HTML Living Standard implementation. It does not run scripts,
-//! fetch subresources, decode character references, or implement browser layout.
-//! It builds a simple tree so later DOM/layout work can begin behind tests.
+//! This is not an HTML Living Standard implementation. It does not run scripts
+//! or fetch subresources. It decodes numeric references plus a deliberately small
+//! named-reference subset, but does not include the full HTML entity catalogue.
 
 use hari_engine_core::{EngineLimits, InputError, validate_document_input};
 
@@ -120,9 +120,9 @@ impl TempNode {
 ///
 /// This parser is intentionally conservative in scope: it supports element nesting,
 /// end-tag unwinding, comments, doctypes, quoted/unquoted/boolean attributes, void
-/// elements, and raw-text handling for script/style/textarea/title. It performs no
-/// JavaScript execution or networking. Callers must not treat successful parsing as
-/// a content-safety verdict.
+/// elements, script/style raw text, title/textarea RCDATA, and a limited character
+/// reference subset. It performs no JavaScript execution or networking. Callers must
+/// not treat successful parsing as a content-safety verdict.
 pub fn parse_document(bytes: &[u8], limits: &HtmlLimits) -> Result<Node, ParseError> {
     // Callers may tighten these limits but cannot raise the absolute safety ceilings.
     let effective_limits = HtmlLimits {
@@ -207,7 +207,8 @@ impl<'a> Parser<'a> {
     fn consume_raw_text(&mut self, tag_name: &str) -> Result<(), ParseError> {
         if let Some(end) = self.find_raw_closing(self.position, tag_name) {
             if end > self.position {
-                let value = self.source[self.position..end].to_owned();
+                let raw = &self.source[self.position..end];
+                let value = decode_raw_text_content(tag_name, raw);
                 self.position = end;
                 self.add_node(NodeKind::Text(value), Vec::new())?;
             } else {
@@ -217,7 +218,8 @@ impl<'a> Parser<'a> {
                 return Ok(());
             }
         } else {
-            let value = self.source[self.position..].to_owned();
+            let raw = &self.source[self.position..];
+            let value = decode_raw_text_content(tag_name, raw);
             self.position = self.bytes.len();
             if !value.is_empty() {
                 self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -383,7 +385,7 @@ impl<'a> Parser<'a> {
                     while self.position < self.bytes.len() && self.bytes[self.position] != quote {
                         self.position += 1;
                     }
-                    value = self.source[value_start..self.position].to_owned();
+                    value = decode_character_references(&self.source[value_start..self.position]);
                     if self.position < self.bytes.len() {
                         self.position += 1;
                     }
@@ -395,7 +397,7 @@ impl<'a> Parser<'a> {
                     {
                         self.position += 1;
                     }
-                    value = self.source[value_start..self.position].to_owned();
+                    value = decode_character_references(&self.source[value_start..self.position]);
                 }
             }
 
@@ -440,7 +442,7 @@ impl<'a> Parser<'a> {
             end = (start + 1).min(self.bytes.len());
         }
 
-        let value = self.source[start..end].to_owned();
+        let value = decode_character_references(&self.source[start..end]);
         self.position = end;
         if !value.is_empty() {
             self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -505,6 +507,195 @@ impl<'a> Parser<'a> {
         self.nodes.push(TempNode::new(kind, attributes));
         self.nodes[parent_index].children.push(node_index);
         Ok(node_index)
+    }
+}
+
+
+/// Decodes the character references deliberately supported by this prototype.
+/// Named references are an explicitly small subset; this is not the complete HTML table.
+fn decode_character_references(input: &str) -> String {
+    let bytes = input.as_bytes();
+    let mut output = String::with_capacity(input.len());
+    let mut cursor = 0usize;
+
+    while cursor < bytes.len() {
+        if bytes[cursor] != b'&' {
+            let character = input[cursor..]
+                .chars()
+                .next()
+                .expect("cursor is always at a UTF-8 boundary");
+            output.push(character);
+            cursor += character.len_utf8();
+            continue;
+        }
+
+        if let Some((character, next)) = decode_numeric_reference(bytes, cursor) {
+            output.push(character);
+            cursor = next;
+            continue;
+        }
+
+        if let Some((character, next)) = decode_named_reference(input, cursor) {
+            output.push(character);
+            cursor = next;
+            continue;
+        }
+
+        output.push('&');
+        cursor += 1;
+    }
+
+    output
+}
+
+/// Returns a decoded numeric reference and the byte position immediately after it.
+/// A numeric reference requires at least one digit; the semicolon is optional.
+fn decode_numeric_reference(bytes: &[u8], ampersand: usize) -> Option<(char, usize)> {
+    if bytes.get(ampersand + 1) != Some(&b'#') {
+        return None;
+    }
+
+    let mut cursor = ampersand + 2;
+    let radix = match bytes.get(cursor).copied() {
+        Some(b'x' | b'X') => {
+            cursor += 1;
+            16u32
+        }
+        _ => 10u32,
+    };
+    let first_digit = cursor;
+    let mut value = 0u32;
+    let mut overflow = false;
+
+    while let Some(&byte) = bytes.get(cursor) {
+        let digit = match (radix, byte) {
+            (10, b'0'..=b'9') => u32::from(byte - b'0'),
+            (16, b'0'..=b'9') => u32::from(byte - b'0'),
+            (16, b'a'..=b'f') => u32::from(byte - b'a') + 10,
+            (16, b'A'..=b'F') => u32::from(byte - b'A') + 10,
+            _ => break,
+        };
+        match value.checked_mul(radix).and_then(|n| n.checked_add(digit)) {
+            Some(parsed) if !overflow => value = parsed,
+            _ => overflow = true,
+        }
+        cursor += 1;
+    }
+
+    if cursor == first_digit {
+        return None;
+    }
+
+    if bytes.get(cursor) == Some(&b';') {
+        cursor += 1;
+    }
+
+    let code_point = if overflow {
+        0xFFFD
+    } else {
+        normalize_numeric_reference(value)
+    };
+    Some((char::from_u32(code_point).unwrap_or('\u{FFFD}'), cursor))
+}
+
+/// Applies the HTML numeric-reference replacement and Windows-1252 compatibility map.
+fn normalize_numeric_reference(value: u32) -> u32 {
+    if value == 0 || value > 0x10FFFF || (0xD800..=0xDFFF).contains(&value) {
+        return 0xFFFD;
+    }
+
+    match value {
+        0x80 => 0x20AC,
+        0x82 => 0x201A,
+        0x83 => 0x0192,
+        0x84 => 0x201E,
+        0x85 => 0x2026,
+        0x86 => 0x2020,
+        0x87 => 0x2021,
+        0x88 => 0x02C6,
+        0x89 => 0x2030,
+        0x8A => 0x0160,
+        0x8B => 0x2039,
+        0x8C => 0x0152,
+        0x8E => 0x017D,
+        0x91 => 0x2018,
+        0x92 => 0x2019,
+        0x93 => 0x201C,
+        0x94 => 0x201D,
+        0x95 => 0x2022,
+        0x96 => 0x2013,
+        0x97 => 0x2014,
+        0x98 => 0x02DC,
+        0x99 => 0x2122,
+        0x9A => 0x0161,
+        0x9B => 0x203A,
+        0x9C => 0x0153,
+        0x9E => 0x017E,
+        0x9F => 0x0178,
+        _ => value,
+    }
+}
+
+/// Recognizes only short, semicolon-terminated, supported named references.
+fn decode_named_reference(input: &str, ampersand: usize) -> Option<(char, usize)> {
+    let bytes = input.as_bytes();
+    let mut end = ampersand + 1;
+
+    while end < bytes.len()
+        && end - ampersand <= 33
+        && bytes[end].is_ascii_alphanumeric()
+    {
+        end += 1;
+    }
+
+    if bytes.get(end) != Some(&b';') || end == ampersand + 1 {
+        return None;
+    }
+
+    let name = &input[ampersand + 1..end];
+    Some((named_reference(name)?, end + 1))
+}
+
+fn named_reference(name: &str) -> Option<char> {
+    Some(match name {
+        "amp" | "AMP" => '&',
+        "lt" | "LT" => '<',
+        "gt" | "GT" => '>',
+        "quot" | "QUOT" => '"',
+        "apos" => '\'',
+        "nbsp" | "NonBreakingSpace" => '\u{00A0}',
+        "copy" | "COPY" => '\u{00A9}',
+        "reg" | "REG" => '\u{00AE}',
+        "trade" => '\u{2122}',
+        "euro" => '\u{20AC}',
+        "pound" => '\u{00A3}',
+        "cent" => '\u{00A2}',
+        "yen" => '\u{00A5}',
+        "mdash" => '\u{2014}',
+        "ndash" => '\u{2013}',
+        "hellip" => '\u{2026}',
+        "lsquo" => '\u{2018}',
+        "rsquo" => '\u{2019}',
+        "ldquo" => '\u{201C}',
+        "rdquo" => '\u{201D}',
+        "bull" => '\u{2022}',
+        "middot" => '\u{00B7}',
+        "times" => '\u{00D7}',
+        "divide" => '\u{00F7}',
+        "plusmn" => '\u{00B1}',
+        "deg" => '\u{00B0}',
+        "para" => '\u{00B6}',
+        "sect" => '\u{00A7}',
+        _ => return None,
+    })
+}
+
+/// HTML title and textarea are RCDATA: references decode there but not in script/style.
+fn decode_raw_text_content(tag_name: &str, input: &str) -> String {
+    if matches!(tag_name, "title" | "textarea") {
+        decode_character_references(input)
+    } else {
+        input.to_owned()
     }
 }
 
