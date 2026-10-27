@@ -476,6 +476,34 @@ mod tests {
     }
 
     #[test]
+    fn css_text_and_background_colors_are_visible_in_rendered_pixels() {
+        let layout_options = LayoutOptions {
+            viewport_width: 96,
+            character_width: 8,
+            default_line_height: 18,
+            ..LayoutOptions::default()
+        };
+        let paint_options = PaintOptions {
+            width: 96,
+            height: 80,
+            character_width: 8,
+            line_height: 18,
+            ..PaintOptions::default()
+        };
+        let surface = render_html_to_surface(
+            b"<body><p>HARI</p></body>",
+            "body { color: #ff0000; background-color: #0000ff; }",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
+
+        assert!(surface.pixels().contains(&[255, 0, 0, 255]));
+        assert!(surface.pixels().contains(&[0, 0, 255, 255]));
+    }
+
+    #[test]
     fn surface_reports_out_of_range_pixels_as_none() {
         let surface = Surface::new(2, 2, [1, 2, 3, 255], 4).unwrap();
         assert_eq!(surface.pixel(0, 0), Some([1, 2, 3, 255]));
