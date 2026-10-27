@@ -14,21 +14,21 @@ Supports nested elements, basic end-tag unwinding, comments, doctypes, common vo
 An arena-backed tree with stable node IDs, controlled append/reparent/remove operations, parent/child consistency checks, cycle prevention, a small document lifecycle (`Building`, `Ready`, `Closed`), and resource limits. Node relationships are private; mutations go through `DomDocument`.
 
 ### CSS subset and block-flow layout (`engine/layout/`)
-A small stylesheet parser supports **type selectors only** and the declarations `display: block|none`, `width: Npx`, `height: Npx`, and `margin: Npx`. The layout pass computes deterministic rectangles using configurable fixed-width text metrics and a viewport width. Unknown properties and unsupported values are rejected rather than silently ignored.
+A small stylesheet parser supports **type selectors only** and the declarations `display: block|none`, `width: Npx`, `height: Npx`, `margin: Npx`, `color`, and `background-color`. Colors are opaque and limited to `#RGB`, `#RRGGBB`, and a small set of basic CSS color names. Text color inherits through the tree; element background color does not. The layout pass computes deterministic rectangles using configurable fixed-width text metrics and a viewport width. Unknown properties and unsupported values are rejected rather than silently ignored.
 
 ### Software paint surface (`engine/paint/`)
-A CPU-based painter consumes HARI layout boxes and fills a bounded RGBA8888 off-screen surface. It draws box outlines and text using a tiny built-in 5×7 bitmap glyph set; a single test runs the complete HTML → DOM → CSS/layout → paint pipeline and confirms pixel output. The rasterizer is deterministic and has an explicit pixel budget.
+A CPU-based painter consumes HARI layout boxes and fills a bounded RGBA8888 off-screen surface. It paints opaque CSS background rectangles before child content and draws text using a tiny built-in 5×7 bitmap glyph set. End-to-end tests run the HTML → DOM → CSS/layout → paint pipeline and check rendered color pixels. The rasterizer is deterministic and has an explicit pixel budget.
 
 ## Current limitations
 
-This is an early prototype, not an HTML Living Standard implementation or production browser DOM. The parser's malformed-markup recovery is limited, and the named character-reference table is intentionally incomplete. Numeric references and a small set of common named references are handled; this is not full named-entity support. It does not execute JavaScript, fetch website resources, or implement the full CSS cascade, class/ID selectors, inline formatting contexts, CSS color/background declarations, images, font shaping, anti-aliasing, compositing, transforms, or device-scale behavior. The tiny bitmap font is only a test renderer.
+This is an early prototype, not an HTML Living Standard implementation or production browser DOM. The parser's malformed-markup recovery is limited, and the named character-reference table is intentionally incomplete. Numeric references and a small set of common named references are handled; this is not full named-entity support. It does not execute JavaScript, fetch website resources, or implement the full CSS cascade, class/ID selectors, inline formatting contexts, images, font shaping, anti-aliasing, alpha blending/compositing, transforms, or device-scale behavior. The tiny bitmap font is only a test renderer.
 
 Successful parsing or layout is not a content-safety or malware verdict. Never render untrusted documents in a privileged context based on these components alone.
 
 ## Next stages
 
 1. **Expand browser conformance and hostile-input testing** — fuzzing, malformed markup, CSS edge cases, Unicode, resource-limit stress, and reference comparisons.
-2. **Graphics improvements** — image decoding, real text metrics/font rasterization, color/background styles, clipping, and display scaling.
+2. **Graphics improvements** — image decoding, real text metrics/font rasterization, clipping, alpha blending, and display scaling.
 3. **JavaScript** — decide explicitly whether a maintained external runtime is required; disclose any reused runtime.
 4. **Networking and storage** — origin model, TLS policy, cache/cookie isolation, safe redirects and downloads.
 5. **Android integration** — a separate opt-in prototype behind an explicit feature boundary after the parser, layout, and paint work matures.
