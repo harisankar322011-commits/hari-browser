@@ -27,8 +27,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.MessageDigest;
@@ -215,22 +213,39 @@ public final class AntivirusActivity extends ComponentActivity {
         resultText.setText("Scanning selected file locally…\nThis may take a while for an archive. No file content is uploaded.");
         worker.execute(() -> {
             String fileName = queryDisplayName(uri);
-            long size = querySize(uri);
+            long reportedSize = querySize(uri);
             String mime = getContentResolver().getType(uri);
             AntivirusEngine.Result scan = null;
             String apkReport = "";
             MalwareBazaarReputation.Result reputation = null;
             String failure = null;
             try {
-                scan = AntivirusEngine.scan(
-                        () -> getContentResolver().openInputStream(uri),
-                        fileName, mime, size);
-                if (fileName.toLowerCase(Locale.ROOT).endsWith(".apk")) {
-                    apkReport = inspectApk(uri, size);
+                if (reportedSize > DownloadedFileScanner.MAX_SCAN_BYTES) {
+                    throw new IOException("File exceeds the 100 MiB local-check limit; no clean verdict is available.");
                 }
-                if (!privateModeLaunch) {
+
+                // Read the potentially mutable document-provider URI once. The
+                // scanner, archive inspection and APK metadata review all use
+                // this same app-private snapshot.
+                try (InputStream input = getContentResolver().openInputStream(uri)) {
+                    if (input == null) {
+                        throw new IOException("Android could not open the selected file.");
+                    }
+                    try (FileScanSnapshot snapshot = FileScanSnapshot.capture(
+                            input, getCacheDir(), DownloadedFileScanner.MAX_SCAN_BYTES)) {
+                        scan = AntivirusEngine.scan(
+                                snapshot::openStream, fileName, mime, snapshot.length());
+                        if (fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(".apk")) {
+                            apkReport = inspectApk(snapshot.file());
+                        }
+                    }
+                }
+
+                // Release the temporary snapshot before any optional network
+                // lookup. The reputation request sends only the stable hash.
+                if (!privateModeLaunch && scan != null && !scan.sha256.isEmpty()) {
                     String apiKey = secureStore.get(KEY_REPUTATION_PREF, "");
-                    if (!apiKey.isEmpty() && !scan.sha256.isEmpty()) {
+                    if (!apiKey.isEmpty()) {
                         reputation = MalwareBazaarReputation.lookup(scan.sha256, apiKey);
                     }
                 }
@@ -277,31 +292,10 @@ public final class AntivirusActivity extends ComponentActivity {
         });
     }
 
-    private String inspectApk(Uri uri, long expectedSize) {
-        if (expectedSize > DownloadedFileScanner.MAX_SCAN_BYTES) {
-            return "APK manifest review skipped because the file exceeds the 100 MiB inspection limit.";
-        }
-        File temporary = null;
+    private String inspectApk(File scanSnapshot) {
         try {
-            temporary = File.createTempFile("hari-apk-review-", ".apk", getCacheDir());
-            long bytes = 0;
-            try (InputStream input = getContentResolver().openInputStream(uri);
-                 FileOutputStream output = new FileOutputStream(temporary)) {
-                if (input == null) return "Android could not reopen this APK for manifest review.";
-                byte[] buffer = new byte[64 * 1024];
-                int count;
-                while ((count = input.read(buffer)) != -1) {
-                    bytes += count;
-                    if (bytes > DownloadedFileScanner.MAX_SCAN_BYTES) {
-                        return "APK manifest review stopped at the file-size limit.";
-                    }
-                    output.write(buffer, 0, count);
-                }
-                output.flush();
-            }
-
             PackageInfo info = getPackageManager().getPackageArchiveInfo(
-                    temporary.getAbsolutePath(),
+                    scanSnapshot.getAbsolutePath(),
                     PackageManager.GET_PERMISSIONS | PackageManager.GET_SIGNING_CERTIFICATES);
             if (info == null) {
                 return "Android could not parse the APK package metadata. This is not itself a malware verdict.";
@@ -334,8 +328,6 @@ public final class AntivirusActivity extends ComponentActivity {
             return out.toString();
         } catch (Exception error) {
             return "APK metadata review failed: " + safeError(error);
-        } finally {
-            if (temporary != null) temporary.delete();
         }
     }
 
