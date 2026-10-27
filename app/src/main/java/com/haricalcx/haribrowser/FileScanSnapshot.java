@@ -88,9 +88,10 @@ public final class FileScanSnapshot implements AutoCloseable {
     @Override
     public void close() throws IOException {
         if (closed) return;
-        closed = true;
         if (file.exists() && !file.delete()) {
+            file.deleteOnExit();
             throw new IOException("Temporary scan snapshot could not be removed.");
         }
+        closed = true;
     }
 }
