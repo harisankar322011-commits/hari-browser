@@ -212,25 +212,42 @@ public final class AntivirusActivity extends ComponentActivity {
         scanButton.setEnabled(false);
         quarantineButton.setVisibility(View.GONE);
         progress.setVisibility(View.VISIBLE);
-        resultText.setText("Scanning selected file locally…\nThis may take a while for an archive. No file content is uploaded.");
+        resultText.setText("Scanning selected file locally…\\nThis may take a while for an archive. No file content is uploaded.");
         worker.execute(() -> {
             String fileName = queryDisplayName(uri);
-            long size = querySize(uri);
+            long reportedSize = querySize(uri);
             String mime = getContentResolver().getType(uri);
             AntivirusEngine.Result scan = null;
             String apkReport = "";
             MalwareBazaarReputation.Result reputation = null;
             String failure = null;
             try {
-                scan = AntivirusEngine.scan(
-                        () -> getContentResolver().openInputStream(uri),
-                        fileName, mime, size);
-                if (fileName.toLowerCase(Locale.ROOT).endsWith(".apk")) {
-                    apkReport = inspectApk(uri, size);
+                if (reportedSize > DownloadedFileScanner.MAX_SCAN_BYTES) {
+                    throw new IOException("File exceeds the 100 MiB local-check limit; no clean verdict is available.");
                 }
-                if (!privateModeLaunch) {
+
+                // Read the potentially mutable document-provider URI once. The
+                // scanner, archive inspection and APK metadata review all use
+                // this same app-private snapshot.
+                try (InputStream input = getContentResolver().openInputStream(uri)) {
+                    if (input == null) {
+                        throw new IOException("Android could not open the selected file.");
+                    }
+                    try (FileScanSnapshot snapshot = FileScanSnapshot.capture(
+                            input, getCacheDir(), DownloadedFileScanner.MAX_SCAN_BYTES)) {
+                        scan = AntivirusEngine.scan(
+                                snapshot::openStream, fileName, mime, snapshot.length());
+                        if (fileName != null && fileName.toLowerCase(Locale.ROOT).endsWith(".apk")) {
+                            apkReport = inspectApk(snapshot.file());
+                        }
+                    }
+                }
+
+                // Release the temporary snapshot before any optional network
+                // lookup. The reputation request sends only the stable hash.
+                if (!privateModeLaunch && scan != null && !scan.sha256.isEmpty()) {
                     String apiKey = secureStore.get(KEY_REPUTATION_PREF, "");
-                    if (!apiKey.isEmpty() && !scan.sha256.isEmpty()) {
+                    if (!apiKey.isEmpty()) {
                         reputation = MalwareBazaarReputation.lookup(scan.sha256, apiKey);
                     }
                 }
@@ -252,63 +269,42 @@ public final class AntivirusActivity extends ComponentActivity {
                 currentResult = completedScan;
                 lastKnownMalware = completedReputation != null && completedReputation.knownMalware;
                 if (completedFailure != null || completedScan == null) {
-                    resultText.setText("SCAN INCOMPLETE\n\n" + (completedFailure == null ? "No result was available." : completedFailure) +
-                            "\n\nDo not treat this result as proof the file is safe.");
+                    resultText.setText("SCAN INCOMPLETE\\n\\n" + (completedFailure == null ? "No result was available." : completedFailure) +
+                            "\\n\\nDo not treat this result as proof the file is safe.");
                     quarantineButton.setVisibility(View.GONE);
                     return;
                 }
                 StringBuilder report = new StringBuilder();
-                report.append("File: ").append(safeDisplay(completedName)).append("\n");
-                report.append("Result: ").append(lastKnownMalware ? "KNOWN_MALWARE_HASH" : completedScan.status).append("\n");
-                report.append("Bytes scanned: ").append(completedScan.bytesScanned).append("\n");
-                report.append("SHA-256: ").append(completedScan.sha256.isEmpty() ? "unavailable" : completedScan.sha256).append("\n\n");
+                report.append("File: ").append(safeDisplay(completedName)).append("\\n");
+                report.append("Result: ").append(lastKnownMalware ? "KNOWN_MALWARE_HASH" : completedScan.status).append("\\n");
+                report.append("Bytes scanned: ").append(completedScan.bytesScanned).append("\\n");
+                report.append("SHA-256: ").append(completedScan.sha256.isEmpty() ? "unavailable" : completedScan.sha256).append("\\n\\n");
                 report.append(completedScan.details);
-                if (!completedApkReport.isEmpty()) report.append("\n\nAPK PACKAGE REVIEW\n").append(completedApkReport);
-                if (completedReputation != null) report.append("\n\nONLINE HASH REPUTATION\n").append(completedReputation.details);
+                if (!completedApkReport.isEmpty()) report.append("\\n\\nAPK PACKAGE REVIEW\\n").append(completedApkReport);
+                if (completedReputation != null) report.append("\\n\\nONLINE HASH REPUTATION\\n").append(completedReputation.details);
                 else if (!privateModeLaunch && secureStore.get(KEY_REPUTATION_PREF, "").isEmpty()) {
-                    report.append("\n\nONLINE HASH REPUTATION\nNot configured. Local checks remain available; no file data was sent.");
+                    report.append("\\n\\nONLINE HASH REPUTATION\\nNot configured. Local checks remain available; no file data was sent.");
                 } else if (privateModeLaunch) {
-                    report.append("\n\nONLINE HASH REPUTATION\nDisabled for this private browsing session.");
+                    report.append("\\n\\nONLINE HASH REPUTATION\\nDisabled for this private browsing session.");
                 }
-                report.append("\n\nInterpretation: a warning indicates a risk signal requiring review, not proof of infection. A basic-check result or hash with no reputation match does not prove safety.");
+                report.append("\\n\\nInterpretation: a warning indicates a risk signal requiring review, not proof of infection. A basic-check result or hash with no reputation match does not prove safety.");
                 resultText.setText(report.toString());
                 quarantineButton.setVisibility(completedScan.requiresReview() || lastKnownMalware ? View.VISIBLE : View.GONE);
             });
         });
     }
 
-    private String inspectApk(Uri uri, long expectedSize) {
-        if (expectedSize > DownloadedFileScanner.MAX_SCAN_BYTES) {
-            return "APK manifest review skipped because the file exceeds the 100 MiB inspection limit.";
-        }
-        File temporary = null;
+    private String inspectApk(File scanSnapshot) {
         try {
-            temporary = File.createTempFile("hari-apk-review-", ".apk", getCacheDir());
-            long bytes = 0;
-            try (InputStream input = getContentResolver().openInputStream(uri);
-                 FileOutputStream output = new FileOutputStream(temporary)) {
-                if (input == null) return "Android could not reopen this APK for manifest review.";
-                byte[] buffer = new byte[64 * 1024];
-                int count;
-                while ((count = input.read(buffer)) != -1) {
-                    bytes += count;
-                    if (bytes > DownloadedFileScanner.MAX_SCAN_BYTES) {
-                        return "APK manifest review stopped at the file-size limit.";
-                    }
-                    output.write(buffer, 0, count);
-                }
-                output.flush();
-            }
-
             PackageInfo info = getPackageManager().getPackageArchiveInfo(
-                    temporary.getAbsolutePath(),
+                    scanSnapshot.getAbsolutePath(),
                     PackageManager.GET_PERMISSIONS | PackageManager.GET_SIGNING_CERTIFICATES);
             if (info == null) {
                 return "Android could not parse the APK package metadata. This is not itself a malware verdict.";
             }
             StringBuilder out = new StringBuilder();
             out.append("Package: ").append(info.packageName == null ? "unknown" : info.packageName);
-            out.append("\nVersion: ").append(info.versionName == null ? "unknown" : info.versionName);
+            out.append("\\nVersion: ").append(info.versionName == null ? "unknown" : info.versionName);
             List<String> reviewPermissions = new ArrayList<>();
             String[] permissions = info.requestedPermissions;
             if (permissions != null) {
@@ -316,26 +312,24 @@ public final class AntivirusActivity extends ComponentActivity {
                     if (isHigherRiskPermission(permission)) reviewPermissions.add(permission);
                 }
             }
-            out.append("\nHigher-risk capabilities in a small review list: ").append(reviewPermissions.size());
+            out.append("\\nHigher-risk capabilities in a small review list: ").append(reviewPermissions.size());
             if (!reviewPermissions.isEmpty()) {
-                for (String permission : reviewPermissions) out.append("\n• ").append(permission);
-                out.append("\nReview these capabilities before installation; legitimate apps may need them.");
+                for (String permission : reviewPermissions) out.append("\\n• ").append(permission);
+                out.append("\\nReview these capabilities before installation; legitimate apps may need them.");
             } else {
-                out.append("\nNo permission from the scanner's small review list was found. This does not prove the APK is safe.");
+                out.append("\\nNo permission from the scanner's small review list was found. This does not prove the APK is safe.");
             }
 
             if (info.signingInfo != null) {
                 Signature[] signatures = info.signingInfo.getApkContentsSigners();
                 if (signatures != null && signatures.length > 0) {
-                    out.append("\nSigner certificate SHA-256: ").append(certificateHash(signatures[0].toByteArray()));
+                    out.append("\\nSigner certificate SHA-256: ").append(certificateHash(signatures[0].toByteArray()));
                 }
             }
-            out.append("\nThis is static package metadata review, not dynamic execution or a malware verdict.");
+            out.append("\\nThis is static package metadata review, not dynamic execution or a malware verdict.");
             return out.toString();
         } catch (Exception error) {
             return "APK metadata review failed: " + safeError(error);
-        } finally {
-            if (temporary != null) temporary.delete();
         }
     }
 
