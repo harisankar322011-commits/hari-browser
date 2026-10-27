@@ -760,6 +760,62 @@ mod tests {
     }
 
     #[test]
+    fn decodes_numeric_references_in_text_and_attributes() {
+        let source = r#"<p title="A &#x1F600; &#169;" data-value=v&#97;lue>&#65;&#x1F642; &#0; &#xD800; &#x110000; &#128;</p>"#;
+        let document = parse_document(source.as_bytes(), &HtmlLimits::default()).unwrap();
+        let paragraph = element(&document.children[0], "p");
+
+        assert_eq!(paragraph.attribute("title"), Some("A 😀 ©"));
+        assert_eq!(paragraph.attribute("data-value"), Some("value"));
+        assert_eq!(paragraph.text_content(), "A🙂 � � � €");
+    }
+
+    #[test]
+    fn decodes_supported_named_references_once() {
+        let document = parse_document(
+            b"<p>&amp; &lt; &gt; &quot; &apos; &nbsp; &copy; &AMP;</p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert_eq!(document.children[0].text_content(), "& < > \" ' \u{00A0} © &");
+    }
+
+    #[test]
+    fn decodes_references_in_rcdata_but_preserves_raw_text_elements() {
+        let document = parse_document(
+            b"<title>Fish &amp; Chips</title><textarea>&lt;b&gt;hi&lt;/b&gt;</textarea><script>if (a &amp;&amp; b < c)</script><style>p::before { content: '&amp;'; }</style>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert_eq!(element(&document.children[0], "title").text_content(), "Fish & Chips");
+        assert_eq!(element(&document.children[1], "textarea").text_content(), "<b>hi</b>");
+        assert_eq!(
+            element(&document.children[2], "script").text_content(),
+            "if (a &amp;&amp; b < c)"
+        );
+        assert_eq!(
+            element(&document.children[3], "style").text_content(),
+            "p::before { content: '&amp;'; }"
+        );
+    }
+
+    #[test]
+    fn preserves_unknown_or_malformed_references_and_decodes_no_output_recursively() {
+        let document = parse_document(
+            b"<p>&unknown; &amp & #65; &#x; &#; &amp;lt;</p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            document.children[0].text_content(),
+            "&unknown; &amp & #65; &#x; &#; &lt;"
+        );
+    }
+
+    #[test]
     fn malformed_markup_corpus_is_handled_without_panicking() {
         let samples = [
             "<div",
