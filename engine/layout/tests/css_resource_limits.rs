@@ -10,7 +10,10 @@ const MAX_DECLARATIONS_PER_RULE: usize = 64;
 fn rejects_stylesheet_over_byte_budget_before_trimming_or_parsing() {
     // Whitespace is still input and must count against the byte budget.
     let source = " ".repeat(MAX_CSS_BYTES + 1);
-    assert_eq!(StyleSheet::parse(&source), Err(CssError::StylesheetTooLarge));
+    assert_eq!(
+        StyleSheet::parse(&source),
+        Err(CssError::StylesheetTooLarge)
+    );
 }
 
 #[test]
