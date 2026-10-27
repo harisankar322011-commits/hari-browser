@@ -8,11 +8,17 @@
 use hari_engine_dom::{DocumentState, DomDocument, DomError, NodeId, NodeKind};
 
 const HARD_MAX_LAYOUT_BOXES: usize = 100_000;
+const HARD_MAX_CSS_BYTES: usize = 256 * 1024;
+const HARD_MAX_CSS_RULES: usize = 128;
+const HARD_MAX_CSS_DECLARATIONS_PER_RULE: usize = 64;
 const HARD_MAX_CSS_PX: u32 = 1_000_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CssError {
     InvalidRule,
+    StylesheetTooLarge,
+    RuleLimitExceeded,
+    DeclarationLimitExceeded,
     UnsupportedSelector,
     UnsupportedProperty,
     InvalidValue,
@@ -112,6 +118,11 @@ impl StyleSheet {
     /// a bounded named-color subset or `#RGB`/`#RRGGBB`. Unsupported CSS is rejected so
     /// callers cannot assume a property was applied when it was ignored.
     pub fn parse(source: &str) -> Result<Self, CssError> {
+        // Enforce byte limits before trimming or allocating parsed rule data.
+        if source.len() > HARD_MAX_CSS_BYTES {
+            return Err(CssError::StylesheetTooLarge);
+        }
+
         let mut remaining = source.trim();
         let mut rules = Vec::new();
 
@@ -120,6 +131,10 @@ impl StyleSheet {
                 let end = remaining.find("*/").ok_or(CssError::InvalidRule)?;
                 remaining = remaining[end + 2..].trim_start();
                 continue;
+            }
+
+            if rules.len() >= HARD_MAX_CSS_RULES {
+                return Err(CssError::RuleLimitExceeded);
             }
 
             let open = remaining.find('{').ok_or(CssError::InvalidRule)?;
@@ -138,12 +153,17 @@ impl StyleSheet {
                 .ok_or(CssError::InvalidRule)?;
             let declarations = &remaining[open + 1..close];
             let mut style = ElementStyle::default();
+            let mut declaration_count = 0usize;
 
             for declaration in declarations
                 .split(';')
                 .map(str::trim)
                 .filter(|item| !item.is_empty())
             {
+                declaration_count = declaration_count.saturating_add(1);
+                if declaration_count > HARD_MAX_CSS_DECLARATIONS_PER_RULE {
+                    return Err(CssError::DeclarationLimitExceeded);
+                }
                 let (property, value) = declaration.split_once(':').ok_or(CssError::InvalidRule)?;
                 let property = property.trim().to_ascii_lowercase();
                 let value = value.trim().to_ascii_lowercase();
