@@ -8,7 +8,7 @@ HARI Engine is a new, experimental browser-engine project being developed alongs
 A dependency-free Rust library that checks source byte length, UTF-8 validity, and forbidden control characters.
 
 ### HTML tokenizer/tree parser (`engine/html/`)
-Supports nested elements, basic end-tag unwinding, comments, doctypes, common void elements, quoted/unquoted/boolean attributes, and raw-text handling for `script`, `style`, `textarea`, and `title`. It bounds document bytes, node count, nesting depth, and attributes per element.
+Supports nested elements, basic end-tag unwinding, comments, doctypes, common void elements, quoted/unquoted/boolean attributes, script/style raw text, and title/textarea RCDATA. It decodes numeric character references plus a small named-reference subset in text, attribute values, and RCDATA. It bounds document bytes, node count, nesting depth, and attributes per element.
 
 ### HARI DOM model (`engine/dom/`)
 An arena-backed tree with stable node IDs, controlled append/reparent/remove operations, parent/child consistency checks, cycle prevention, a small document lifecycle (`Building`, `Ready`, `Closed`), and resource limits. Node relationships are private; mutations go through `DomDocument`.
@@ -21,7 +21,7 @@ A CPU-based painter consumes HARI layout boxes and fills a bounded RGBA8888 off-
 
 ## Current limitations
 
-This is an early prototype, not an HTML Living Standard implementation or production browser DOM. The parser's malformed-markup recovery is limited. It does not execute JavaScript, fetch website resources, decode HTML character references, or implement the full CSS cascade, class/ID selectors, inline formatting contexts, CSS color/background declarations, images, font shaping, anti-aliasing, compositing, transforms, or device-scale behavior. The tiny bitmap font is only a test renderer.
+This is an early prototype, not an HTML Living Standard implementation or production browser DOM. The parser's malformed-markup recovery is limited, and the named character-reference table is intentionally incomplete. Numeric references and a small set of common named references are handled; this is not full named-entity support. It does not execute JavaScript, fetch website resources, or implement the full CSS cascade, class/ID selectors, inline formatting contexts, CSS color/background declarations, images, font shaping, anti-aliasing, compositing, transforms, or device-scale behavior. The tiny bitmap font is only a test renderer.
 
 Successful parsing or layout is not a content-safety or malware verdict. Never render untrusted documents in a privileged context based on these components alone.
 
