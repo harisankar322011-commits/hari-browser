@@ -50,13 +50,8 @@ fn malformed_markup_corpus_finishes_with_bounded_surfaces() {
     ];
 
     for source in samples {
-        let surface = render(
-            source.as_bytes(),
-            "",
-            &DomLimits::default(),
-            &options(4096),
-        )
-        .unwrap_or_else(|error| panic!("bounded recovery failed for {source:?}: {error:?}"));
+        let surface = render(source.as_bytes(), "", &DomLimits::default(), &options(4096))
+            .unwrap_or_else(|error| panic!("bounded recovery failed for {source:?}: {error:?}"));
 
         assert_eq!(surface.width(), 64, "wrong output width for {source:?}");
         assert_eq!(surface.height(), 64, "wrong output height for {source:?}");
@@ -85,12 +80,7 @@ fn excessive_nesting_is_rejected_by_the_html_boundary() {
     html.push_str(&"</a>".repeat(300));
 
     assert!(matches!(
-        render(
-            html.as_bytes(),
-            "",
-            &DomLimits::default(),
-            &options(4096)
-        ),
+        render(html.as_bytes(), "", &DomLimits::default(), &options(4096)),
         Err(RenderError::Dom(DomError::Html(_)))
     ));
 }
@@ -115,7 +105,7 @@ fn unsupported_css_is_rejected_instead_of_silently_ignored() {
             b"<p>text</p>",
             "p { position: fixed; }",
             &DomLimits::default(),
-            &options(4096)
+            &options(4096),
         ),
         Err(RenderError::Css(CssError::UnsupportedProperty))
     );
@@ -124,12 +114,7 @@ fn unsupported_css_is_rejected_instead_of_silently_ignored() {
 #[test]
 fn paint_budget_rejects_large_surface_before_rendering() {
     assert_eq!(
-        render(
-            b"<p>text</p>",
-            "",
-            &DomLimits::default(),
-            &options(8)
-        ),
+        render(b"<p>text</p>", "", &DomLimits::default(), &options(8)),
         Err(RenderError::Paint(PaintError::PixelLimitExceeded))
     );
 }
@@ -142,7 +127,7 @@ fn successful_parse_is_not_a_safety_verdict() {
         b"<p>untrusted text</p>",
         "",
         &DomLimits::default(),
-        &options(4096)
+        &options(4096),
     )
     .unwrap();
 
