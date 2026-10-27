@@ -56,6 +56,10 @@ pub struct LayoutBox {
     pub rect: Rect,
     /// Uniform outer margin in this deliberately small layout model.
     pub margin: u32,
+    /// Computed or inherited text color, expressed as opaque RGBA.
+    pub text_color: Option<[u8; 4]>,
+    /// Element background color; backgrounds do not inherit.
+    pub background_color: Option<[u8; 4]>,
     pub children: Vec<LayoutBox>,
     flow_advance: u32,
 }
@@ -85,6 +89,8 @@ struct ElementStyle {
     width: Option<u32>,
     height: Option<u32>,
     margin: Option<u32>,
+    color: Option<[u8; 4]>,
+    background_color: Option<[u8; 4]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -102,7 +108,8 @@ impl StyleSheet {
     /// Parses a small CSS subset with type selectors and pixel lengths.
     ///
     /// Supported declarations: `display: block|none`, `width: Npx`,
-    /// `height: Npx`, and `margin: Npx`. Unsupported CSS is rejected so
+    /// `height: Npx`, `margin: Npx`, `color`, and `background-color` using
+    /// a bounded named-color subset or `#RGB`/`#RRGGBB`. Unsupported CSS is rejected so
     /// callers cannot assume a property was applied when it was ignored.
     pub fn parse(source: &str) -> Result<Self, CssError> {
         let mut remaining = source.trim();
@@ -151,6 +158,8 @@ impl StyleSheet {
                     "width" => style.width = Some(parse_px(&value)?),
                     "height" => style.height = Some(parse_px(&value)?),
                     "margin" => style.margin = Some(parse_px(&value)?),
+                    "color" => style.color = Some(parse_css_color(&value)?),
+                    "background-color" => style.background_color = Some(parse_css_color(&value)?),
                     _ => return Err(CssError::UnsupportedProperty),
                 }
             }
@@ -171,6 +180,8 @@ impl StyleSheet {
             width: None,
             height: None,
             margin: Some(0),
+            color: None,
+            background_color: None,
         };
         for rule in &self.rules {
             if rule.selector.eq_ignore_ascii_case(tag_name) {
@@ -186,10 +197,78 @@ impl StyleSheet {
                 if let Some(value) = rule.style.margin {
                     computed.margin = Some(value);
                 }
+                if let Some(value) = rule.style.color {
+                    computed.color = Some(value);
+                }
+                if let Some(value) = rule.style.background_color {
+                    computed.background_color = Some(value);
+                }
             }
         }
         computed
     }
+}
+
+fn parse_css_color(value: &str) -> Result<[u8; 4], CssError> {
+    let (red, green, blue) = if let Some(hex) = value.strip_prefix('#') {
+        match hex.len() {
+            3 => {
+                let bytes = hex.as_bytes();
+                let red = parse_hex_digit(bytes[0])?.saturating_mul(17);
+                let green = parse_hex_digit(bytes[1])?.saturating_mul(17);
+                let blue = parse_hex_digit(bytes[2])?.saturating_mul(17);
+                (red, green, blue)
+            }
+            6 => {
+                let bytes = hex.as_bytes();
+                (
+                    parse_hex_byte(&bytes[0..2])?,
+                    parse_hex_byte(&bytes[2..4])?,
+                    parse_hex_byte(&bytes[4..6])?,
+                )
+            }
+            _ => return Err(CssError::InvalidValue),
+        }
+    } else {
+        match value {
+            "black" => (0, 0, 0),
+            "silver" => (192, 192, 192),
+            "gray" | "grey" => (128, 128, 128),
+            "white" => (255, 255, 255),
+            "maroon" => (128, 0, 0),
+            "red" => (255, 0, 0),
+            "purple" => (128, 0, 128),
+            "fuchsia" => (255, 0, 255),
+            "green" => (0, 128, 0),
+            "lime" => (0, 255, 0),
+            "olive" => (128, 128, 0),
+            "yellow" => (255, 255, 0),
+            "navy" => (0, 0, 128),
+            "blue" => (0, 0, 255),
+            "teal" => (0, 128, 128),
+            "aqua" => (0, 255, 255),
+            "orange" => (255, 165, 0),
+            "rebeccapurple" => (102, 51, 153),
+            _ => return Err(CssError::InvalidValue),
+        }
+    };
+    Ok([red, green, blue, 255])
+}
+
+fn parse_hex_digit(byte: u8) -> Result<u8, CssError> {
+    match byte {
+        b'0'..=b'9' => Ok(byte - b'0'),
+        b'a'..=b'f' => Ok(byte - b'a' + 10),
+        b'A'..=b'F' => Ok(byte - b'A' + 10),
+        _ => Err(CssError::InvalidValue),
+    }
+}
+
+fn parse_hex_byte(bytes: &[u8]) -> Result<u8, CssError> {
+    if bytes.len() != 2 {
+        return Err(CssError::InvalidValue);
+    }
+    Ok(parse_hex_digit(bytes[0])? * 16 + parse_hex_digit(bytes[1])?)
 }
 
 fn parse_px(value: &str) -> Result<u32, CssError> {
@@ -233,6 +312,7 @@ pub fn compute_layout(
         0,
         0,
         options.viewport_width,
+        None,
         options,
         max_boxes,
         &mut generated_boxes,
@@ -248,6 +328,7 @@ fn layout_node(
     x: i32,
     flow_y: i32,
     containing_width: u32,
+    inherited_text_color: Option<[u8; 4]>,
     options: &LayoutOptions,
     max_boxes: usize,
     generated_boxes: &mut usize,
@@ -259,8 +340,16 @@ fn layout_node(
         return Ok(None);
     }
 
-    let (box_kind, display, width, height, margin) = match kind {
-        NodeKind::Document => (BoxKind::Document, Display::Block, containing_width, None, 0),
+    let (box_kind, display, width, height, margin, text_color, background_color) = match kind {
+        NodeKind::Document => (
+            BoxKind::Document,
+            Display::Block,
+            containing_width,
+            None,
+            0,
+            inherited_text_color,
+            None,
+        ),
         NodeKind::Element { tag_name } => {
             let style = stylesheet.style_for(&tag_name);
             let display = style.display.unwrap_or(Display::Block);
@@ -269,12 +358,15 @@ fn layout_node(
             }
             let margin = style.margin.unwrap_or(0);
             let available_width = containing_width.saturating_sub(margin.saturating_mul(2));
+            let text_color = style.color.or(inherited_text_color);
             (
                 BoxKind::Element { tag_name },
                 display,
                 style.width.unwrap_or(available_width).min(available_width),
                 style.height,
                 margin,
+                text_color,
+                style.background_color,
             )
         }
         NodeKind::Text(value) => {
@@ -290,6 +382,8 @@ fn layout_node(
                 containing_width,
                 Some(measured_height),
                 0,
+                inherited_text_color,
+                None,
             )
         }
         NodeKind::Comment(_) | NodeKind::Doctype(_) => return Ok(None),
@@ -318,6 +412,7 @@ fn layout_node(
             box_x,
             cursor_y,
             content_width,
+            text_color,
             options,
             max_boxes,
             generated_boxes,
@@ -342,6 +437,8 @@ fn layout_node(
             height: box_height,
         },
         margin,
+        text_color,
+        background_color,
         children,
         flow_advance,
     }))
