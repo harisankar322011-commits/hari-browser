@@ -6,8 +6,8 @@
 use hari_engine_html::{HtmlLimits, Node, NodeKind, parse_document};
 
 const ALPHABET: &[char] = &[
-    '<', '>', '/', '!', '-', '=', '\'', '"', '&', '#', ';', 'a', 'A', 'b', 'c', 'p', 's',
-    't', 'r', 'i', ' ', '\t', '\n', 'é', 'മ', '😀', '\u{00A0}',
+    '<', '>', '/', '!', '-', '=', '\'', '"', '&', '#', ';', 'a', 'A', 'b', 'c', 'p', 's', 't', 'r',
+    'i', ' ', '\t', '\n', 'é', 'മ', '😀', '\u{00A0}',
 ];
 
 fn assert_bounded_tree(node: &Node, parent_element_depth: usize, limits: &HtmlLimits) -> usize {
@@ -72,16 +72,12 @@ fn deterministic_generated_markup_keeps_parser_output_bounded() {
     let mut accepted = 0usize;
 
     for case_index in 0..512 {
-        state = state
-            .wrapping_mul(1_664_525)
-            .wrapping_add(1_013_904_223);
+        state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
         let character_count = (state % 256) as usize;
         let mut source = String::with_capacity(character_count * 2);
 
         for _ in 0..character_count {
-            state = state
-                .wrapping_mul(1_664_525)
-                .wrapping_add(1_013_904_223);
+            state = state.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
             source.push(ALPHABET[(state as usize) % ALPHABET.len()]);
         }
 
