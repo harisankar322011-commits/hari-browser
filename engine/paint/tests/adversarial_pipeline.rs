@@ -3,11 +3,9 @@
 //! These cases are regression guards for input/resource boundaries, not a claim
 //! of HTML conformance or production-grade browser security.
 
-use hari_engine_dom::{DomDocument, DomError, DomLimits};
+use hari_engine_dom::{DomError, DomLimits};
 use hari_engine_layout::{CssError, LayoutOptions};
-use hari_engine_paint::{
-    PaintError, PaintOptions, RenderError, render_html_to_surface,
-};
+use hari_engine_paint::{PaintError, PaintOptions, RenderError, render_html_to_surface};
 
 fn options(max_pixels: usize) -> PaintOptions {
     PaintOptions {
@@ -33,13 +31,7 @@ fn render(
         ..LayoutOptions::default()
     };
 
-    render_html_to_surface(
-        html,
-        css,
-        dom_limits,
-        &layout_options,
-        paint_options,
-    )
+    render_html_to_surface(html, css, dom_limits, &layout_options, paint_options)
 }
 
 #[test]
@@ -68,7 +60,11 @@ fn malformed_markup_corpus_finishes_with_bounded_surfaces() {
 
         assert_eq!(surface.width(), 64, "wrong output width for {source:?}");
         assert_eq!(surface.height(), 64, "wrong output height for {source:?}");
-        assert_eq!(surface.pixels().len(), 4096, "wrong pixel count for {source:?}");
+        assert_eq!(
+            surface.pixels().len(),
+            4096,
+            "wrong pixel count for {source:?}"
+        );
     }
 }
 
@@ -78,12 +74,7 @@ fn oversized_document_is_rejected_before_rendering() {
     let html = vec![b'x'; 1_048_577];
 
     assert!(matches!(
-        render(
-            &html,
-            "",
-            &DomLimits::default(),
-            &options(4096),
-        ),
+        render(&html, "", &DomLimits::default(), &options(4096)),
         Err(RenderError::Dom(DomError::Html(_)))
     ));
 }
@@ -98,7 +89,7 @@ fn excessive_nesting_is_rejected_by_the_html_boundary() {
             html.as_bytes(),
             "",
             &DomLimits::default(),
-            &options(4096),
+            &options(4096)
         ),
         Err(RenderError::Dom(DomError::Html(_)))
     ));
@@ -124,7 +115,7 @@ fn unsupported_css_is_rejected_instead_of_silently_ignored() {
             b"<p>text</p>",
             "p { position: fixed; }",
             &DomLimits::default(),
-            &options(4096),
+            &options(4096)
         ),
         Err(RenderError::Css(CssError::UnsupportedProperty))
     );
@@ -137,7 +128,7 @@ fn paint_budget_rejects_large_surface_before_rendering() {
             b"<p>text</p>",
             "",
             &DomLimits::default(),
-            &options(8),
+            &options(8)
         ),
         Err(RenderError::Paint(PaintError::PixelLimitExceeded))
     );
@@ -151,7 +142,7 @@ fn successful_parse_is_not_a_safety_verdict() {
         b"<p>untrusted text</p>",
         "",
         &DomLimits::default(),
-        &options(4096),
+        &options(4096)
     )
     .unwrap();
 
