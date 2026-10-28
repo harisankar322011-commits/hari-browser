@@ -179,6 +179,8 @@ impl<'a> Parser<'a> {
                 self.parse_comment()?;
             } else if self.starts_doctype(self.position) {
                 self.parse_doctype()?;
+            } else if self.starts_bogus_comment(self.position) {
+                self.parse_bogus_comment()?;
             } else if self.is_end_tag_start(self.position) {
                 self.parse_end_tag();
             } else if self.is_start_tag_start(self.position) {
@@ -267,6 +269,17 @@ impl<'a> Parser<'a> {
         let value = self.source[start..end].trim().to_owned();
         self.position = if end < self.bytes.len() { end + 1 } else { end };
         self.add_node(NodeKind::Doctype(value), Vec::new())?;
+        Ok(())
+    }
+
+    /// HTML treats unrecognized declarations and processing-instruction syntax as
+    /// bogus comments, ending at the first greater-than sign or end of input.
+    fn parse_bogus_comment(&mut self) -> Result<(), ParseError> {
+        let start = self.position + 2;
+        let end = find_byte(self.bytes, start, b'>').unwrap_or(self.bytes.len());
+        let value = self.source[start..end].to_owned();
+        self.position = if end < self.bytes.len() { end + 1 } else { end };
+        self.add_node(NodeKind::Comment(value), Vec::new())?;
         Ok(())
     }
 
@@ -475,6 +488,21 @@ impl<'a> Parser<'a> {
             && tail
                 .get(9)
                 .is_none_or(|byte| byte.is_ascii_whitespace() || *byte == b'>')
+    }
+
+    fn starts_bogus_comment(&self, index: usize) -> bool {
+        let Some(tail) = self.bytes.get(index..) else {
+            return false;
+        };
+        if tail.first() != Some(&b'<') {
+            return false;
+        }
+
+        match tail.get(1) {
+            Some(b'?') => true,
+            Some(b'!') => !self.starts_comment(index) && !self.starts_doctype(index),
+            _ => false,
+        }
     }
 
     fn is_start_tag_start(&self, index: usize) -> bool {
