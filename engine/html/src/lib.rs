@@ -818,6 +818,19 @@ mod tests {
     }
 
     #[test]
+    fn ignores_self_closing_syntax_for_non_void_html_elements() {
+        let document = parse_document(
+            b"<div/>inside<span>nested</span></div><p>after</p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let div = element(&document.children[0], "div");
+        assert_eq!(div.text_content(), "insidenested");
+        assert_eq!(element(&document.children[1], "p").text_content(), "after");
+    }
+
+    #[test]
     fn closing_tag_unwinds_to_matching_open_element() {
         let document =
             parse_document(b"<div><p>one</div><span>two", &HtmlLimits::default()).unwrap();
