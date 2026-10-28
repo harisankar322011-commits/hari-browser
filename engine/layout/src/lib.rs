@@ -195,8 +195,19 @@ impl StyleSheet {
     }
 
     fn style_for(&self, tag_name: &str) -> ElementStyle {
+        // Basic user-agent defaults for elements that do not generate visible boxes.
+        // The small author stylesheet subset may override these defaults, just as
+        // author CSS can override ordinary user-agent declarations in a browser.
+        let default_display = if matches!(
+            tag_name,
+            "base" | "head" | "link" | "meta" | "script" | "style" | "template" | "title"
+        ) {
+            Display::None
+        } else {
+            Display::Block
+        };
         let mut computed = ElementStyle {
-            display: Some(Display::Block),
+            display: Some(default_display),
             width: None,
             height: None,
             margin: Some(0),
