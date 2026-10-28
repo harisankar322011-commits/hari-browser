@@ -590,6 +590,25 @@ mod tests {
     }
 
     #[test]
+    fn default_hidden_html_elements_are_excluded_from_layout() {
+        let document = DomDocument::from_html(
+            br#"<html><head><title>head title</title></head><body><title>body title</title><style>p { color: red; }</style><script>alert(1);</script><meta name="x"><link rel="stylesheet"><base href="/"><p>VISIBLE</p></body></html>"#,
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let layout = compute_layout(&document, &StyleSheet::default(), &LayoutOptions::default())
+            .unwrap();
+
+        for tag in ["head", "title", "style", "script", "meta", "link", "base"] {
+            assert!(
+                find_tag(&layout, tag).is_none(),
+                "{tag} should not create a visible layout box"
+            );
+        }
+        assert!(find_tag(&layout, "p").is_some());
+    }
+
+    #[test]
     fn display_none_excludes_element_and_descendants_from_layout() {
         let document = fixture();
         let stylesheet = StyleSheet::parse("h1 { display: none; }").unwrap();
