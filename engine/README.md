@@ -33,6 +33,20 @@ Successful parsing or layout is not a content-safety or malware verdict. Never r
 4. **Networking and storage** — origin model, TLS policy, cache/cookie isolation, safe redirects and downloads.
 5. **Android integration** — a separate opt-in prototype behind an explicit feature boundary after the parser, layout, and paint work matures.
 
+## Coverage-guided fuzzing
+
+The separate `engine/fuzz/` package provides a `cargo-fuzz` target for the HTML parser. It uses a 16 KiB input ceiling and tighter node, depth, and per-element attribute budgets so fuzz runs stay bounded. Successful parses are traversed iteratively to check tree invariants. This is useful for finding crashes and invariant violations, but it is not a substitute for HTML conformance tests, long-running fuzz campaigns, or security review.
+
+Install the tools with nightly Rust active, then run from the repository root:
+
+```sh
+cargo install cargo-fuzz --locked
+cd engine/fuzz
+cargo fuzz run html_parser -- -max_total_time=30 -max_len=16384
+```
+
+The `HARI Engine Fuzz Smoke` GitHub Actions workflow runs a bounded 30-second smoke test for engine changes and also supports scheduled and manual runs.
+
 ## Safety and compatibility rules
 
 - The existing Android System WebView path remains the production path until the new engine passes compatibility, security, performance, and regression gates.
