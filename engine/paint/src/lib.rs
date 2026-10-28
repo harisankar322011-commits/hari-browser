@@ -545,6 +545,14 @@ mod tests {
     }
 
     #[test]
+    fn rejects_zero_pixel_budget_without_allocating_a_surface() {
+        assert_eq!(
+            Surface::new(1, 1, [0, 0, 0, 255], 0),
+            Err(PaintError::PixelLimitExceeded)
+        );
+    }
+
+    #[test]
     fn surface_reports_out_of_range_pixels_as_none() {
         let surface = Surface::new(2, 2, [1, 2, 3, 255], 4).unwrap();
         assert_eq!(surface.pixel(0, 0), Some([1, 2, 3, 255]));
