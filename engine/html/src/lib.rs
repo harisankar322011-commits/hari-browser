@@ -323,7 +323,6 @@ impl<'a> Parser<'a> {
         let tag_name = self.source[name_start..self.position].to_ascii_lowercase();
         let mut attributes = Vec::new();
         let mut seen_attributes = 0usize;
-        let mut self_closing = false;
 
         loop {
             while self.position < self.bytes.len()
@@ -341,8 +340,9 @@ impl<'a> Parser<'a> {
             }
             if self.bytes[self.position] == b'/' && self.bytes.get(self.position + 1) == Some(&b'>')
             {
+                // Consume the syntax, but HTML ignores the self-closing flag
+                // on ordinary HTML elements. Only void elements stay closed below.
                 self.position += 2;
-                self_closing = true;
                 break;
             }
 
@@ -422,7 +422,7 @@ impl<'a> Parser<'a> {
             attributes,
         )?;
 
-        if !is_void && !self_closing {
+        if !is_void {
             self.open_elements.push(node_index);
         }
         Ok(())
