@@ -83,7 +83,7 @@ impl Surface {
         let pixel_count = (width as usize)
             .checked_mul(height as usize)
             .ok_or(PaintError::PixelLimitExceeded)?;
-        let effective_budget = max_pixels.clamp(1, HARD_MAX_PIXELS);
+        let effective_budget = max_pixels.min(HARD_MAX_PIXELS);
         if pixel_count > effective_budget {
             return Err(PaintError::PixelLimitExceeded);
         }
