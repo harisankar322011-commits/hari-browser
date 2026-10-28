@@ -41,8 +41,7 @@ Install the tools with nightly Rust active, then run from the repository root:
 
 ```sh
 cargo install cargo-fuzz --locked
-cd engine/fuzz
-cargo fuzz run html_parser -- -max_total_time=30 -max_len=16384
+cargo fuzz run --fuzz-dir=engine/fuzz html_parser -- -max_total_time=30 -max_len=16384
 ```
 
 The `HARI Engine Fuzz Smoke` GitHub Actions workflow runs a bounded 30-second smoke test for engine changes and also supports scheduled and manual runs.
