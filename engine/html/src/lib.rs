@@ -831,6 +831,25 @@ mod tests {
     }
 
     #[test]
+    fn treats_unrecognized_markup_declarations_as_bogus_comments() {
+        let document = parse_document(
+            b"<![CDATA[not cdata]]><?xml version=\"1.0\"?><p>visible</p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert!(matches!(
+            document.children[0].kind,
+            NodeKind::Comment(ref value) if value == "[CDATA[not cdata]]"
+        ));
+        assert!(matches!(
+            document.children[1].kind,
+            NodeKind::Comment(ref value) if value == "xml version=\"1.0\"?"
+        ));
+        assert_eq!(element(&document.children[2], "p").text_content(), "visible");
+    }
+
+    #[test]
     fn closing_tag_unwinds_to_matching_open_element() {
         let document =
             parse_document(b"<div><p>one</div><span>two", &HtmlLimits::default()).unwrap();
