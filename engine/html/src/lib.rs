@@ -846,7 +846,10 @@ mod tests {
             document.children[1].kind,
             NodeKind::Comment(ref value) if value == "xml version=\"1.0\"?"
         ));
-        assert_eq!(element(&document.children[2], "p").text_content(), "visible");
+        assert_eq!(
+            element(&document.children[2], "p").text_content(),
+            "visible"
+        );
     }
 
     #[test]
