@@ -607,8 +607,8 @@ mod tests {
             &DomLimits::default(),
         )
         .unwrap();
-        let layout = compute_layout(&document, &StyleSheet::default(), &LayoutOptions::default())
-            .unwrap();
+        let layout =
+            compute_layout(&document, &StyleSheet::default(), &LayoutOptions::default()).unwrap();
 
         for tag in ["head", "title", "style", "script", "meta", "link", "base"] {
             assert!(
