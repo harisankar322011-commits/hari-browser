@@ -710,6 +710,52 @@ mod tests {
     }
 
     #[test]
+    fn matches_id_and_class_selectors_on_elements() {
+        let document = DomDocument::from_html(
+            b"<main id=\"hero\" class=\"shell wide\"><p class=\"notice feature\">HARI</p></main>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet =
+            StyleSheet::parse("#hero { width: 240px; } .feature { color: red; }").unwrap();
+        let layout = compute_layout(
+            &document,
+            &stylesheet,
+            &LayoutOptions {
+                viewport_width: 320,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
+
+        let main = find_tag(&layout, "main").unwrap();
+        let paragraph = find_tag(&layout, "p").unwrap();
+        assert_eq!(main.rect.width, 240);
+        assert_eq!(paragraph.text_color, Some([255, 0, 0, 255]));
+    }
+
+    #[test]
+    fn selector_specificity_beats_later_lower_specificity_rules() {
+        let document = DomDocument::from_html(
+            b"<p id=\"message\" class=\"note\">HARI</p>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse(
+            "p.note { color: red; background-color: red; } \
+             .note { color: green; } \
+             #message { background-color: blue; } \
+             p.note { background-color: red; }",
+        )
+        .unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+        let paragraph = find_tag(&layout, "p").unwrap();
+
+        assert_eq!(paragraph.text_color, Some([255, 0, 0, 255]));
+        assert_eq!(paragraph.background_color, Some([0, 0, 255, 255]));
+    }
+
+    #[test]
     fn box_nodes_retain_source_dom_ids() {
         let document = fixture();
         let layout =
