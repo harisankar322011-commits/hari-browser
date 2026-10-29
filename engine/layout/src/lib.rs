@@ -767,7 +767,8 @@ fn measure_text_height(value: &str, width: u32, character_width: u32, line_heigh
 #[cfg(test)]
 mod tests {
     use super::{
-        BoxKind, CssError, Display, LayoutError, LayoutOptions, Rect, StyleSheet, compute_layout,
+        BoxKind, CssError, Display, LayoutError, LayoutOptions, Rect, Selector, StyleSheet,
+        HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES, HARD_MAX_CSS_SELECTOR_PARTS, compute_layout,
     };
     use hari_engine_dom::{DomDocument, DomLimits, NodeId};
 
