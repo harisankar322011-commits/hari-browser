@@ -110,7 +110,7 @@ Use only builds linked from the official [Hari Browser repository](https://githu
 
 The repository is maintained for family use and sideloading, not Google Play publishing. The maintainer reports that a newer one-time-signed owner-test APK installed successfully on 2026-10-26. Treat that as a limited test of that exact artifact on that device, not as independent malware certification; verify the specific APK and never ignore a new Android protection warning.
 
-1. Open the repository's **Actions** tab and locate **Build a one-time-signed APK for owner testing** if you need to review the owner-test build.
+1. Open the repository's **Actions** tab and locate **Build Hari Browser Release APK** for a release artifact, or **Build Hari Browser Debug APK** for a debuggable test build. No installable release APK is produced until the stable signing secrets and the pinned certificate fingerprint are configured; until then that workflow fails rather than publishing an unsigned build.
 2. Treat a one-time-signed APK as a test artifact, not a permanent release. Android requires a matching signing certificate for an in-place update; if the temporary signing key is not retained, a future differently signed build will not update this installation and reinstalling may erase local app data.
 3. For ongoing family updates, use an installable release APK built from `main` only after the stable release key and pinned certificate fingerprint checks are configured and pass.
 4. Never install an artifact named `*-unsigned.apk`; unsigned validation artifacts are not installable release builds.
