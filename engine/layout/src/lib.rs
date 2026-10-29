@@ -767,8 +767,9 @@ fn measure_text_height(value: &str, width: u32, character_width: u32, line_heigh
 #[cfg(test)]
 mod tests {
     use super::{
-        BoxKind, CssError, Display, LayoutError, LayoutOptions, Rect, Selector, StyleSheet,
-        HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES, HARD_MAX_CSS_SELECTOR_PARTS, compute_layout,
+        BoxKind, CssError, Display, HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES,
+        HARD_MAX_CSS_SELECTOR_PARTS, LayoutError, LayoutOptions, Rect, Selector, StyleSheet,
+        compute_layout,
     };
     use hari_engine_dom::{DomDocument, DomLimits, NodeId};
 
@@ -971,8 +972,7 @@ mod tests {
     #[test]
     fn wraps_inline_siblings_to_a_new_line() {
         let document =
-            DomDocument::from_html(b"<p>12345<span>abc</span></p>", &DomLimits::default())
-                .unwrap();
+            DomDocument::from_html(b"<p>12345<span>abc</span></p>", &DomLimits::default()).unwrap();
         let layout = compute_layout(
             &document,
             &StyleSheet::default(),
