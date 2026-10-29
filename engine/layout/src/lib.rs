@@ -2,8 +2,9 @@
 //!
 //! This module is a teaching/prototype pipeline, not a standards-compliant CSS
 //! cascade or layout engine. It does not paint pixels, shape fonts, load fonts,
-//! collapse whitespace, lay out inline formatting contexts, or support selectors
-//! beyond type selectors.
+//! collapse whitespace, or lay out inline formatting contexts. Its bounded
+//! selector subset supports type, universal, class, ID, and compound selectors,
+//! but not combinators, attribute selectors, or pseudo-classes.
 
 use hari_engine_dom::{DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind};
 
@@ -835,6 +836,30 @@ mod tests {
             ),
             Err(LayoutError::BoxLimitExceeded)
         );
+    }
+
+    #[test]
+    fn rejects_unsupported_and_overlong_selectors() {
+        assert_eq!(Selector::parse("div > p"), Err(CssError::UnsupportedSelector));
+        assert_eq!(Selector::parse("p:first-child"), Err(CssError::UnsupportedSelector));
+        assert_eq!(
+            Selector::parse(&format!(".{}", "a".repeat(HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES + 1))),
+            Err(CssError::UnsupportedSelector)
+        );
+        assert_eq!(
+            Selector::parse(&format!("div{}", ".x".repeat(HARD_MAX_CSS_SELECTOR_PARTS))),
+            Err(CssError::UnsupportedSelector)
+        );
+    }
+
+    #[test]
+    fn universal_selector_matches_any_element() {
+        let document = DomDocument::from_html(b"<main><p>HARI</p></main>", &DomLimits::default()).unwrap();
+        let stylesheet = StyleSheet::parse("* { color: blue; }").unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+
+        assert_eq!(find_tag(&layout, "main").unwrap().text_color, Some([0, 0, 255, 255]));
+        assert_eq!(find_tag(&layout, "p").unwrap().text_color, Some([0, 0, 255, 255]));
     }
 
     #[test]
