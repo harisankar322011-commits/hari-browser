@@ -643,6 +643,19 @@ mod tests {
             .find_map(|child| find_tag(child, name))
     }
 
+    fn find_text<'a>(
+        layout: &'a super::LayoutBox,
+        value: &str,
+    ) -> Option<&'a super::LayoutBox> {
+        if matches!(&layout.kind, BoxKind::Text(text) if text == value) {
+            return Some(layout);
+        }
+        layout
+            .children
+            .iter()
+            .find_map(|child| find_text(child, value))
+    }
+
     #[test]
     fn lays_out_basic_document_in_vertical_block_flow() {
         let document = fixture();
@@ -773,6 +786,42 @@ mod tests {
         .unwrap();
         let paragraph = find_tag(&layout, "p").unwrap();
         assert_eq!(paragraph.rect.height, 54);
+    }
+
+    #[test]
+    fn inline_text_and_elements_share_a_line() {
+        let document =
+            DomDocument::from_html(b"<p>Hi <span>there</span>!</p>", &DomLimits::default())
+                .unwrap();
+        let stylesheet = StyleSheet::parse("span { display: inline; }").unwrap();
+        let layout = compute_layout(
+            &document,
+            &stylesheet,
+            &LayoutOptions {
+                viewport_width: 128,
+                character_width: 8,
+                default_line_height: 18,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
+
+        let paragraph = find_tag(&layout, "p").unwrap();
+        let first_text = find_text(&layout, "Hi ").unwrap();
+        let span = find_tag(&layout, "span").unwrap();
+        let last_text = find_text(&layout, "!").unwrap();
+
+        assert_eq!(first_text.rect.width, 24);
+        assert_eq!(span.rect.width, 40);
+        assert_eq!(last_text.rect.width, 8);
+        assert_eq!(
+            span.rect.x,
+            first_text.rect.x + first_text.rect.width as i32
+        );
+        assert_eq!(last_text.rect.x, span.rect.x + span.rect.width as i32);
+        assert_eq!(first_text.rect.y, span.rect.y);
+        assert_eq!(first_text.rect.y, last_text.rect.y);
+        assert_eq!(paragraph.rect.height, 18);
     }
 
     #[test]
