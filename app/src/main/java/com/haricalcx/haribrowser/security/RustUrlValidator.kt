@@ -29,9 +29,14 @@ data class UrlClassification(
 )
 
 /**
- * Uses Rust JNI when available, with Kotlin enforcing the same strict input
- * boundary. If the Rust and Kotlin parsers disagree, the result fails closed
- * as INVALID rather than allowing parser-differential ambiguity.
+ * Classifies navigation input with Rust JNI when the native library is present,
+ * with Kotlin enforcing the same strict input boundary. If the Rust and Kotlin
+ * parsers disagree, the result fails closed as INVALID rather than allowing
+ * parser-differential ambiguity.
+ *
+ * The native build is opt-in, so ordinary release and debug APKs do not package
+ * libhari_url_guard.so and report [UrlClassifierBackend.KOTLIN_FALLBACK]. Only
+ * the Kotlin path runs in those builds.
  */
 object RustUrlValidator {
     private const val MAX_URL_BYTES = 8_192
