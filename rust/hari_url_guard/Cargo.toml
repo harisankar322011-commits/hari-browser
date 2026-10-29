@@ -10,5 +10,5 @@ name = "hari_url_guard"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-jni = "=0.21.1"
+jni = "=0.22.4"
 url = "=2.5.8"
