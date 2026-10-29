@@ -5,12 +5,15 @@
 //! collapse whitespace, lay out inline formatting contexts, or support selectors
 //! beyond type selectors.
 
-use hari_engine_dom::{DocumentState, DomDocument, DomError, NodeId, NodeKind};
+use hari_engine_dom::{DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind};
 
 const HARD_MAX_LAYOUT_BOXES: usize = 100_000;
 const HARD_MAX_CSS_BYTES: usize = 256 * 1024;
 const HARD_MAX_CSS_RULES: usize = 128;
 const HARD_MAX_CSS_DECLARATIONS_PER_RULE: usize = 64;
+const HARD_MAX_CSS_SELECTOR_BYTES: usize = 1024;
+const HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES: usize = 128;
+const HARD_MAX_CSS_SELECTOR_PARTS: usize = 16;
 const HARD_MAX_CSS_PX: u32 = 1_000_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -100,8 +103,126 @@ struct ElementStyle {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+struct Selector {
+    tag_name: Option<String>,
+    id: Option<String>,
+    classes: Vec<String>,
+}
+
+impl Selector {
+    /// Parses one bounded compound selector: an optional type or universal
+    /// selector followed by optional ID and class components. Combinators,
+    /// attribute selectors, and pseudo-classes remain explicitly unsupported.
+    fn parse(source: &str) -> Result<Self, CssError> {
+        if source.is_empty() || source.len() > HARD_MAX_CSS_SELECTOR_BYTES {
+            return Err(CssError::UnsupportedSelector);
+        }
+
+        let bytes = source.as_bytes();
+        let mut index = 0usize;
+        let mut tag_name = None;
+        let mut id = None;
+        let mut classes = Vec::new();
+
+        if bytes[0] == b'*' {
+            index = 1;
+        } else if bytes[0] != b'.' && bytes[0] != b'#' {
+            let start = index;
+            while index < bytes.len() && is_selector_identifier_byte(bytes[index]) {
+                index += 1;
+            }
+            if start == index {
+                return Err(CssError::UnsupportedSelector);
+            }
+            tag_name = Some(source[start..index].to_ascii_lowercase());
+        }
+
+        while index < bytes.len() {
+            let marker = bytes[index];
+            if marker != b'.' && marker != b'#' {
+                return Err(CssError::UnsupportedSelector);
+            }
+            index += 1;
+            let start = index;
+            while index < bytes.len() && is_selector_identifier_byte(bytes[index]) {
+                index += 1;
+            }
+            let identifier_length = index - start;
+            if identifier_length == 0
+                || identifier_length > HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES
+            {
+                return Err(CssError::UnsupportedSelector);
+            }
+
+            let identifier = source[start..index].to_owned();
+            match marker {
+                b'#' => {
+                    if id.replace(identifier).is_some() {
+                        return Err(CssError::UnsupportedSelector);
+                    }
+                }
+                b'.' => classes.push(identifier),
+                _ => return Err(CssError::UnsupportedSelector),
+            }
+
+            if classes.len() + usize::from(id.is_some()) > HARD_MAX_CSS_SELECTOR_PARTS {
+                return Err(CssError::UnsupportedSelector);
+            }
+        }
+
+        if tag_name.is_none() && id.is_none() && classes.is_empty() && bytes[0] != b'*' {
+            return Err(CssError::UnsupportedSelector);
+        }
+
+        Ok(Self {
+            tag_name,
+            id,
+            classes,
+        })
+    }
+
+    fn matches(&self, tag_name: &str, node: &DomNode) -> bool {
+        if self
+            .tag_name
+            .as_deref()
+            .is_some_and(|expected| !expected.eq_ignore_ascii_case(tag_name))
+        {
+            return false;
+        }
+
+        if self
+            .id
+            .as_deref()
+            .is_some_and(|expected| node.attribute("id") != Some(expected))
+        {
+            return false;
+        }
+
+        let class_attribute = node.attribute("class").unwrap_or_default();
+        self.classes.iter().all(|expected| {
+            class_attribute
+                .split_ascii_whitespace()
+                .any(|actual| actual == expected)
+        })
+    }
+
+    /// CSS specificity tuple: (IDs, classes, type selectors).
+    fn specificity(&self) -> (u8, u8, u8) {
+        (
+            u8::from(self.id.is_some()),
+            self.classes.len().min(u8::MAX as usize) as u8,
+            u8::from(self.tag_name.is_some()),
+        )
+    }
+}
+
+fn is_selector_identifier_byte(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_')
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 struct StyleRule {
-    selector: String,
+    selector: Selector,
     style: ElementStyle,
 }
 
@@ -138,14 +259,7 @@ impl StyleSheet {
             }
 
             let open = remaining.find('{').ok_or(CssError::InvalidRule)?;
-            let selector = remaining[..open].trim();
-            if selector.is_empty()
-                || !selector
-                    .bytes()
-                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
-            {
-                return Err(CssError::UnsupportedSelector);
-            }
+            let selector = Selector::parse(remaining[..open].trim())?;
 
             let close = remaining[open + 1..]
                 .find('}')
@@ -184,17 +298,14 @@ impl StyleSheet {
                 }
             }
 
-            rules.push(StyleRule {
-                selector: selector.to_ascii_lowercase(),
-                style,
-            });
+            rules.push(StyleRule { selector, style });
             remaining = remaining[close + 1..].trim();
         }
 
         Ok(Self { rules })
     }
 
-    fn style_for(&self, tag_name: &str) -> ElementStyle {
+    fn style_for(&self, tag_name: &str, node: &DomNode) -> ElementStyle {
         // Basic user-agent defaults for elements that do not generate visible boxes.
         // The small author stylesheet subset may override these defaults, just as
         // author CSS can override ordinary user-agent declarations in a browser.
@@ -214,26 +325,39 @@ impl StyleSheet {
             color: None,
             background_color: None,
         };
-        for rule in &self.rules {
-            if rule.selector.eq_ignore_ascii_case(tag_name) {
-                if let Some(value) = rule.style.display {
-                    computed.display = Some(value);
-                }
-                if let Some(value) = rule.style.width {
-                    computed.width = Some(value);
-                }
-                if let Some(value) = rule.style.height {
-                    computed.height = Some(value);
-                }
-                if let Some(value) = rule.style.margin {
-                    computed.margin = Some(value);
-                }
-                if let Some(value) = rule.style.color {
-                    computed.color = Some(value);
-                }
-                if let Some(value) = rule.style.background_color {
-                    computed.background_color = Some(value);
-                }
+
+        // Apply lower-specificity rules first and source order within equal
+        // specificity, so later declarations win only when CSS says they should.
+        let mut matching: Vec<((u8, u8, u8), usize, &StyleRule)> = self
+            .rules
+            .iter()
+            .enumerate()
+            .filter_map(|(order, rule)| {
+                rule.selector
+                    .matches(tag_name, node)
+                    .then_some((rule.selector.specificity(), order, rule))
+            })
+            .collect();
+        matching.sort_by_key(|(specificity, order, _)| (*specificity, *order));
+
+        for (_, _, rule) in matching {
+            if let Some(value) = rule.style.display {
+                computed.display = Some(value);
+            }
+            if let Some(value) = rule.style.width {
+                computed.width = Some(value);
+            }
+            if let Some(value) = rule.style.height {
+                computed.height = Some(value);
+            }
+            if let Some(value) = rule.style.margin {
+                computed.margin = Some(value);
+            }
+            if let Some(value) = rule.style.color {
+                computed.color = Some(value);
+            }
+            if let Some(value) = rule.style.background_color {
+                computed.background_color = Some(value);
             }
         }
         computed
@@ -382,7 +506,7 @@ fn layout_node(
             None,
         ),
         NodeKind::Element { tag_name } => {
-            let style = stylesheet.style_for(&tag_name);
+            let style = stylesheet.style_for(&tag_name, node);
             let display = style.display.unwrap_or(Display::Block);
             if display == Display::None {
                 return Ok(None);
