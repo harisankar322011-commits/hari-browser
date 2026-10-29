@@ -840,10 +840,19 @@ mod tests {
 
     #[test]
     fn rejects_unsupported_and_overlong_selectors() {
-        assert_eq!(Selector::parse("div > p"), Err(CssError::UnsupportedSelector));
-        assert_eq!(Selector::parse("p:first-child"), Err(CssError::UnsupportedSelector));
         assert_eq!(
-            Selector::parse(&format!(".{}", "a".repeat(HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES + 1))),
+            Selector::parse("div > p"),
+            Err(CssError::UnsupportedSelector)
+        );
+        assert_eq!(
+            Selector::parse("p:first-child"),
+            Err(CssError::UnsupportedSelector)
+        );
+        assert_eq!(
+            Selector::parse(&format!(
+                ".{}",
+                "a".repeat(HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES + 1)
+            )),
             Err(CssError::UnsupportedSelector)
         );
         assert_eq!(
@@ -854,12 +863,19 @@ mod tests {
 
     #[test]
     fn universal_selector_matches_any_element() {
-        let document = DomDocument::from_html(b"<main><p>HARI</p></main>", &DomLimits::default()).unwrap();
+        let document =
+            DomDocument::from_html(b"<main><p>HARI</p></main>", &DomLimits::default()).unwrap();
         let stylesheet = StyleSheet::parse("* { color: blue; }").unwrap();
         let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
 
-        assert_eq!(find_tag(&layout, "main").unwrap().text_color, Some([0, 0, 255, 255]));
-        assert_eq!(find_tag(&layout, "p").unwrap().text_color, Some([0, 0, 255, 255]));
+        assert_eq!(
+            find_tag(&layout, "main").unwrap().text_color,
+            Some([0, 0, 255, 255])
+        );
+        assert_eq!(
+            find_tag(&layout, "p").unwrap().text_color,
+            Some([0, 0, 255, 255])
+        );
     }
 
     #[test]
