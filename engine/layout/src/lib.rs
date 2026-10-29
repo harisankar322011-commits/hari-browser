@@ -1,10 +1,10 @@
-//! Initial CSS subset and deterministic block-flow layout for HARI Engine.
+//! Initial CSS subset and deterministic flow layout for HARI Engine.
 //!
 //! This module is a teaching/prototype pipeline, not a standards-compliant CSS
-//! cascade or layout engine. It does not paint pixels, shape fonts, load fonts,
-//! collapse whitespace, or lay out inline formatting contexts. Its bounded
-//! selector subset supports type, universal, class, ID, and compound selectors,
-//! but not combinators, attribute selectors, or pseudo-classes.
+//! cascade or layout engine. Inline runs use fixed character-width metrics; it
+//! does not paint pixels, shape fonts, load fonts, or collapse whitespace. Its
+//! bounded selector subset supports type, universal, class, ID, and compound
+//! selectors, but not combinators, attribute selectors, or pseudo-classes.
 
 use hari_engine_dom::{DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind};
 
@@ -40,6 +40,7 @@ pub enum LayoutError {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Display {
     Block,
+    Inline,
     None,
 }
 
@@ -288,6 +289,7 @@ impl StyleSheet {
                     "display" => {
                         style.display = Some(match value.as_str() {
                             "block" => Display::Block,
+                            "inline" => Display::Inline,
                             "none" => Display::None,
                             _ => return Err(CssError::InvalidValue),
                         });
@@ -317,6 +319,13 @@ impl StyleSheet {
             "base" | "head" | "link" | "meta" | "script" | "style" | "template" | "title"
         ) {
             Display::None
+        } else if matches!(
+            tag_name,
+            "a" | "abbr" | "b" | "bdi" | "bdo" | "cite" | "code" | "data" | "em" | "i"
+                | "label" | "mark" | "q" | "s" | "small" | "span" | "strong" | "sub" | "sup"
+                | "time" | "u" | "var"
+        ) {
+            Display::Inline
         } else {
             Display::Block
         };
@@ -518,11 +527,16 @@ fn layout_node(
             }
             let margin = style.margin.unwrap_or(0);
             let available_width = containing_width.saturating_sub(margin.saturating_mul(2));
+            let intrinsic_width = if display == Display::Inline {
+                measure_inline_content_width(document, stylesheet, node_id, options.character_width)?
+            } else {
+                available_width
+            };
             let text_color = style.color.or(inherited_text_color);
             (
                 BoxKind::Element { tag_name },
                 display,
-                style.width.unwrap_or(available_width).min(available_width),
+                style.width.unwrap_or(intrinsic_width).min(available_width),
                 style.height,
                 margin,
                 text_color,
@@ -536,10 +550,12 @@ fn layout_node(
                 options.character_width,
                 options.default_line_height,
             );
+            let measured_width =
+                measure_text_width(&value, containing_width, options.character_width);
             (
                 BoxKind::Text(value),
-                Display::Block,
-                containing_width,
+                Display::Inline,
+                measured_width,
                 Some(measured_height),
                 0,
                 inherited_text_color,
@@ -559,30 +575,80 @@ fn layout_node(
     let content_width = width.max(1);
     let mut children = Vec::new();
     let mut cursor_y = box_y;
+    let mut inline_x = 0u32;
+    let mut inline_line_height = options.default_line_height;
     let child_ids = document
         .children(node_id)
         .map_err(LayoutError::Dom)?
         .to_vec();
 
     for child_id in child_ids {
-        if let Some(child) = layout_node(
-            document,
-            stylesheet,
-            child_id,
-            box_x,
-            cursor_y,
-            content_width,
-            text_color,
-            options,
-            max_boxes,
-            generated_boxes,
-        )? {
-            cursor_y = cursor_y.saturating_add(child.flow_advance.min(i32::MAX as u32) as i32);
-            children.push(child);
+        if is_inline_node(document, stylesheet, child_id)? {
+            let intrinsic_width = measure_inline_content_width(
+                document,
+                stylesheet,
+                child_id,
+                options.character_width,
+            )?;
+            let remaining_width = content_width.saturating_sub(inline_x);
+            if inline_x > 0 && intrinsic_width > remaining_width {
+                cursor_y = cursor_y.saturating_add(
+                    inline_line_height.min(i32::MAX as u32) as i32,
+                );
+                inline_x = 0;
+                inline_line_height = options.default_line_height;
+            }
+
+            let child_x = box_x.saturating_add(inline_x.min(i32::MAX as u32) as i32);
+            let child_width = content_width.saturating_sub(inline_x).max(1);
+            if let Some(child) = layout_node(
+                document,
+                stylesheet,
+                child_id,
+                child_x,
+                cursor_y,
+                child_width,
+                text_color,
+                options,
+                max_boxes,
+                generated_boxes,
+            )? {
+                inline_x = inline_x.saturating_add(child.rect.width);
+                inline_line_height = inline_line_height.max(child.rect.height);
+                children.push(child);
+            }
+        } else {
+            if inline_x > 0 {
+                cursor_y = cursor_y.saturating_add(
+                    inline_line_height.min(i32::MAX as u32) as i32,
+                );
+                inline_x = 0;
+                inline_line_height = options.default_line_height;
+            }
+
+            if let Some(child) = layout_node(
+                document,
+                stylesheet,
+                child_id,
+                box_x,
+                cursor_y,
+                content_width,
+                text_color,
+                options,
+                max_boxes,
+                generated_boxes,
+            )? {
+                cursor_y = cursor_y
+                    .saturating_add(child.flow_advance.min(i32::MAX as u32) as i32);
+                children.push(child);
+            }
         }
     }
 
-    let natural_height = cursor_y.saturating_sub(box_y).max(0) as u32;
+    let natural_height = cursor_y
+        .saturating_sub(box_y)
+        .max(0) as u32
+        .saturating_add(if inline_x > 0 { inline_line_height } else { 0 });
     let box_height = height.unwrap_or(natural_height);
     let flow_advance = box_height.saturating_add(margin.saturating_mul(2));
 
@@ -602,6 +668,72 @@ fn layout_node(
         children,
         flow_advance,
     }))
+}
+
+fn is_inline_node(
+    document: &DomDocument,
+    stylesheet: &StyleSheet,
+    node_id: NodeId,
+) -> Result<bool, LayoutError> {
+    let node = document.node(node_id).map_err(LayoutError::Dom)?;
+    Ok(match node.kind() {
+        NodeKind::Text(_) => true,
+        NodeKind::Element { tag_name } => {
+            stylesheet.style_for(tag_name, node).display == Some(Display::Inline)
+        }
+        NodeKind::Document | NodeKind::Comment(_) | NodeKind::Doctype(_) => false,
+    })
+}
+
+/// Measures visible text descendants for the prototype's fixed-width inline model.
+fn measure_inline_content_width(
+    document: &DomDocument,
+    stylesheet: &StyleSheet,
+    node_id: NodeId,
+    character_width: u32,
+) -> Result<u32, LayoutError> {
+    let node = document.node(node_id).map_err(LayoutError::Dom)?;
+    match node.kind() {
+        NodeKind::Text(value) => Ok(measure_text_width(value, HARD_MAX_CSS_PX, character_width)),
+        NodeKind::Element { tag_name }
+            if stylesheet.style_for(tag_name, node).display == Some(Display::None) =>
+        {
+            Ok(0)
+        }
+        NodeKind::Element { .. } | NodeKind::Document => {
+            let mut width = 0u32;
+            let child_ids = document
+                .children(node_id)
+                .map_err(LayoutError::Dom)?
+                .to_vec();
+            for child_id in child_ids {
+                width = width.saturating_add(measure_inline_content_width(
+                    document,
+                    stylesheet,
+                    child_id,
+                    character_width,
+                )?);
+                if width >= HARD_MAX_CSS_PX {
+                    return Ok(HARD_MAX_CSS_PX);
+                }
+            }
+            Ok(width)
+        }
+        NodeKind::Comment(_) | NodeKind::Doctype(_) => Ok(0),
+    }
+}
+
+/// Measure the longest line in fixed-width character metrics. Real font shaping is a later stage.
+fn measure_text_width(value: &str, width: u32, character_width: u32) -> u32 {
+    let max_columns = (width / character_width).max(1) as usize;
+    let columns = value
+        .split('\n')
+        .map(|line| line.chars().count().min(max_columns))
+        .max()
+        .unwrap_or(0);
+    (columns as u32)
+        .saturating_mul(character_width)
+        .min(width)
 }
 
 /// Estimate line count using fixed-width metrics. Real font shaping is a later stage.
