@@ -2,12 +2,19 @@
 
 ## Status
 
-This is a separate-branch prototype. The existing Java browser and the
-`main` branch remain unchanged. The Kotlin/Rust classifier is wired into WebView main-frame navigation and
-main-frame request interception as a strict URL-input guard. It rejects
-malformed or ambiguous HTTP(S) syntax, bad ports, malformed percent escapes,
-and oversized URLs before a main-frame request proceeds. Valid internationalized
-domain names are supported. A Rust/Kotlin parser disagreement fails closed.
+This pilot is merged into `main`. The Kotlin classifier is wired into WebView
+main-frame navigation and main-frame request interception as a strict URL-input
+guard. It rejects malformed or ambiguous HTTP(S) syntax, bad ports, malformed
+percent escapes, and oversized URLs before a main-frame request proceeds. Valid
+internationalized domain names are supported. When the Rust library is present,
+a Rust/Kotlin parser disagreement fails closed.
+
+The native build is still opt-in and is **not** enabled for shipped artifacts.
+`build-apk.yml` and `build-debug-apk.yml` do not pass
+`-PenableRustNativeBuild=true`, so those APKs package no
+`libhari_url_guard.so` and every classification reports `KOTLIN_FALLBACK`.
+Only `kotlin-rust-prototype.yml` compiles the native library and verifies that
+it is packaged. Shipping the Rust guard to users remains an open decision.
 
 This is still separate from website reputation, TLS validation, page-content
 analysis, and download/file malware scanning.
@@ -59,5 +66,7 @@ it does not commit compiled binaries.
 7. Its output is not a malware or safety verdict; do not label a URL safe solely
    because it classifies as HTTPS.
 
-Do not merge this branch into `main` automatically. This pilot needs successful
-CI and device testing plus explicit review before promotion.
+The Kotlin guard is already on `main`. Before the Rust library is enabled for
+shipped builds, the pilot still needs device testing of both JNI-backed
+classification and fallback behaviour, plus explicit review of crash behaviour
+and APK-size impact.

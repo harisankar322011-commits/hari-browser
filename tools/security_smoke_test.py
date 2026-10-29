@@ -373,8 +373,10 @@ try:
 
     for workflow_name in [
         ".github/workflows/build-apk.yml",
+        ".github/workflows/build-debug-apk.yml",
         ".github/workflows/codeql.yml",
         ".github/workflows/dependency-review.yml",
+        ".github/workflows/kotlin-rust-prototype.yml",
         ".github/workflows/secret-scan.yml",
     ]:
         workflow = read(workflow_name)

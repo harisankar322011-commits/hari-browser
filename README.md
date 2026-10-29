@@ -30,7 +30,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 
 ### Browsing and everyday tools
 
-- DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
+- DuckDuckGo is the default search provider; Google, Bing, Brave Search, Startpage, Ecosia, Mojeek, and Qwant are also available.
 - Address bar accepts a web address or search query. Optional voice search asks Android's selected speech-recognition service for text in the selected dashboard language; audio/transcript handling follows that service's own privacy policy.
 - Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader mode, adjustable text size, page sharing, and full-screen web video. Normal-mode tabs are saved in the encrypted local store and restored after process death; private tabs are never saved in the normal session snapshot, and clear-data-on-exit removes it. The proposed reader-extraction update builds a bounded, text-only view locally using page text and inserts it as text rather than HTML; it is heuristic, may include clutter or miss article content, and still needs Android WebView testing.
 - Optional **Read later** saves explicitly selected HTTPS pages as encrypted, text-only snapshots. The defaults are eight pages and 24,000 characters per page; Settings can configure 4/8/12 pages and 8,000/24,000/32,000 characters, with hard ceilings of 12 pages and 32,000 characters per page. It does not save images, live links, scripts, cookies, login sessions, or the full page layout; snapshots may be incomplete or out of date. Saving is disabled in Private mode, and saved pages can be removed individually or cleared.
@@ -110,7 +110,7 @@ Use only builds linked from the official [Hari Browser repository](https://githu
 
 The repository is maintained for family use and sideloading, not Google Play publishing. The maintainer reports that a newer one-time-signed owner-test APK installed successfully on 2026-10-26. Treat that as a limited test of that exact artifact on that device, not as independent malware certification; verify the specific APK and never ignore a new Android protection warning.
 
-1. Open the repository's **Actions** tab and locate **Build a one-time-signed APK for owner testing** if you need to review the owner-test build.
+1. Open the repository's **Actions** tab and locate **Build Hari Browser Release APK** for a release artifact, or **Build Hari Browser Debug APK** for a debuggable test build. No installable release APK is produced until the stable signing secrets and the pinned certificate fingerprint are configured; until then that workflow fails rather than publishing an unsigned build.
 2. Treat a one-time-signed APK as a test artifact, not a permanent release. Android requires a matching signing certificate for an in-place update; if the temporary signing key is not retained, a future differently signed build will not update this installation and reinstalling may erase local app data.
 3. For ongoing family updates, use an installable release APK built from `main` only after the stable release key and pinned certificate fingerprint checks are configured and pass.
 4. Never install an artifact named `*-unsigned.apk`; unsigned validation artifacts are not installable release builds.
