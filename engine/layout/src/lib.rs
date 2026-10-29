@@ -148,8 +148,7 @@ impl Selector {
                 index += 1;
             }
             let identifier_length = index - start;
-            if identifier_length == 0
-                || identifier_length > HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES
+            if identifier_length == 0 || identifier_length > HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES
             {
                 return Err(CssError::UnsupportedSelector);
             }
@@ -157,15 +156,18 @@ impl Selector {
             let identifier = source[start..index].to_owned();
             match marker {
                 b'#' => {
-                    if id.replace(identifier).is_some() {
+                    if id.is_some() {
                         return Err(CssError::UnsupportedSelector);
                     }
+                    id = Some(identifier);
                 }
                 b'.' => classes.push(identifier),
                 _ => return Err(CssError::UnsupportedSelector),
             }
 
-            if classes.len() + usize::from(id.is_some()) > HARD_MAX_CSS_SELECTOR_PARTS {
+            let id_parts = if id.is_some() { 1 } else { 0 };
+            let type_parts = if tag_name.is_some() { 1 } else { 0 };
+            if classes.len() + id_parts + type_parts > HARD_MAX_CSS_SELECTOR_PARTS {
                 return Err(CssError::UnsupportedSelector);
             }
         }
@@ -333,9 +335,11 @@ impl StyleSheet {
             .iter()
             .enumerate()
             .filter_map(|(order, rule)| {
-                rule.selector
-                    .matches(tag_name, node)
-                    .then_some((rule.selector.specificity(), order, rule))
+                rule.selector.matches(tag_name, node).then_some((
+                    rule.selector.specificity(),
+                    order,
+                    rule,
+                ))
             })
             .collect();
         matching.sort_by_key(|(specificity, order, _)| (*specificity, *order));
