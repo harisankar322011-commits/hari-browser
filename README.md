@@ -30,7 +30,7 @@ Hari Browser is an open-source Android browser built on **Android System WebView
 
 ### Browsing and everyday tools
 
-- DuckDuckGo is the default search provider; Google, Bing, Brave Search, and Startpage are also available.
+- DuckDuckGo is the default search provider; Google, Bing, Brave Search, Startpage, Ecosia, Mojeek, and Qwant are also available.
 - Address bar accepts a web address or search query. Optional voice search asks Android's selected speech-recognition service for text in the selected dashboard language; audio/transcript handling follows that service's own privacy policy.
 - Tabs, duplicate tabs, recently closed tabs, downloads, in-page search, desktop mode, reader mode, adjustable text size, page sharing, and full-screen web video. Normal-mode tabs are saved in the encrypted local store and restored after process death; private tabs are never saved in the normal session snapshot, and clear-data-on-exit removes it. The proposed reader-extraction update builds a bounded, text-only view locally using page text and inserts it as text rather than HTML; it is heuristic, may include clutter or miss article content, and still needs Android WebView testing.
 - Optional **Read later** saves explicitly selected HTTPS pages as encrypted, text-only snapshots. The defaults are eight pages and 24,000 characters per page; Settings can configure 4/8/12 pages and 8,000/24,000/32,000 characters, with hard ceilings of 12 pages and 32,000 characters per page. It does not save images, live links, scripts, cookies, login sessions, or the full page layout; snapshots may be incomplete or out of date. Saving is disabled in Private mode, and saved pages can be removed individually or cleared.
