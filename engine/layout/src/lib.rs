@@ -968,6 +968,32 @@ mod tests {
     }
 
     #[test]
+    fn wraps_inline_siblings_to_a_new_line() {
+        let document =
+            DomDocument::from_html(b"<p>12345<span>abc</span></p>", &DomLimits::default())
+                .unwrap();
+        let layout = compute_layout(
+            &document,
+            &StyleSheet::default(),
+            &LayoutOptions {
+                viewport_width: 40,
+                character_width: 8,
+                default_line_height: 18,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
+
+        let paragraph = find_tag(&layout, "p").unwrap();
+        let first_text = find_text(&layout, "12345").unwrap();
+        let span = find_tag(&layout, "span").unwrap();
+
+        assert_eq!(span.rect.x, paragraph.rect.x);
+        assert_eq!(span.rect.y, first_text.rect.y + 18);
+        assert_eq!(paragraph.rect.height, 36);
+    }
+
+    #[test]
     fn rejects_unsupported_css_properties_instead_of_silently_lying() {
         assert_eq!(
             StyleSheet::parse("p { position: fixed; }"),
