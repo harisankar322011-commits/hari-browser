@@ -592,9 +592,8 @@ fn layout_node(
             )?;
             let remaining_width = content_width.saturating_sub(inline_x);
             if inline_x > 0 && intrinsic_width > remaining_width {
-                cursor_y = cursor_y.saturating_add(
-                    inline_line_height.min(i32::MAX as u32) as i32,
-                );
+                cursor_y =
+                    cursor_y.saturating_add(inline_line_height.min(i32::MAX as u32) as i32);
                 inline_x = 0;
                 inline_line_height = options.default_line_height;
             }
@@ -619,9 +618,8 @@ fn layout_node(
             }
         } else {
             if inline_x > 0 {
-                cursor_y = cursor_y.saturating_add(
-                    inline_line_height.min(i32::MAX as u32) as i32,
-                );
+                cursor_y =
+                    cursor_y.saturating_add(inline_line_height.min(i32::MAX as u32) as i32);
                 inline_x = 0;
                 inline_line_height = options.default_line_height;
             }
@@ -638,16 +636,14 @@ fn layout_node(
                 max_boxes,
                 generated_boxes,
             )? {
-                cursor_y = cursor_y
-                    .saturating_add(child.flow_advance.min(i32::MAX as u32) as i32);
+                cursor_y =
+                    cursor_y.saturating_add(child.flow_advance.min(i32::MAX as u32) as i32);
                 children.push(child);
             }
         }
     }
 
-    let natural_height = cursor_y
-        .saturating_sub(box_y)
-        .max(0) as u32
+    let natural_height = (cursor_y.saturating_sub(box_y).max(0) as u32)
         .saturating_add(if inline_x > 0 { inline_line_height } else { 0 });
     let box_height = height.unwrap_or(natural_height);
     let flow_advance = box_height.saturating_add(margin.saturating_mul(2));
@@ -775,10 +771,7 @@ mod tests {
             .find_map(|child| find_tag(child, name))
     }
 
-    fn find_text<'a>(
-        layout: &'a super::LayoutBox,
-        value: &str,
-    ) -> Option<&'a super::LayoutBox> {
+    fn find_text<'a>(layout: &'a super::LayoutBox, value: &str) -> Option<&'a super::LayoutBox> {
         if matches!(&layout.kind, BoxKind::Text(text) if text == value) {
             return Some(layout);
         }
