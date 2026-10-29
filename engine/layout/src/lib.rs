@@ -321,9 +321,27 @@ impl StyleSheet {
             Display::None
         } else if matches!(
             tag_name,
-            "a" | "abbr" | "b" | "bdi" | "bdo" | "cite" | "code" | "data" | "em" | "i"
-                | "label" | "mark" | "q" | "s" | "small" | "span" | "strong" | "sub" | "sup"
-                | "time" | "u" | "var"
+            "a" | "abbr"
+                | "b"
+                | "bdi"
+                | "bdo"
+                | "cite"
+                | "code"
+                | "data"
+                | "em"
+                | "i"
+                | "label"
+                | "mark"
+                | "q"
+                | "s"
+                | "small"
+                | "span"
+                | "strong"
+                | "sub"
+                | "sup"
+                | "time"
+                | "u"
+                | "var"
         ) {
             Display::Inline
         } else {
@@ -528,7 +546,12 @@ fn layout_node(
             let margin = style.margin.unwrap_or(0);
             let available_width = containing_width.saturating_sub(margin.saturating_mul(2));
             let intrinsic_width = if display == Display::Inline {
-                measure_inline_content_width(document, stylesheet, node_id, options.character_width)?
+                measure_inline_content_width(
+                    document,
+                    stylesheet,
+                    node_id,
+                    options.character_width,
+                )?
             } else {
                 available_width
             };
@@ -592,8 +615,7 @@ fn layout_node(
             )?;
             let remaining_width = content_width.saturating_sub(inline_x);
             if inline_x > 0 && intrinsic_width > remaining_width {
-                cursor_y =
-                    cursor_y.saturating_add(inline_line_height.min(i32::MAX as u32) as i32);
+                cursor_y = cursor_y.saturating_add(inline_line_height.min(i32::MAX as u32) as i32);
                 inline_x = 0;
                 inline_line_height = options.default_line_height;
             }
@@ -618,8 +640,7 @@ fn layout_node(
             }
         } else {
             if inline_x > 0 {
-                cursor_y =
-                    cursor_y.saturating_add(inline_line_height.min(i32::MAX as u32) as i32);
+                cursor_y = cursor_y.saturating_add(inline_line_height.min(i32::MAX as u32) as i32);
                 inline_x = 0;
                 inline_line_height = options.default_line_height;
             }
@@ -636,8 +657,7 @@ fn layout_node(
                 max_boxes,
                 generated_boxes,
             )? {
-                cursor_y =
-                    cursor_y.saturating_add(child.flow_advance.min(i32::MAX as u32) as i32);
+                cursor_y = cursor_y.saturating_add(child.flow_advance.min(i32::MAX as u32) as i32);
                 children.push(child);
             }
         }
@@ -727,9 +747,7 @@ fn measure_text_width(value: &str, width: u32, character_width: u32) -> u32 {
         .map(|line| line.chars().count().min(max_columns))
         .max()
         .unwrap_or(0);
-    (columns as u32)
-        .saturating_mul(character_width)
-        .min(width)
+    (columns as u32).saturating_mul(character_width).min(width)
 }
 
 /// Estimate line count using fixed-width metrics. Real font shaping is a later stage.
