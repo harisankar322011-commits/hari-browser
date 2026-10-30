@@ -3,8 +3,8 @@
 //! This module is a teaching/prototype pipeline, not a standards-compliant CSS
 //! cascade or layout engine. Inline runs use fixed character-width metrics; it
 //! does not paint pixels, shape fonts, load fonts, or collapse whitespace. Its
-//! bounded selector subset supports type, universal, class, ID, and compound
-//! selectors, but not combinators, attribute selectors, or pseudo-classes.
+//! bounded selector subset supports type, universal, class, ID, compound,
+//! descendant, and child selectors, but not sibling combinators, attribute selectors, or pseudo-classes.
 
 use hari_engine_dom::{DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind};
 
@@ -15,6 +15,7 @@ const HARD_MAX_CSS_DECLARATIONS_PER_RULE: usize = 64;
 const HARD_MAX_CSS_SELECTOR_BYTES: usize = 1024;
 const HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES: usize = 128;
 const HARD_MAX_CSS_SELECTOR_PARTS: usize = 16;
+const HARD_MAX_CSS_SELECTOR_COMPOUNDS: usize = 16;
 const HARD_MAX_CSS_PX: u32 = 1_000_000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -105,16 +106,14 @@ struct ElementStyle {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Selector {
+struct CompoundSelector {
     tag_name: Option<String>,
     id: Option<String>,
     classes: Vec<String>,
 }
 
-impl Selector {
-    /// Parses one bounded compound selector: an optional type or universal
-    /// selector followed by optional ID and class components. Combinators,
-    /// attribute selectors, and pseudo-classes remain explicitly unsupported.
+impl CompoundSelector {
+    /// Parses one compound selector, such as `p.notice#main` or `*.feature`.
     fn parse(source: &str) -> Result<Self, CssError> {
         if source.is_empty() || source.len() > HARD_MAX_CSS_SELECTOR_BYTES {
             return Err(CssError::UnsupportedSelector);
@@ -220,6 +219,142 @@ impl Selector {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SelectorCombinator {
+    Descendant,
+    Child,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Selector {
+    compounds: Vec<CompoundSelector>,
+    /// Each combinator joins compound[i] to compound[i + 1].
+    combinators: Vec<SelectorCombinator>,
+}
+
+impl Selector {
+    /// Parses a bounded chain of compound selectors joined by descendant or child combinators.
+    /// Attribute selectors, pseudo-classes, sibling combinators, and selector lists are unsupported.
+    fn parse(source: &str) -> Result<Self, CssError> {
+        if source.is_empty() || source.len() > HARD_MAX_CSS_SELECTOR_BYTES {
+            return Err(CssError::UnsupportedSelector);
+        }
+
+        let bytes = source.as_bytes();
+        let mut index = 0usize;
+        let mut compounds = Vec::new();
+        let mut combinators = Vec::new();
+
+        while index < bytes.len() {
+            let whitespace_start = index;
+            while index < bytes.len() && bytes[index].is_ascii_whitespace() {
+                index += 1;
+            }
+            let had_whitespace = index > whitespace_start;
+            if index >= bytes.len() {
+                break;
+            }
+
+            if compounds.is_empty() {
+                if bytes[index] == b'>' {
+                    return Err(CssError::UnsupportedSelector);
+                }
+            } else {
+                let combinator = if bytes[index] == b'>' {
+                    index += 1;
+                    while index < bytes.len() && bytes[index].is_ascii_whitespace() {
+                        index += 1;
+                    }
+                    SelectorCombinator::Child
+                } else if had_whitespace {
+                    SelectorCombinator::Descendant
+                } else {
+                    return Err(CssError::UnsupportedSelector);
+                };
+
+                if index >= bytes.len() || bytes[index] == b'>' {
+                    return Err(CssError::UnsupportedSelector);
+                }
+                combinators.push(combinator);
+            }
+
+            let compound_start = index;
+            while index < bytes.len()
+                && !bytes[index].is_ascii_whitespace()
+                && bytes[index] != b'>'
+            {
+                index += 1;
+            }
+            if compound_start == index {
+                return Err(CssError::UnsupportedSelector);
+            }
+
+            compounds.push(CompoundSelector::parse(&source[compound_start..index])?);
+            if compounds.len() > HARD_MAX_CSS_SELECTOR_COMPOUNDS {
+                return Err(CssError::UnsupportedSelector);
+            }
+        }
+
+        if compounds.is_empty() || combinators.len() + 1 != compounds.len() {
+            return Err(CssError::UnsupportedSelector);
+        }
+
+        Ok(Self {
+            compounds,
+            combinators,
+        })
+    }
+
+    fn matches(&self, document: &DomDocument, node_id: NodeId) -> bool {
+        self.matches_from(document, node_id, self.compounds.len() - 1)
+    }
+
+    fn matches_from(&self, document: &DomDocument, node_id: NodeId, index: usize) -> bool {
+        let Ok(node) = document.node(node_id) else {
+            return false;
+        };
+        let Some(tag_name) = node.tag_name() else {
+            return false;
+        };
+        if !self.compounds[index].matches(tag_name, node) {
+            return false;
+        }
+        if index == 0 {
+            return true;
+        }
+
+        let mut ancestor = node.parent();
+        match self.combinators[index - 1] {
+            SelectorCombinator::Child => ancestor
+                .is_some_and(|parent_id| self.matches_from(document, parent_id, index - 1)),
+            SelectorCombinator::Descendant => {
+                while let Some(parent_id) = ancestor {
+                    if self.matches_from(document, parent_id, index - 1) {
+                        return true;
+                    }
+                    ancestor = document
+                        .node(parent_id)
+                        .ok()
+                        .and_then(|parent| parent.parent());
+                }
+                false
+            }
+        }
+    }
+
+    /// Specificity is the component-wise sum across the complete selector chain.
+    fn specificity(&self) -> (u8, u8, u8) {
+        self.compounds.iter().fold((0, 0, 0), |total, compound| {
+            let specificity = compound.specificity();
+            (
+                total.0.saturating_add(specificity.0),
+                total.1.saturating_add(specificity.1),
+                total.2.saturating_add(specificity.2),
+            )
+        })
+    }
+}
+
 fn is_selector_identifier_byte(byte: u8) -> bool {
     byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_')
 }
@@ -236,7 +371,7 @@ pub struct StyleSheet {
 }
 
 impl StyleSheet {
-    /// Parses a small CSS subset with type selectors and pixel lengths.
+    /// Parses bounded compound/descendant/child selectors and a small set of pixel/color declarations.
     ///
     /// Supported declarations: `display: block|none`, `width: Npx`,
     /// `height: Npx`, `margin: Npx`, `color`, and `background-color` using
@@ -310,7 +445,13 @@ impl StyleSheet {
         Ok(Self { rules })
     }
 
-    fn style_for(&self, tag_name: &str, node: &DomNode) -> ElementStyle {
+    fn style_for(
+        &self,
+        document: &DomDocument,
+        node_id: NodeId,
+        tag_name: &str,
+        node: &DomNode,
+    ) -> ElementStyle {
         // Basic user-agent defaults for elements that do not generate visible boxes.
         // The small author stylesheet subset may override these defaults, just as
         // author CSS can override ordinary user-agent declarations in a browser.
@@ -363,7 +504,7 @@ impl StyleSheet {
             .iter()
             .enumerate()
             .filter_map(|(order, rule)| {
-                rule.selector.matches(tag_name, node).then_some((
+                rule.selector.matches(document, node_id).then_some((
                     rule.selector.specificity(),
                     order,
                     rule,
@@ -538,7 +679,7 @@ fn layout_node(
             None,
         ),
         NodeKind::Element { tag_name } => {
-            let style = stylesheet.style_for(&tag_name, node);
+            let style = stylesheet.style_for(document, node_id, &tag_name, node);
             let display = style.display.unwrap_or(Display::Block);
             if display == Display::None {
                 return Ok(None);
@@ -695,7 +836,7 @@ fn is_inline_node(
     Ok(match node.kind() {
         NodeKind::Text(_) => true,
         NodeKind::Element { tag_name } => {
-            stylesheet.style_for(tag_name, node).display == Some(Display::Inline)
+            stylesheet.style_for(document, node_id, tag_name, node).display == Some(Display::Inline)
         }
         NodeKind::Document | NodeKind::Comment(_) | NodeKind::Doctype(_) => false,
     })
@@ -712,7 +853,7 @@ fn measure_inline_content_width(
     match node.kind() {
         NodeKind::Text(value) => Ok(measure_text_width(value, HARD_MAX_CSS_PX, character_width)),
         NodeKind::Element { tag_name }
-            if stylesheet.style_for(tag_name, node).display == Some(Display::None) =>
+            if stylesheet.style_for(document, node_id, tag_name, node).display == Some(Display::None) =>
         {
             Ok(0)
         }
