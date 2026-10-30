@@ -172,3 +172,30 @@ fn ignores_style_elements_declared_with_a_non_css_type() {
 
     assert!(surface.non_background_pixel_count() > 0);
 }
+
+#[test]
+fn does_not_apply_print_only_embedded_styles_to_the_screen_surface() {
+    let surface = render(
+        b"<style media=print>div { background-color: #ff0000; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_ne!(surface.pixel(1, 1), Some([255, 0, 0, 255]));
+}
+
+#[test]
+fn applies_embedded_styles_for_a_screen_media_list_entry() {
+    let surface = render(
+        b"<style media=\"print, screen\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_eq!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
+}
+
