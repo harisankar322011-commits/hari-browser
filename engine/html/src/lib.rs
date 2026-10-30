@@ -965,6 +965,25 @@ mod tests {
     }
 
     #[test]
+    fn starting_a_nested_list_item_preserves_the_outer_list_item() {
+        let document = parse_document(
+            b"<ul><li>outer<ul><li>inner<li>inner2</ul><li>outer2</ul>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let outer_list = element(&document.children[0], "ul");
+        assert_eq!(outer_list.children.len(), 2);
+
+        let outer_item = element(&outer_list.children[0], "li");
+        let nested_list = element(&outer_item.children[1], "ul");
+        assert_eq!(nested_list.children.len(), 2);
+        assert_eq!(nested_list.children[0].text_content(), "inner");
+        assert_eq!(nested_list.children[1].text_content(), "inner2");
+        assert_eq!(outer_list.children[1].text_content(), "outer2");
+    }
+
+    #[test]
     fn raw_text_elements_keep_less_than_signs_as_text() {
         let document = parse_document(
             b"<script>if (a < b) { c(); }</script><p>done</p>",
