@@ -607,10 +607,10 @@ fn decode_named_reference(
     }
 
     // Prefer a full semicolon-terminated spelling over its legacy alias.
-    if bytes.get(name_end) == Some(&b';') {
-        if let Some(replacement) = named_reference(&input[start..name_end + 1]) {
-            return Some((replacement, name_end + 1));
-        }
+    if bytes.get(name_end) == Some(&b';')
+        && let Some(replacement) = named_reference(&input[start..name_end + 1])
+    {
+        return Some((replacement, name_end + 1));
     }
 
     // HTML's named-reference algorithm uses the longest matching prefix.
