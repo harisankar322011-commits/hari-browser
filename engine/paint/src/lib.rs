@@ -209,7 +209,6 @@ pub fn render_html_to_surface(
     paint_layout(&layout, paint_options).map_err(RenderError::Paint)
 }
 
-
 /// Collects inline CSS blocks in document order, followed by caller-provided CSS.
 ///
 /// Caller CSS is intentionally appended last so it wins equal-specificity conflicts.
@@ -224,9 +223,9 @@ fn collect_embedded_stylesheets(
     while let Some(id) = stack.pop() {
         let node = document.node(id).map_err(RenderError::Dom)?;
         if node.tag_name() == Some("style") {
-            let is_css = node.attribute("type").is_none_or(|value| {
-                value.trim().eq_ignore_ascii_case("text/css")
-            });
+            let is_css = node
+                .attribute("type")
+                .is_none_or(|value| value.trim().eq_ignore_ascii_case("text/css"));
             if is_css {
                 let source = node.text_content(document);
                 append_bounded_css(&mut combined, &source)?;
