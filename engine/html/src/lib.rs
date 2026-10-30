@@ -401,7 +401,8 @@ impl<'a> Parser<'a> {
                     while self.position < self.bytes.len() && self.bytes[self.position] != quote {
                         self.position += 1;
                     }
-                    value = decode_character_references(&self.source[value_start..self.position], true);
+                    value =
+                        decode_character_references(&self.source[value_start..self.position], true);
                     if self.position < self.bytes.len() {
                         self.position += 1;
                     }
