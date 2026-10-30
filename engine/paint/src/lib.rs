@@ -265,16 +265,12 @@ fn style_media_applies_to_screen(
         return false;
     }
 
-    let mut entries = media.split(',');
-    for index in 0..MAX_MEDIA_LIST_ENTRIES {
-        let Some(entry) = entries.next() else {
+    for (index, entry) in media.split(',').enumerate() {
+        if index >= MAX_MEDIA_LIST_ENTRIES {
             return false;
-        };
+        }
         if media_query_matches_screen(entry, viewport_width) {
             return true;
-        }
-        if index + 1 == MAX_MEDIA_LIST_ENTRIES {
-            return entries.next().is_none();
         }
     }
     false
