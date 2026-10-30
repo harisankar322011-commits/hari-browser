@@ -172,4 +172,3 @@ fn ignores_style_elements_declared_with_a_non_css_type() {
 
     assert!(surface.non_background_pixel_count() > 0);
 }
-
