@@ -222,14 +222,12 @@ fn collect_embedded_stylesheets(
 
     while let Some(id) = stack.pop() {
         let node = document.node(id).map_err(RenderError::Dom)?;
-        if node.tag_name() == Some("style") {
-            let is_css = node
-                .attribute("type")
-                .is_none_or(|value| value.trim().eq_ignore_ascii_case("text/css"));
-            if is_css {
-                let source = node.text_content(document);
-                append_bounded_css(&mut combined, &source)?;
-            }
+        if node.tag_name() == Some("style")
+            && style_type_is_css(node)
+            && style_media_applies_to_screen(node)
+        {
+            let source = node.text_content(document);
+            append_bounded_css(&mut combined, &source)?;
         }
 
         let children = document.children(id).map_err(RenderError::Dom)?;
@@ -239,6 +237,25 @@ fn collect_embedded_stylesheets(
 
     append_bounded_css(&mut combined, caller_css)?;
     Ok(combined)
+}
+
+fn style_type_is_css(node: &hari_engine_dom::DomNode) -> bool {
+    node.attribute("type")
+        .is_none_or(|value| value.trim().eq_ignore_ascii_case("text/css"))
+}
+
+/// The prototype paints a screen surface, so only unqualified, "all", or
+/// bare "screen" media-list entries are supported. Unknown queries are skipped
+/// rather than being treated as if their conditions were true.
+fn style_media_applies_to_screen(node: &hari_engine_dom::DomNode) -> bool {
+    let Some(media) = node.attribute("media") else {
+        return true;
+    };
+
+    media.split(',').any(|entry| {
+        let entry = entry.trim();
+        entry.eq_ignore_ascii_case("all") || entry.eq_ignore_ascii_case("screen")
+    })
 }
 
 fn append_bounded_css(output: &mut String, source: &str) -> Result<(), RenderError> {
