@@ -1330,7 +1330,7 @@ mod tests {
     #[test]
     fn selector_specificity_accumulates_across_combinator_chains() {
         let document = DomDocument::from_html(
-            b"<main id=\\"hero\\"><p>target</p></main>",
+            b"<main id=\"hero\"><p>target</p></main>",
             &DomLimits::default(),
         )
         .unwrap();
