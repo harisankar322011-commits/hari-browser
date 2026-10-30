@@ -251,10 +251,7 @@ fn style_type_is_css(node: &hari_engine_dom::DomNode) -> bool {
 /// This bounded parser supports comma-separated media lists containing `all`,
 /// `screen`, and simple min-width/max-width pixel conjunctions. Unsupported
 /// query syntax is skipped rather than being treated as a match.
-fn style_media_applies_to_screen(
-    node: &hari_engine_dom::DomNode,
-    viewport_width: u32,
-) -> bool {
+fn style_media_applies_to_screen(node: &hari_engine_dom::DomNode, viewport_width: u32) -> bool {
     const MAX_MEDIA_ATTRIBUTE_BYTES: usize = 1_024;
     const MAX_MEDIA_LIST_ENTRIES: usize = 16;
 
@@ -292,7 +289,10 @@ fn media_query_matches_screen(query: &str, viewport_width: u32) -> bool {
         if condition_count > 2 {
             return false;
         }
-        let Some(condition) = condition.trim().strip_prefix('(').and_then(|v| v.strip_suffix(')'))
+        let Some(condition) = condition
+            .trim()
+            .strip_prefix('(')
+            .and_then(|v| v.strip_suffix(')'))
         else {
             return false;
         };
