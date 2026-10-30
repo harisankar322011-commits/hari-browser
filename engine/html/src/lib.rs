@@ -321,6 +321,36 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Closes the current list item when another item starts in the same list.
+    ///
+    /// The nearest open list container bounds the search so a nested list item
+    /// does not close an item belonging to its outer list.
+    fn close_open_list_item(&mut self) {
+        let list_scope_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "ul" || tag_name == "ol"
+            )
+        });
+        let Some(list_scope_position) = list_scope_position else {
+            return;
+        };
+
+        let list_item_position = (list_scope_position + 1..self.open_elements.len())
+            .rev()
+            .find(|&position| {
+                let node_index = self.open_elements[position];
+                matches!(
+                    &self.nodes[node_index].kind,
+                    NodeKind::Element { tag_name } if tag_name == "li"
+                )
+            });
+
+        if let Some(position) = list_item_position {
+            self.open_elements.truncate(position);
+        }
+    }
+
     fn parse_start_tag(&mut self) -> Result<(), ParseError> {
         self.position += 1; // <
         let name_start = self.position;
@@ -425,6 +455,10 @@ impl<'a> Parser<'a> {
             {
                 attributes.push(Attribute { name, value });
             }
+        }
+
+        if tag_name == "li" {
+            self.close_open_list_item();
         }
 
         let is_void = is_void_element(&tag_name);
@@ -918,6 +952,35 @@ mod tests {
             document.children[1].kind,
             NodeKind::Comment(ref value) if value == "safe note"
         ));
+    }
+
+    #[test]
+    fn starting_a_new_list_item_closes_the_previous_list_item() {
+        let document = parse_document(b"<ul><li>one<li>two</ul>", &HtmlLimits::default()).unwrap();
+
+        let list = element(&document.children[0], "ul");
+        assert_eq!(list.children.len(), 2);
+        assert_eq!(list.children[0].text_content(), "one");
+        assert_eq!(list.children[1].text_content(), "two");
+    }
+
+    #[test]
+    fn starting_a_nested_list_item_preserves_the_outer_list_item() {
+        let document = parse_document(
+            b"<ul><li>outer<ul><li>inner<li>inner2</ul><li>outer2</ul>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let outer_list = element(&document.children[0], "ul");
+        assert_eq!(outer_list.children.len(), 2);
+
+        let outer_item = element(&outer_list.children[0], "li");
+        let nested_list = element(&outer_item.children[1], "ul");
+        assert_eq!(nested_list.children.len(), 2);
+        assert_eq!(nested_list.children[0].text_content(), "inner");
+        assert_eq!(nested_list.children[1].text_content(), "inner2");
+        assert_eq!(outer_list.children[1].text_content(), "outer2");
     }
 
     #[test]
