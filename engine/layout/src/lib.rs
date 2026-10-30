@@ -444,12 +444,7 @@ impl StyleSheet {
         Ok(Self { rules })
     }
 
-    fn style_for(
-        &self,
-        document: &DomDocument,
-        node_id: NodeId,
-        tag_name: &str,
-    ) -> ElementStyle {
+    fn style_for(&self, document: &DomDocument, node_id: NodeId, tag_name: &str) -> ElementStyle {
         // Basic user-agent defaults for elements that do not generate visible boxes.
         // The small author stylesheet subset may override these defaults, just as
         // author CSS can override ordinary user-agent declarations in a browser.
@@ -834,10 +829,7 @@ fn is_inline_node(
     Ok(match node.kind() {
         NodeKind::Text(_) => true,
         NodeKind::Element { tag_name } => {
-            stylesheet
-                .style_for(document, node_id, tag_name)
-                .display
-                == Some(Display::Inline)
+            stylesheet.style_for(document, node_id, tag_name).display == Some(Display::Inline)
         }
         NodeKind::Document | NodeKind::Comment(_) | NodeKind::Doctype(_) => false,
     })
@@ -854,10 +846,7 @@ fn measure_inline_content_width(
     match node.kind() {
         NodeKind::Text(value) => Ok(measure_text_width(value, HARD_MAX_CSS_PX, character_width)),
         NodeKind::Element { tag_name }
-            if stylesheet
-                .style_for(document, node_id, tag_name)
-                .display
-                == Some(Display::None) =>
+            if stylesheet.style_for(document, node_id, tag_name).display == Some(Display::None) =>
         {
             Ok(0)
         }
