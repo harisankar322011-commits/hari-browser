@@ -266,4 +266,3 @@ fn rejects_nonmatching_media_lists_at_the_entry_limit() {
 
     assert_ne!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
 }
-
