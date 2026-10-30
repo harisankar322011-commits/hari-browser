@@ -12,6 +12,8 @@ use hari_engine_layout::{
 };
 
 const HARD_MAX_PIXELS: usize = 1_048_576;
+// Keep this in sync with the bounded stylesheet parser in hari-engine-layout.
+const HARD_MAX_STYLESHEET_BYTES: usize = 256 * 1024;
 const HARD_MAX_DIMENSION: u32 = 16_384;
 const GLYPH_WIDTH: usize = 5;
 const GLYPH_HEIGHT: usize = 7;
@@ -200,10 +202,66 @@ pub fn render_html_to_surface(
     }
 
     let document = DomDocument::from_html(html, dom_limits).map_err(RenderError::Dom)?;
-    let stylesheet = StyleSheet::parse(css).map_err(RenderError::Css)?;
+    let stylesheet_source = collect_embedded_stylesheets(&document, css)?;
+    let stylesheet = StyleSheet::parse(&stylesheet_source).map_err(RenderError::Css)?;
     let layout =
         compute_layout(&document, &stylesheet, layout_options).map_err(RenderError::Layout)?;
     paint_layout(&layout, paint_options).map_err(RenderError::Paint)
+}
+
+
+/// Collects inline CSS blocks in document order, followed by caller-provided CSS.
+///
+/// Caller CSS is intentionally appended last so it wins equal-specificity conflicts.
+/// The combined source remains within the same 256 KiB budget enforced by the CSS parser.
+fn collect_embedded_stylesheets(
+    document: &DomDocument,
+    caller_css: &str,
+) -> Result<String, RenderError> {
+    let mut combined = String::new();
+    let mut stack = vec![document.root()];
+
+    while let Some(id) = stack.pop() {
+        let node = document.node(id).map_err(RenderError::Dom)?;
+        if node.tag_name() == Some("style") {
+            let is_css = node.attribute("type").is_none_or(|value| {
+                value.trim().eq_ignore_ascii_case("text/css")
+            });
+            if is_css {
+                let source = node.text_content(document);
+                append_bounded_css(&mut combined, &source)?;
+            }
+        }
+
+        let children = document.children(id).map_err(RenderError::Dom)?;
+        // Reverse the stack insertion so traversal preserves document order.
+        stack.extend(children.iter().rev().copied());
+    }
+
+    append_bounded_css(&mut combined, caller_css)?;
+    Ok(combined)
+}
+
+fn append_bounded_css(output: &mut String, source: &str) -> Result<(), RenderError> {
+    if source.is_empty() {
+        return Ok(());
+    }
+
+    let separator = usize::from(!output.is_empty() && !output.ends_with('\n'));
+    let new_len = output
+        .len()
+        .checked_add(separator)
+        .and_then(|length| length.checked_add(source.len()))
+        .ok_or(RenderError::Css(CssError::StylesheetTooLarge))?;
+    if new_len > HARD_MAX_STYLESHEET_BYTES {
+        return Err(RenderError::Css(CssError::StylesheetTooLarge));
+    }
+
+    if separator > 0 {
+        output.push('\n');
+    }
+    output.push_str(source);
+    Ok(())
 }
 
 fn paint_node(node: &LayoutBox, surface: &mut Surface, options: &PaintOptions) {
