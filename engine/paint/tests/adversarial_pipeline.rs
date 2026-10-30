@@ -133,3 +133,43 @@ fn successful_parse_is_not_a_safety_verdict() {
 
     assert!(surface.non_background_pixel_count() > 0);
 }
+
+#[test]
+fn applies_embedded_style_elements_to_the_rendered_page() {
+    let surface = render(
+        b"<style>div { background-color: #ff0000; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_eq!(surface.pixel(1, 1), Some([255, 0, 0, 255]));
+}
+
+#[test]
+fn caller_stylesheet_overrides_embedded_style_rules() {
+    let surface = render(
+        b"<style>div { background-color: #ff0000; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "div { background-color: #0000ff; width: 16px; height: 16px; }",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_eq!(surface.pixel(1, 1), Some([0, 0, 255, 255]));
+}
+
+#[test]
+fn ignores_style_elements_declared_with_a_non_css_type() {
+    let surface = render(
+        b"<style type=application/json>{ this is not CSS }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert!(surface.non_background_pixel_count() > 0);
+}
+
