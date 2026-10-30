@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   html-parser-fuzz:
-    name: Coverage-guided HTML parser smoke test
+    name: Bounded HTML parser and render-pipeline fuzz smoke tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -34,3 +34,5 @@ jobs:
         run: cargo install cargo-fuzz --locked
       - name: Fuzz HTML parser with bounded input
         run: cargo fuzz run --fuzz-dir=engine/fuzz html_parser -- -max_total_time=30 -max_len=16384
+      - name: Fuzz complete render pipeline with bounded resources
+        run: cargo fuzz run --fuzz-dir=engine/fuzz render_pipeline -- -max_total_time=30 -max_len=16384
