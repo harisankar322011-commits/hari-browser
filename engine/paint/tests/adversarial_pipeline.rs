@@ -198,4 +198,3 @@ fn applies_embedded_styles_for_a_screen_media_list_entry() {
 
     assert_eq!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
 }
-
