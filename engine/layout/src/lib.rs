@@ -325,7 +325,7 @@ impl Selector {
         match self.combinators[index - 1] {
             SelectorCombinator::Child => {
                 ancestor.is_some_and(|parent_id| self.matches_from(document, parent_id, index - 1))
-            },
+            }
             SelectorCombinator::Descendant => {
                 while let Some(parent_id) = ancestor {
                     if self.matches_from(document, parent_id, index - 1) {
