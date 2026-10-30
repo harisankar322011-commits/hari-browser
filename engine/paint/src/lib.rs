@@ -265,15 +265,14 @@ fn style_media_applies_to_screen(
         return false;
     }
 
+    let mut matched = false;
     for (index, entry) in media.split(',').enumerate() {
         if index >= MAX_MEDIA_LIST_ENTRIES {
             return false;
         }
-        if media_query_matches_screen(entry, viewport_width) {
-            return true;
-        }
+        matched |= media_query_matches_screen(entry, viewport_width);
     }
-    false
+    matched
 }
 
 fn media_query_matches_screen(query: &str, viewport_width: u32) -> bool {
