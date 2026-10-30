@@ -198,3 +198,59 @@ fn applies_embedded_styles_for_a_screen_media_list_entry() {
 
     assert_eq!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
 }
+
+#[test]
+fn evaluates_min_width_media_queries_at_the_viewport_boundary() {
+    let applies = render(
+        b"<style media=\"screen and (min-width: 64px)\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+    let does_not_apply = render(
+        b"<style media=\"screen and (min-width: 65px)\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_eq!(applies.pixel(1, 1), Some([0, 255, 0, 255]));
+    assert_ne!(does_not_apply.pixel(1, 1), Some([0, 255, 0, 255]));
+}
+
+#[test]
+fn evaluates_max_width_media_queries_at_the_viewport_boundary() {
+    let applies = render(
+        b"<style media=\"screen and (max-width: 64px)\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+    let does_not_apply = render(
+        b"<style media=\"screen and (max-width: 63px)\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_eq!(applies.pixel(1, 1), Some([0, 255, 0, 255]));
+    assert_ne!(does_not_apply.pixel(1, 1), Some([0, 255, 0, 255]));
+}
+
+#[test]
+fn evaluates_bounded_media_query_conjunctions_and_comma_lists() {
+    let surface = render(
+        b"<style media=\"print, screen and (min-width: 32px) and (max-width: 80px)\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_eq!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
+}
+
