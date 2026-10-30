@@ -1058,11 +1058,17 @@ mod tests {
     }
 
     #[test]
-    fn rejects_unsupported_and_overlong_selectors() {
-        assert_eq!(
-            Selector::parse("div > p"),
-            Err(CssError::UnsupportedSelector)
-        );
+    fn accepts_bounded_descendant_and_child_selectors_but_rejects_malformed_chains() {
+        assert!(Selector::parse("div > p").is_ok());
+        assert!(Selector::parse("main section p").is_ok());
+        assert!(Selector::parse("main > section.feature p#target").is_ok());
+        for invalid in ["> div", "div >", "div > > p", "div,,p"] {
+            assert_eq!(
+                Selector::parse(invalid),
+                Err(CssError::UnsupportedSelector),
+                "selector should be rejected: {invalid}"
+            );
+        }
         assert_eq!(
             Selector::parse("p:first-child"),
             Err(CssError::UnsupportedSelector)
@@ -1141,6 +1147,60 @@ mod tests {
 
         assert_eq!(paragraph.text_color, Some([255, 0, 0, 255]));
         assert_eq!(paragraph.background_color, Some([0, 0, 255, 255]));
+    }
+
+    #[test]
+    fn descendant_selectors_match_direct_and_deep_descendants() {
+        let document = DomDocument::from_html(
+            b"<main><section><p>nested</p></section><p>direct</p></main>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse("main p { color: red; }").unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+
+        assert_eq!(
+            find_text(&layout, "nested").unwrap().text_color,
+            Some([255, 0, 0, 255])
+        );
+        assert_eq!(
+            find_text(&layout, "direct").unwrap().text_color,
+            Some([255, 0, 0, 255])
+        );
+    }
+
+    #[test]
+    fn child_selectors_match_only_immediate_element_children() {
+        let document = DomDocument::from_html(
+            b"<main><section><p>nested</p></section><p>direct</p></main>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse("main > p { color: blue; }").unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+
+        assert_eq!(
+            find_text(&layout, "direct").unwrap().text_color,
+            Some([0, 0, 255, 255])
+        );
+        assert_eq!(find_text(&layout, "nested").unwrap().text_color, None);
+    }
+
+    #[test]
+    fn selector_specificity_accumulates_across_combinator_chains() {
+        let document = DomDocument::from_html(
+            b"<main id=\\"hero\\"><p>target</p></main>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet =
+            StyleSheet::parse("#hero p { color: blue; } main p { color: red; }").unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+
+        assert_eq!(
+            find_text(&layout, "target").unwrap().text_color,
+            Some([0, 0, 255, 255])
+        );
     }
 
     #[test]
