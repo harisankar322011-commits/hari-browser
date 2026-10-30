@@ -1047,6 +1047,33 @@ mod tests {
     }
 
     #[test]
+    fn every_bundled_html5_named_reference_round_trips_and_is_sorted() {
+        let mut previous: Option<&str> = None;
+        let mut checked = 0usize;
+
+        for &(name, expected) in super::NAMED_REFERENCES {
+            if let Some(previous_name) = previous {
+                assert!(
+                    previous_name < name,
+                    "named-reference table must be strictly sorted: {previous_name:?} before {name:?}"
+                );
+            }
+
+            let source = format!("&{name}");
+            assert_eq!(
+                super::decode_character_references(&source, false),
+                expected,
+                "incorrect decoding for HTML5 named reference {name:?}"
+            );
+
+            previous = Some(name);
+            checked += 1;
+        }
+
+        assert_eq!(checked, 2231, "HTML5 named-reference coverage unexpectedly changed");
+    }
+
+    #[test]
     fn decodes_full_named_reference_table_and_multi_codepoint_replacements() {
         let document = parse_document(
             b"<p>&NotEqualTilde; &fjlig; &CounterClockwiseContourIntegral;</p>",
