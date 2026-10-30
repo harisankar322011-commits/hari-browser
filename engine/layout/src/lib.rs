@@ -449,7 +449,6 @@ impl StyleSheet {
         document: &DomDocument,
         node_id: NodeId,
         tag_name: &str,
-        node: &DomNode,
     ) -> ElementStyle {
         // Basic user-agent defaults for elements that do not generate visible boxes.
         // The small author stylesheet subset may override these defaults, just as
@@ -678,7 +677,7 @@ fn layout_node(
             None,
         ),
         NodeKind::Element { tag_name } => {
-            let style = stylesheet.style_for(document, node_id, &tag_name, node);
+            let style = stylesheet.style_for(document, node_id, &tag_name);
             let display = style.display.unwrap_or(Display::Block);
             if display == Display::None {
                 return Ok(None);
@@ -836,7 +835,7 @@ fn is_inline_node(
         NodeKind::Text(_) => true,
         NodeKind::Element { tag_name } => {
             stylesheet
-                .style_for(document, node_id, tag_name, node)
+                .style_for(document, node_id, tag_name)
                 .display
                 == Some(Display::Inline)
         }
@@ -856,7 +855,7 @@ fn measure_inline_content_width(
         NodeKind::Text(value) => Ok(measure_text_width(value, HARD_MAX_CSS_PX, character_width)),
         NodeKind::Element { tag_name }
             if stylesheet
-                .style_for(document, node_id, tag_name, node)
+                .style_for(document, node_id, tag_name)
                 .display
                 == Some(Display::None) =>
         {
