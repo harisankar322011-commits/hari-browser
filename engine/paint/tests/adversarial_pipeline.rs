@@ -254,3 +254,16 @@ fn evaluates_bounded_media_query_conjunctions_and_comma_lists() {
     assert_eq!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
 }
 
+#[test]
+fn rejects_nonmatching_media_lists_at_the_entry_limit() {
+    let surface = render(
+        b"<style media=\"print, print, print, print, print, print, print, print, print, print, print, print, print, print, print, print\">div { background-color: #00ff00; width: 16px; height: 16px; }</style><div>HARI</div>",
+        "",
+        &DomLimits::default(),
+        &options(4096),
+    )
+    .unwrap();
+
+    assert_ne!(surface.pixel(1, 1), Some([0, 255, 0, 255]));
+}
+
