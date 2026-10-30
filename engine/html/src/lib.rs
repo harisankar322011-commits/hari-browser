@@ -1070,7 +1070,10 @@ mod tests {
             checked += 1;
         }
 
-        assert_eq!(checked, 2231, "HTML5 named-reference coverage unexpectedly changed");
+        assert_eq!(
+            checked, 2231,
+            "HTML5 named-reference coverage unexpectedly changed"
+        );
     }
 
     #[test]
