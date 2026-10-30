@@ -202,7 +202,8 @@ pub fn render_html_to_surface(
     }
 
     let document = DomDocument::from_html(html, dom_limits).map_err(RenderError::Dom)?;
-    let stylesheet_source = collect_embedded_stylesheets(&document, css)?;
+    let stylesheet_source =
+        collect_embedded_stylesheets(&document, css, layout_options.viewport_width)?;
     let stylesheet = StyleSheet::parse(&stylesheet_source).map_err(RenderError::Css)?;
     let layout =
         compute_layout(&document, &stylesheet, layout_options).map_err(RenderError::Layout)?;
@@ -216,6 +217,7 @@ pub fn render_html_to_surface(
 fn collect_embedded_stylesheets(
     document: &DomDocument,
     caller_css: &str,
+    viewport_width: u32,
 ) -> Result<String, RenderError> {
     let mut combined = String::new();
     let mut stack = vec![document.root()];
@@ -224,7 +226,7 @@ fn collect_embedded_stylesheets(
         let node = document.node(id).map_err(RenderError::Dom)?;
         if node.tag_name() == Some("style")
             && style_type_is_css(node)
-            && style_media_applies_to_screen(node)
+            && style_media_applies_to_screen(node, viewport_width)
         {
             let source = node.text_content(document);
             append_bounded_css(&mut combined, &source)?;
@@ -244,18 +246,90 @@ fn style_type_is_css(node: &hari_engine_dom::DomNode) -> bool {
         .is_none_or(|value| value.trim().eq_ignore_ascii_case("text/css"))
 }
 
-/// The prototype paints a screen surface, so only unqualified, "all", or
-/// bare "screen" media-list entries are supported. Unknown queries are skipped
-/// rather than being treated as if their conditions were true.
-fn style_media_applies_to_screen(node: &hari_engine_dom::DomNode) -> bool {
+/// Selects embedded CSS applicable to the screen prototype at this viewport width.
+///
+/// This bounded parser supports comma-separated media lists containing `all`,
+/// `screen`, and simple min-width/max-width pixel conjunctions. Unsupported
+/// query syntax is skipped rather than being treated as a match.
+fn style_media_applies_to_screen(
+    node: &hari_engine_dom::DomNode,
+    viewport_width: u32,
+) -> bool {
+    const MAX_MEDIA_ATTRIBUTE_BYTES: usize = 1_024;
+    const MAX_MEDIA_LIST_ENTRIES: usize = 16;
+
     let Some(media) = node.attribute("media") else {
         return true;
     };
+    if media.len() > MAX_MEDIA_ATTRIBUTE_BYTES {
+        return false;
+    }
 
-    media.split(',').any(|entry| {
-        let entry = entry.trim();
-        entry.eq_ignore_ascii_case("all") || entry.eq_ignore_ascii_case("screen")
-    })
+    let mut entries = media.split(',');
+    for index in 0..MAX_MEDIA_LIST_ENTRIES {
+        let Some(entry) = entries.next() else {
+            return false;
+        };
+        if media_query_matches_screen(entry, viewport_width) {
+            return true;
+        }
+        if index + 1 == MAX_MEDIA_LIST_ENTRIES {
+            return entries.next().is_none();
+        }
+    }
+    false
+}
+
+fn media_query_matches_screen(query: &str, viewport_width: u32) -> bool {
+    let normalized = query.trim().to_ascii_lowercase();
+    let mut parts = normalized.split(" and ");
+    let media_type = parts.next().unwrap_or_default().trim();
+    if media_type != "all" && media_type != "screen" {
+        return false;
+    }
+
+    let mut min_width_seen = false;
+    let mut max_width_seen = false;
+    let mut condition_count = 0usize;
+
+    for condition in parts {
+        condition_count += 1;
+        if condition_count > 2 {
+            return false;
+        }
+        let Some(condition) = condition.trim().strip_prefix('(').and_then(|v| v.strip_suffix(')'))
+        else {
+            return false;
+        };
+        let Some((feature, value)) = condition.split_once(':') else {
+            return false;
+        };
+        let value = value.trim();
+        let Some(number) = value.strip_suffix("px") else {
+            return false;
+        };
+        let Ok(width) = number.trim().parse::<u32>() else {
+            return false;
+        };
+
+        match feature.trim() {
+            "min-width" if !min_width_seen => {
+                min_width_seen = true;
+                if viewport_width < width {
+                    return false;
+                }
+            }
+            "max-width" if !max_width_seen => {
+                max_width_seen = true;
+                if viewport_width > width {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+    }
+
+    true
 }
 
 fn append_bounded_css(output: &mut String, source: &str) -> Result<(), RenderError> {
