@@ -921,6 +921,17 @@ mod tests {
     }
 
     #[test]
+    fn starting_a_new_list_item_closes_the_previous_list_item() {
+        let document =
+            parse_document(b"<ul><li>one<li>two</ul>", &HtmlLimits::default()).unwrap();
+
+        let list = element(&document.children[0], "ul");
+        assert_eq!(list.children.len(), 2);
+        assert_eq!(list.children[0].text_content(), "one");
+        assert_eq!(list.children[1].text_content(), "two");
+    }
+
+    #[test]
     fn raw_text_elements_keep_less_than_signs_as_text() {
         let document = parse_document(
             b"<script>if (a < b) { c(); }</script><p>done</p>",
