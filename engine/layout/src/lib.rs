@@ -279,9 +279,7 @@ impl Selector {
             }
 
             let compound_start = index;
-            while index < bytes.len()
-                && !bytes[index].is_ascii_whitespace()
-                && bytes[index] != b'>'
+            while index < bytes.len() && !bytes[index].is_ascii_whitespace() && bytes[index] != b'>'
             {
                 index += 1;
             }
@@ -325,8 +323,9 @@ impl Selector {
 
         let mut ancestor = node.parent();
         match self.combinators[index - 1] {
-            SelectorCombinator::Child => ancestor
-                .is_some_and(|parent_id| self.matches_from(document, parent_id, index - 1)),
+            SelectorCombinator::Child => {
+                ancestor.is_some_and(|parent_id| self.matches_from(document, parent_id, index - 1))
+            },
             SelectorCombinator::Descendant => {
                 while let Some(parent_id) = ancestor {
                     if self.matches_from(document, parent_id, index - 1) {
@@ -836,7 +835,10 @@ fn is_inline_node(
     Ok(match node.kind() {
         NodeKind::Text(_) => true,
         NodeKind::Element { tag_name } => {
-            stylesheet.style_for(document, node_id, tag_name, node).display == Some(Display::Inline)
+            stylesheet
+                .style_for(document, node_id, tag_name, node)
+                .display
+                == Some(Display::Inline)
         }
         NodeKind::Document | NodeKind::Comment(_) | NodeKind::Doctype(_) => false,
     })
@@ -853,7 +855,10 @@ fn measure_inline_content_width(
     match node.kind() {
         NodeKind::Text(value) => Ok(measure_text_width(value, HARD_MAX_CSS_PX, character_width)),
         NodeKind::Element { tag_name }
-            if stylesheet.style_for(document, node_id, tag_name, node).display == Some(Display::None) =>
+            if stylesheet
+                .style_for(document, node_id, tag_name, node)
+                .display
+                == Some(Display::None) =>
         {
             Ok(0)
         }
