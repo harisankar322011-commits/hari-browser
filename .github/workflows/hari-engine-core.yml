@@ -1,0 +1,61 @@
+name: HARI Engine Core
+
+on:
+  push:
+    paths:
+      - "engine/**"
+      - ".github/workflows/hari-engine-core.yml"
+  pull_request:
+    paths:
+      - "engine/**"
+      - ".github/workflows/hari-engine-core.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    name: Format, test, and lint HARI Engine crates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install stable Rust
+        uses: dtolnay/rust-toolchain@4360b52568e2003a75bf9bc1d59f33a8e3fc893c # stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - name: Check Core formatting
+        run: cargo fmt --manifest-path engine/core/Cargo.toml -- --check
+      - name: Test Core
+        run: cargo test --manifest-path engine/core/Cargo.toml
+      - name: Lint Core
+        run: cargo clippy --manifest-path engine/core/Cargo.toml --all-targets -- -D warnings
+      - name: Check HTML formatting
+        run: cargo fmt --manifest-path engine/html/Cargo.toml -- --check
+      - name: Test HTML parser and Core dependency
+        run: cargo test --manifest-path engine/html/Cargo.toml
+      - name: Lint HTML parser
+        run: cargo clippy --manifest-path engine/html/Cargo.toml --all-targets -- -D warnings
+      - name: Check DOM formatting
+        run: cargo fmt --manifest-path engine/dom/Cargo.toml -- --check
+      - name: Test DOM tree invariants
+        run: cargo test --manifest-path engine/dom/Cargo.toml
+      - name: Lint DOM
+        run: cargo clippy --manifest-path engine/dom/Cargo.toml --all-targets -- -D warnings
+      - name: Check layout formatting
+        run: cargo fmt --manifest-path engine/layout/Cargo.toml -- --check
+      - name: Test CSS subset and layout
+        run: cargo test --manifest-path engine/layout/Cargo.toml
+      - name: Lint layout
+        run: cargo clippy --manifest-path engine/layout/Cargo.toml --all-targets -- -D warnings
+      - name: Check paint formatting
+        run: cargo fmt --manifest-path engine/paint/Cargo.toml -- --check
+      - name: Test software painter and adversarial pipeline
+        run: cargo test --manifest-path engine/paint/Cargo.toml
+      - name: Lint paint
+        run: cargo clippy --manifest-path engine/paint/Cargo.toml --all-targets -- -D warnings

@@ -1,0 +1,29 @@
+[package]
+name = "hari-engine-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+hari-engine-html = { path = "../html" }
+hari-engine-dom = { path = "../dom" }
+hari-engine-layout = { path = "../layout" }
+hari-engine-paint = { path = "../paint" }
+
+[[bin]]
+name = "html_parser"
+path = "fuzz_targets/html_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "render_pipeline"
+path = "fuzz_targets/render_pipeline.rs"
+test = false
+doc = false
+bench = false

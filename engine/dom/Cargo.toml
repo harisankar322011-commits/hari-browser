@@ -1,0 +1,12 @@
+[package]
+name = "hari-engine-dom"
+version = "0.1.0"
+edition = "2024"
+description = "Experimental tree-safe DOM model for HARI Engine"
+license = "MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+hari-engine-html = { path = "../html" }

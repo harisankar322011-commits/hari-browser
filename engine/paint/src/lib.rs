@@ -1,0 +1,705 @@
+//! Deterministic software paint surface for the experimental HARI Engine.
+//!
+//! The renderer uses a tiny built-in 5x7 bitmap font for ASCII text and draws
+//! optional element outlines. It is a proof-of-pipeline renderer, not a browser
+//! quality graphics stack: no font shaping, anti-aliasing, image decoding, alpha
+//! compositing, transforms, or device-scale behavior is provided. The supported
+//! opaque CSS colors are handled by the bounded layout and paint pipeline.
+
+use hari_engine_dom::{DomDocument, DomError, DomLimits};
+use hari_engine_layout::{
+    BoxKind, CssError, LayoutBox, LayoutError, LayoutOptions, StyleSheet, compute_layout,
+};
+
+const HARD_MAX_PIXELS: usize = 1_048_576;
+// Keep this in sync with the bounded stylesheet parser in hari-engine-layout.
+const HARD_MAX_STYLESHEET_BYTES: usize = 256 * 1024;
+const HARD_MAX_DIMENSION: u32 = 16_384;
+const GLYPH_WIDTH: usize = 5;
+const GLYPH_HEIGHT: usize = 7;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaintError {
+    InvalidSurfaceDimensions,
+    PixelLimitExceeded,
+    InvalidMetrics,
+    ConfigurationMismatch,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RenderError {
+    Dom(DomError),
+    Css(CssError),
+    Layout(LayoutError),
+    Paint(PaintError),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PaintOptions {
+    pub width: u32,
+    pub height: u32,
+    pub character_width: u32,
+    pub line_height: u32,
+    pub max_pixels: usize,
+    pub background: [u8; 4],
+    pub text_color: [u8; 4],
+    pub outline_color: [u8; 4],
+    pub draw_element_outlines: bool,
+}
+
+impl Default for PaintOptions {
+    fn default() -> Self {
+        Self {
+            width: 360,
+            height: 640,
+            character_width: 8,
+            line_height: 18,
+            max_pixels: HARD_MAX_PIXELS,
+            background: [255, 255, 255, 255],
+            text_color: [20, 24, 32, 255],
+            outline_color: [222, 226, 232, 255],
+            draw_element_outlines: true,
+        }
+    }
+}
+
+/// A contiguous, opaque RGBA8888 off-screen surface.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Surface {
+    width: u32,
+    height: u32,
+    pixels: Vec<[u8; 4]>,
+    background: [u8; 4],
+}
+
+impl Surface {
+    pub fn new(
+        width: u32,
+        height: u32,
+        background: [u8; 4],
+        max_pixels: usize,
+    ) -> Result<Self, PaintError> {
+        if width == 0 || height == 0 || width > HARD_MAX_DIMENSION || height > HARD_MAX_DIMENSION {
+            return Err(PaintError::InvalidSurfaceDimensions);
+        }
+        let pixel_count = (width as usize)
+            .checked_mul(height as usize)
+            .ok_or(PaintError::PixelLimitExceeded)?;
+        let effective_budget = max_pixels.min(HARD_MAX_PIXELS);
+        if pixel_count > effective_budget {
+            return Err(PaintError::PixelLimitExceeded);
+        }
+
+        let mut pixels = Vec::new();
+        pixels
+            .try_reserve_exact(pixel_count)
+            .map_err(|_| PaintError::PixelLimitExceeded)?;
+        pixels.resize(pixel_count, background);
+
+        Ok(Self {
+            width,
+            height,
+            pixels,
+            background,
+        })
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    pub fn pixels(&self) -> &[[u8; 4]] {
+        &self.pixels
+    }
+
+    pub fn pixel(&self, x: u32, y: u32) -> Option<[u8; 4]> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        self.pixels
+            .get((y as usize) * (self.width as usize) + x as usize)
+            .copied()
+    }
+
+    pub fn non_background_pixel_count(&self) -> usize {
+        self.pixels
+            .iter()
+            .filter(|pixel| **pixel != self.background)
+            .count()
+    }
+
+    fn set_pixel(&mut self, x: i32, y: i32, color: [u8; 4]) {
+        if x < 0 || y < 0 || x as u32 >= self.width || y as u32 >= self.height {
+            return;
+        }
+        let index = (y as usize) * self.width as usize + x as usize;
+        if let Some(pixel) = self.pixels.get_mut(index) {
+            *pixel = color;
+        }
+    }
+
+    fn fill_rect(&mut self, x: i32, y: i32, width: u32, height: u32, color: [u8; 4]) {
+        let surface_width = i64::from(self.width);
+        let surface_height = i64::from(self.height);
+        let left = i64::from(x).clamp(0, surface_width);
+        let top = i64::from(y).clamp(0, surface_height);
+        let right = i64::from(x)
+            .saturating_add(i64::from(width))
+            .clamp(0, surface_width);
+        let bottom = i64::from(y)
+            .saturating_add(i64::from(height))
+            .clamp(0, surface_height);
+        if right <= left || bottom <= top {
+            return;
+        }
+
+        let row_width = (right - left) as usize;
+        for row in top as usize..bottom as usize {
+            let start = row * self.width as usize + left as usize;
+            let end = start + row_width;
+            if let Some(pixels) = self.pixels.get_mut(start..end) {
+                pixels.fill(color);
+            }
+        }
+    }
+}
+
+/// Paints a computed HARI layout tree to a bounded in-memory RGBA surface.
+pub fn paint_layout(layout: &LayoutBox, options: &PaintOptions) -> Result<Surface, PaintError> {
+    if options.character_width < GLYPH_WIDTH as u32 + 1 || options.line_height < GLYPH_HEIGHT as u32
+    {
+        return Err(PaintError::InvalidMetrics);
+    }
+
+    let mut surface = Surface::new(
+        options.width,
+        options.height,
+        options.background,
+        options.max_pixels,
+    )?;
+    paint_node(layout, &mut surface, options);
+    Ok(surface)
+}
+
+/// Runs the current end-to-end prototype: bounded HTML parse, DOM import,
+/// small CSS parse, block-flow layout, then deterministic software painting.
+pub fn render_html_to_surface(
+    html: &[u8],
+    css: &str,
+    dom_limits: &DomLimits,
+    layout_options: &LayoutOptions,
+    paint_options: &PaintOptions,
+) -> Result<Surface, RenderError> {
+    if layout_options.viewport_width != paint_options.width
+        || layout_options.character_width != paint_options.character_width
+        || layout_options.default_line_height != paint_options.line_height
+    {
+        return Err(RenderError::Paint(PaintError::ConfigurationMismatch));
+    }
+
+    let document = DomDocument::from_html(html, dom_limits).map_err(RenderError::Dom)?;
+    let stylesheet_source =
+        collect_embedded_stylesheets(&document, css, layout_options.viewport_width)?;
+    let stylesheet = StyleSheet::parse(&stylesheet_source).map_err(RenderError::Css)?;
+    let layout =
+        compute_layout(&document, &stylesheet, layout_options).map_err(RenderError::Layout)?;
+    paint_layout(&layout, paint_options).map_err(RenderError::Paint)
+}
+
+/// Collects inline CSS blocks in document order, followed by caller-provided CSS.
+///
+/// Caller CSS is intentionally appended last so it wins equal-specificity conflicts.
+/// The combined source remains within the same 256 KiB budget enforced by the CSS parser.
+fn collect_embedded_stylesheets(
+    document: &DomDocument,
+    caller_css: &str,
+    viewport_width: u32,
+) -> Result<String, RenderError> {
+    let mut combined = String::new();
+    let mut stack = vec![document.root()];
+
+    while let Some(id) = stack.pop() {
+        let node = document.node(id).map_err(RenderError::Dom)?;
+        if node.tag_name() == Some("style")
+            && style_type_is_css(node)
+            && style_media_applies_to_screen(node, viewport_width)
+        {
+            let source = node.text_content(document);
+            append_bounded_css(&mut combined, &source)?;
+        }
+
+        let children = document.children(id).map_err(RenderError::Dom)?;
+        // Reverse the stack insertion so traversal preserves document order.
+        stack.extend(children.iter().rev().copied());
+    }
+
+    append_bounded_css(&mut combined, caller_css)?;
+    Ok(combined)
+}
+
+fn style_type_is_css(node: &hari_engine_dom::DomNode) -> bool {
+    node.attribute("type")
+        .is_none_or(|value| value.trim().eq_ignore_ascii_case("text/css"))
+}
+
+/// Selects embedded CSS applicable to the screen prototype at this viewport width.
+///
+/// This bounded parser supports comma-separated media lists containing `all`,
+/// `screen`, and simple min-width/max-width pixel conjunctions. Unsupported
+/// query syntax is skipped rather than being treated as a match.
+fn style_media_applies_to_screen(node: &hari_engine_dom::DomNode, viewport_width: u32) -> bool {
+    const MAX_MEDIA_ATTRIBUTE_BYTES: usize = 1_024;
+    const MAX_MEDIA_LIST_ENTRIES: usize = 16;
+
+    let Some(media) = node.attribute("media") else {
+        return true;
+    };
+    if media.len() > MAX_MEDIA_ATTRIBUTE_BYTES {
+        return false;
+    }
+
+    let mut matched = false;
+    for (index, entry) in media.split(',').enumerate() {
+        if index >= MAX_MEDIA_LIST_ENTRIES {
+            return false;
+        }
+        matched |= media_query_matches_screen(entry, viewport_width);
+    }
+    matched
+}
+
+fn media_query_matches_screen(query: &str, viewport_width: u32) -> bool {
+    let normalized = query.trim().to_ascii_lowercase();
+    let mut parts = normalized.split(" and ");
+    let media_type = parts.next().unwrap_or_default().trim();
+    if media_type != "all" && media_type != "screen" {
+        return false;
+    }
+
+    let mut min_width_seen = false;
+    let mut max_width_seen = false;
+    let mut condition_count = 0usize;
+
+    for condition in parts {
+        condition_count += 1;
+        if condition_count > 2 {
+            return false;
+        }
+        let Some(condition) = condition
+            .trim()
+            .strip_prefix('(')
+            .and_then(|v| v.strip_suffix(')'))
+        else {
+            return false;
+        };
+        let Some((feature, value)) = condition.split_once(':') else {
+            return false;
+        };
+        let value = value.trim();
+        let Some(number) = value.strip_suffix("px") else {
+            return false;
+        };
+        let Ok(width) = number.trim().parse::<u32>() else {
+            return false;
+        };
+
+        match feature.trim() {
+            "min-width" if !min_width_seen => {
+                min_width_seen = true;
+                if viewport_width < width {
+                    return false;
+                }
+            }
+            "max-width" if !max_width_seen => {
+                max_width_seen = true;
+                if viewport_width > width {
+                    return false;
+                }
+            }
+            _ => return false,
+        }
+    }
+
+    true
+}
+
+fn append_bounded_css(output: &mut String, source: &str) -> Result<(), RenderError> {
+    if source.is_empty() {
+        return Ok(());
+    }
+
+    let separator = usize::from(!output.is_empty() && !output.ends_with('\n'));
+    let new_len = output
+        .len()
+        .checked_add(separator)
+        .and_then(|length| length.checked_add(source.len()))
+        .ok_or(RenderError::Css(CssError::StylesheetTooLarge))?;
+    if new_len > HARD_MAX_STYLESHEET_BYTES {
+        return Err(RenderError::Css(CssError::StylesheetTooLarge));
+    }
+
+    if separator > 0 {
+        output.push('\n');
+    }
+    output.push_str(source);
+    Ok(())
+}
+
+fn paint_node(node: &LayoutBox, surface: &mut Surface, options: &PaintOptions) {
+    match &node.kind {
+        BoxKind::Document => {}
+        BoxKind::Element { .. } => {
+            if let Some(background_color) = node.background_color {
+                surface.fill_rect(
+                    node.rect.x,
+                    node.rect.y,
+                    node.rect.width,
+                    node.rect.height,
+                    background_color,
+                );
+            }
+            if options.draw_element_outlines {
+                draw_outline(
+                    surface,
+                    node.rect.x,
+                    node.rect.y,
+                    node.rect.width,
+                    node.rect.height,
+                    options.outline_color,
+                );
+            }
+        }
+        BoxKind::Text(text) => draw_text(surface, text, node, options),
+    }
+
+    for child in &node.children {
+        paint_node(child, surface, options);
+    }
+}
+
+fn draw_outline(surface: &mut Surface, x: i32, y: i32, width: u32, height: u32, color: [u8; 4]) {
+    if width == 0 || height == 0 {
+        return;
+    }
+    for dx in 0..width {
+        let px = x.saturating_add(dx.min(i32::MAX as u32) as i32);
+        surface.set_pixel(px, y, color);
+        surface.set_pixel(
+            px,
+            y.saturating_add(height.saturating_sub(1).min(i32::MAX as u32) as i32),
+            color,
+        );
+    }
+    for dy in 0..height {
+        let py = y.saturating_add(dy.min(i32::MAX as u32) as i32);
+        surface.set_pixel(x, py, color);
+        surface.set_pixel(
+            x.saturating_add(width.saturating_sub(1).min(i32::MAX as u32) as i32),
+            py,
+            color,
+        );
+    }
+}
+
+fn draw_text(surface: &mut Surface, text: &str, node: &LayoutBox, options: &PaintOptions) {
+    let columns = (node.rect.width / options.character_width).max(1) as usize;
+    let mut line = 0usize;
+    let mut column = 0usize;
+    for character in text.chars() {
+        if character == '\r' {
+            continue;
+        }
+        if character == '\n' {
+            line = line.saturating_add(1);
+            column = 0;
+            continue;
+        }
+        if column >= columns {
+            line = line.saturating_add(1);
+            column = 0;
+        }
+
+        let line_offset = (line as u32).saturating_mul(options.line_height);
+        if line_offset >= node.rect.height {
+            break;
+        }
+        let origin_x = node.rect.x.saturating_add(
+            (column as u32)
+                .saturating_mul(options.character_width)
+                .min(i32::MAX as u32) as i32,
+        );
+        let origin_y = node
+            .rect
+            .y
+            .saturating_add(line_offset.min(i32::MAX as u32) as i32);
+        draw_glyph(
+            surface,
+            origin_x,
+            origin_y,
+            character,
+            node.text_color.unwrap_or(options.text_color),
+        );
+        column = column.saturating_add(1);
+    }
+}
+
+fn draw_glyph(
+    surface: &mut Surface,
+    origin_x: i32,
+    origin_y: i32,
+    character: char,
+    color: [u8; 4],
+) {
+    let rows = glyph_rows(character.to_ascii_uppercase());
+    for (row_index, bits) in rows.iter().enumerate() {
+        for column in 0..GLYPH_WIDTH {
+            if *bits & (1 << (GLYPH_WIDTH - 1 - column)) != 0 {
+                surface.set_pixel(
+                    origin_x.saturating_add(column as i32),
+                    origin_y.saturating_add(row_index as i32),
+                    color,
+                );
+            }
+        }
+    }
+}
+
+fn glyph_rows(character: char) -> [u8; GLYPH_HEIGHT] {
+    match character {
+        'A' => [14, 17, 17, 31, 17, 17, 17],
+        'B' => [30, 17, 17, 30, 17, 17, 30],
+        'C' => [14, 17, 16, 16, 16, 17, 14],
+        'D' => [30, 17, 17, 17, 17, 17, 30],
+        'E' => [31, 16, 16, 30, 16, 16, 31],
+        'F' => [31, 16, 16, 30, 16, 16, 16],
+        'G' => [14, 17, 16, 23, 17, 17, 15],
+        'H' => [17, 17, 17, 31, 17, 17, 17],
+        'I' => [31, 4, 4, 4, 4, 4, 31],
+        'J' => [7, 2, 2, 2, 18, 18, 12],
+        'K' => [17, 18, 20, 24, 20, 18, 17],
+        'L' => [16, 16, 16, 16, 16, 16, 31],
+        'M' => [17, 27, 21, 21, 17, 17, 17],
+        'N' => [17, 25, 21, 19, 17, 17, 17],
+        'O' => [14, 17, 17, 17, 17, 17, 14],
+        'P' => [30, 17, 17, 30, 16, 16, 16],
+        'Q' => [14, 17, 17, 17, 21, 18, 13],
+        'R' => [30, 17, 17, 30, 20, 18, 17],
+        'S' => [15, 16, 16, 14, 1, 1, 30],
+        'T' => [31, 4, 4, 4, 4, 4, 4],
+        'U' => [17, 17, 17, 17, 17, 17, 14],
+        'V' => [17, 17, 17, 17, 17, 10, 4],
+        'W' => [17, 17, 17, 21, 21, 21, 10],
+        'X' => [17, 17, 10, 4, 10, 17, 17],
+        'Y' => [17, 17, 10, 4, 4, 4, 4],
+        'Z' => [31, 1, 2, 4, 8, 16, 31],
+        '0' => [14, 17, 19, 21, 25, 17, 14],
+        '1' => [4, 12, 4, 4, 4, 4, 14],
+        '2' => [14, 17, 1, 2, 4, 8, 31],
+        '3' => [30, 1, 1, 14, 1, 1, 30],
+        '4' => [2, 6, 10, 18, 31, 2, 2],
+        '5' => [31, 16, 16, 30, 1, 1, 30],
+        '6' => [14, 16, 16, 30, 17, 17, 14],
+        '7' => [31, 1, 2, 4, 8, 8, 8],
+        '8' => [14, 17, 17, 14, 17, 17, 14],
+        '9' => [14, 17, 17, 15, 1, 1, 14],
+        '-' => [0, 0, 0, 31, 0, 0, 0],
+        '_' => [0, 0, 0, 0, 0, 0, 31],
+        '.' => [0, 0, 0, 0, 0, 12, 12],
+        ',' => [0, 0, 0, 0, 4, 4, 8],
+        ':' => [0, 4, 4, 0, 4, 4, 0],
+        ';' => [0, 4, 4, 0, 4, 4, 8],
+        '!' => [4, 4, 4, 4, 4, 0, 4],
+        '?' => [14, 17, 1, 2, 4, 0, 4],
+        '\'' => [4, 4, 2, 0, 0, 0, 0],
+        '"' => [10, 10, 10, 0, 0, 0, 0],
+        '/' => [1, 2, 2, 4, 8, 8, 16],
+        '(' => [2, 4, 8, 8, 8, 4, 2],
+        ')' => [8, 4, 2, 2, 2, 4, 8],
+        '+' => [0, 4, 4, 31, 4, 4, 0],
+        '=' => [0, 31, 0, 31, 0, 0, 0],
+        ' ' => [0; GLYPH_HEIGHT],
+        _ => [31, 17, 5, 4, 4, 0, 4],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        PaintError, PaintOptions, RenderError, Surface, paint_layout, render_html_to_surface,
+    };
+    use hari_engine_dom::DomLimits;
+    use hari_engine_layout::{LayoutOptions, StyleSheet};
+
+    #[test]
+    fn renders_html_css_dom_layout_pipeline_to_rgba_pixels() {
+        let layout_options = LayoutOptions {
+            viewport_width: 240,
+            character_width: 8,
+            default_line_height: 18,
+            ..LayoutOptions::default()
+        };
+        let paint_options = PaintOptions {
+            width: 240,
+            height: 160,
+            character_width: 8,
+            line_height: 18,
+            ..PaintOptions::default()
+        };
+        let surface = render_html_to_surface(
+            b"<html><body><h1>HARI ENGINE</h1><p>FIRST PAGE</p></body></html>",
+            "body { margin: 8px; } h1 { height: 24px; }",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
+
+        assert_eq!(surface.width(), 240);
+        assert_eq!(surface.height(), 160);
+        assert!(surface.pixel(239, 159).is_some());
+        assert!(surface.pixels().contains(&paint_options.text_color));
+        assert!(surface.pixels().contains(&paint_options.background));
+        assert!(surface.non_background_pixel_count() > 100);
+    }
+
+    #[test]
+    fn painting_is_deterministic_for_the_same_layout_and_options() {
+        let layout_options = LayoutOptions {
+            viewport_width: 96,
+            ..LayoutOptions::default()
+        };
+        let paint_options = PaintOptions {
+            width: 96,
+            height: 80,
+            ..PaintOptions::default()
+        };
+        let html = b"<p>HARI</p>";
+        let first = render_html_to_surface(
+            html,
+            "",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
+        let second = render_html_to_surface(
+            html,
+            "",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn rejects_zero_surface_dimensions() {
+        let layout = hari_engine_layout::compute_layout(
+            &hari_engine_dom::DomDocument::from_html(b"<p>x</p>", &DomLimits::default()).unwrap(),
+            &StyleSheet::default(),
+            &LayoutOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            paint_layout(
+                &layout,
+                &PaintOptions {
+                    width: 0,
+                    ..PaintOptions::default()
+                }
+            ),
+            Err(PaintError::InvalidSurfaceDimensions)
+        );
+    }
+
+    #[test]
+    fn rejects_surfaces_over_pixel_budget_before_allocating() {
+        let layout = hari_engine_layout::compute_layout(
+            &hari_engine_dom::DomDocument::from_html(b"<p>x</p>", &DomLimits::default()).unwrap(),
+            &StyleSheet::default(),
+            &LayoutOptions::default(),
+        )
+        .unwrap();
+        assert_eq!(
+            paint_layout(
+                &layout,
+                &PaintOptions {
+                    width: 100,
+                    height: 100,
+                    max_pixels: 1,
+                    ..PaintOptions::default()
+                }
+            ),
+            Err(PaintError::PixelLimitExceeded)
+        );
+    }
+
+    #[test]
+    fn render_pipeline_rejects_inconsistent_viewport_widths() {
+        assert_eq!(
+            render_html_to_surface(
+                b"<p>HARI</p>",
+                "",
+                &DomLimits::default(),
+                &LayoutOptions {
+                    viewport_width: 100,
+                    ..LayoutOptions::default()
+                },
+                &PaintOptions {
+                    width: 101,
+                    ..PaintOptions::default()
+                },
+            ),
+            Err(RenderError::Paint(PaintError::ConfigurationMismatch))
+        );
+    }
+
+    #[test]
+    fn css_text_and_background_colors_are_visible_in_rendered_pixels() {
+        let layout_options = LayoutOptions {
+            viewport_width: 96,
+            character_width: 8,
+            default_line_height: 18,
+            ..LayoutOptions::default()
+        };
+        let paint_options = PaintOptions {
+            width: 96,
+            height: 80,
+            character_width: 8,
+            line_height: 18,
+            ..PaintOptions::default()
+        };
+        let surface = render_html_to_surface(
+            b"<body><p>HARI</p></body>",
+            "body { color: #ff0000; background-color: #0000ff; }",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
+
+        assert!(surface.pixels().contains(&[255, 0, 0, 255]));
+        assert!(surface.pixels().contains(&[0, 0, 255, 255]));
+    }
+
+    #[test]
+    fn rejects_zero_pixel_budget_without_allocating_a_surface() {
+        assert_eq!(
+            Surface::new(1, 1, [0, 0, 0, 255], 0),
+            Err(PaintError::PixelLimitExceeded)
+        );
+    }
+
+    #[test]
+    fn surface_reports_out_of_range_pixels_as_none() {
+        let surface = Surface::new(2, 2, [1, 2, 3, 255], 4).unwrap();
+        assert_eq!(surface.pixel(0, 0), Some([1, 2, 3, 255]));
+        assert_eq!(surface.pixel(2, 0), None);
+        assert_eq!(surface.pixel(0, 2), None);
+    }
+}
