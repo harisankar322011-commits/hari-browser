@@ -922,8 +922,7 @@ mod tests {
 
     #[test]
     fn starting_a_new_list_item_closes_the_previous_list_item() {
-        let document =
-            parse_document(b"<ul><li>one<li>two</ul>", &HtmlLimits::default()).unwrap();
+        let document = parse_document(b"<ul><li>one<li>two</ul>", &HtmlLimits::default()).unwrap();
 
         let list = element(&document.children[0], "ul");
         assert_eq!(list.children.len(), 2);
