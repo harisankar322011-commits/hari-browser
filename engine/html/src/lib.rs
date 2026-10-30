@@ -1,10 +1,13 @@
 //! A deliberately small, bounded HTML parser for the experimental HARI Engine.
 //!
 //! This is not an HTML Living Standard implementation. It does not run scripts
-//! or fetch subresources. It decodes numeric references plus a deliberately small
-//! named-reference subset, but does not include the full HTML entity catalogue.
+//! or fetch subresources. It supports numeric references and the complete bundled
+//! HTML5 named-reference table, including legacy and multi-codepoint values.
+
+mod named_entities;
 
 use hari_engine_core::{EngineLimits, InputError, validate_document_input};
+use named_entities::{MAX_NAMED_REFERENCE_NAME_LENGTH, NAMED_REFERENCES};
 
 const HARD_MAX_DOCUMENT_BYTES: usize = 1_048_576;
 const HARD_MAX_NODES: usize = 100_000;
@@ -398,7 +401,7 @@ impl<'a> Parser<'a> {
                     while self.position < self.bytes.len() && self.bytes[self.position] != quote {
                         self.position += 1;
                     }
-                    value = decode_character_references(&self.source[value_start..self.position]);
+                    value = decode_character_references(&self.source[value_start..self.position], true);
                     if self.position < self.bytes.len() {
                         self.position += 1;
                     }
@@ -410,7 +413,7 @@ impl<'a> Parser<'a> {
                     {
                         self.position += 1;
                     }
-                    value = decode_character_references(&self.source[value_start..self.position]);
+                    value = decode_character_references(&self.source[value_start..self.position], true);
                 }
             }
 
@@ -455,7 +458,7 @@ impl<'a> Parser<'a> {
             end = (start + 1).min(self.bytes.len());
         }
 
-        let value = decode_character_references(&self.source[start..end]);
+        let value = decode_character_references(&self.source[start..end], false);
         self.position = end;
         if !value.is_empty() {
             self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -538,9 +541,8 @@ impl<'a> Parser<'a> {
     }
 }
 
-/// Decodes the character references deliberately supported by this prototype.
-/// Named references are an explicitly small subset; this is not the complete HTML table.
-fn decode_character_references(input: &str) -> String {
+/// Decodes numeric and HTML5 named character references in one pass.
+fn decode_character_references(input: &str, in_attribute: bool) -> String {
     let bytes = input.as_bytes();
     let mut output = String::with_capacity(input.len());
     let mut cursor = 0usize;
@@ -562,8 +564,8 @@ fn decode_character_references(input: &str) -> String {
             continue;
         }
 
-        if let Some((character, next)) = decode_named_reference(input, cursor) {
-            output.push(character);
+        if let Some((replacement, next)) = decode_named_reference(input, cursor, in_attribute) {
+            output.push_str(replacement);
             cursor = next;
             continue;
         }
@@ -573,6 +575,65 @@ fn decode_character_references(input: &str) -> String {
     }
 
     output
+}
+
+/// Returns a named-reference replacement and the byte position after the match.
+///
+/// The bundled table is sorted for binary search and includes semicolon-terminated
+/// names plus the legacy names that permit omission of the semicolon. In attribute
+/// values, ambiguous semicolonless matches are left unchanged when followed by
+/// an ASCII alphanumeric character or '='.
+fn decode_named_reference(
+    input: &str,
+    ampersand: usize,
+    in_attribute: bool,
+) -> Option<(&'static str, usize)> {
+    let bytes = input.as_bytes();
+    let start = ampersand + 1;
+    let mut name_end = start;
+
+    while name_end < bytes.len()
+        && bytes[name_end].is_ascii_alphanumeric()
+        && name_end - start < MAX_NAMED_REFERENCE_NAME_LENGTH
+    {
+        name_end += 1;
+    }
+
+    let available_name_length = name_end - start;
+    if available_name_length == 0 {
+        return None;
+    }
+
+    // Prefer a full semicolon-terminated spelling over its legacy alias.
+    if bytes.get(name_end) == Some(&b';') {
+        if let Some(replacement) = named_reference(&input[start..name_end + 1]) {
+            return Some((replacement, name_end + 1));
+        }
+    }
+
+    // HTML's named-reference algorithm uses the longest matching prefix.
+    for name_length in (1..=available_name_length).rev() {
+        let end = start + name_length;
+        if let Some(replacement) = named_reference(&input[start..end]) {
+            if in_attribute
+                && bytes.get(end).is_some_and(|next| {
+                    next.is_ascii_alphanumeric() || *next == b'='
+                })
+            {
+                return None;
+            }
+            return Some((replacement, end));
+        }
+    }
+
+    None
+}
+
+fn named_reference(name: &str) -> Option<&'static str> {
+    NAMED_REFERENCES
+        .binary_search_by(|entry| entry.0.cmp(name))
+        .ok()
+        .map(|index| NAMED_REFERENCES[index].1)
 }
 
 /// Returns a decoded numeric reference and the byte position immediately after it.
@@ -663,61 +724,10 @@ fn normalize_numeric_reference(value: u32) -> u32 {
     }
 }
 
-/// Recognizes only short, semicolon-terminated, supported named references.
-fn decode_named_reference(input: &str, ampersand: usize) -> Option<(char, usize)> {
-    let bytes = input.as_bytes();
-    let mut end = ampersand + 1;
-
-    while end < bytes.len() && end - ampersand <= 33 && bytes[end].is_ascii_alphanumeric() {
-        end += 1;
-    }
-
-    if bytes.get(end) != Some(&b';') || end == ampersand + 1 {
-        return None;
-    }
-
-    let name = &input[ampersand + 1..end];
-    Some((named_reference(name)?, end + 1))
-}
-
-fn named_reference(name: &str) -> Option<char> {
-    Some(match name {
-        "amp" | "AMP" => '&',
-        "lt" | "LT" => '<',
-        "gt" | "GT" => '>',
-        "quot" | "QUOT" => '"',
-        "apos" => '\'',
-        "nbsp" | "NonBreakingSpace" => '\u{00A0}',
-        "copy" | "COPY" => '\u{00A9}',
-        "reg" | "REG" => '\u{00AE}',
-        "trade" => '\u{2122}',
-        "euro" => '\u{20AC}',
-        "pound" => '\u{00A3}',
-        "cent" => '\u{00A2}',
-        "yen" => '\u{00A5}',
-        "mdash" => '\u{2014}',
-        "ndash" => '\u{2013}',
-        "hellip" => '\u{2026}',
-        "lsquo" => '\u{2018}',
-        "rsquo" => '\u{2019}',
-        "ldquo" => '\u{201C}',
-        "rdquo" => '\u{201D}',
-        "bull" => '\u{2022}',
-        "middot" => '\u{00B7}',
-        "times" => '\u{00D7}',
-        "divide" => '\u{00F7}',
-        "plusmn" => '\u{00B1}',
-        "deg" => '\u{00B0}',
-        "para" => '\u{00B6}',
-        "sect" => '\u{00A7}',
-        _ => return None,
-    })
-}
-
 /// HTML title and textarea are RCDATA: references decode there but not in script/style.
 fn decode_raw_text_content(tag_name: &str, input: &str) -> String {
     if matches!(tag_name, "title" | "textarea") {
-        decode_character_references(input)
+        decode_character_references(input, false)
     } else {
         input.to_owned()
     }
@@ -1035,6 +1045,31 @@ mod tests {
     }
 
     #[test]
+    fn decodes_full_named_reference_table_and_multi_codepoint_replacements() {
+        let document = parse_document(
+            b"<p>&NotEqualTilde; &fjlig; &CounterClockwiseContourIntegral;</p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            document.children[0].text_content(),
+            "\u{2242}\u{0338} fj \u{2233}"
+        );
+    }
+
+    #[test]
+    fn applies_legacy_semicolonless_rules_by_context() {
+        let source = r#"<p title="&notit; &amp=raw &amp!" data-safe="&amp!">&notit; &copy text &amp=raw</p>"#;
+        let document = parse_document(source.as_bytes(), &HtmlLimits::default()).unwrap();
+        let paragraph = element(&document.children[0], "p");
+
+        assert_eq!(paragraph.attribute("title"), Some("&notit; &amp=raw &!"));
+        assert_eq!(paragraph.attribute("data-safe"), Some("&!"));
+        assert_eq!(paragraph.text_content(), "\u{00AC}it; \u{00A9} text &=raw");
+    }
+
+    #[test]
     fn decodes_references_in_rcdata_but_preserves_raw_text_elements() {
         let document = parse_document(
             b"<title>Fish &amp; Chips</title><textarea>&lt;b&gt;hi&lt;/b&gt;</textarea><script>if (a &amp;&amp; b < c)</script><style>p::before { content: '&amp;'; }</style>",
@@ -1070,7 +1105,7 @@ mod tests {
 
         assert_eq!(
             document.children[0].text_content(),
-            "&unknown; &amp & #65; &#x; &#; &lt;"
+            "&unknown; & & #65; &#x; &#; &lt;"
         );
     }
 
