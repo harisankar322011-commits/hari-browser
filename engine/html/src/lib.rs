@@ -413,7 +413,8 @@ impl<'a> Parser<'a> {
                     {
                         self.position += 1;
                     }
-                    value = decode_character_references(&self.source[value_start..self.position], true);
+                    value =
+                        decode_character_references(&self.source[value_start..self.position], true);
                 }
             }
 
@@ -616,9 +617,9 @@ fn decode_named_reference(
         let end = start + name_length;
         if let Some(replacement) = named_reference(&input[start..end]) {
             if in_attribute
-                && bytes.get(end).is_some_and(|next| {
-                    next.is_ascii_alphanumeric() || *next == b'='
-                })
+                && bytes
+                    .get(end)
+                    .is_some_and(|next| next.is_ascii_alphanumeric() || *next == b'=')
             {
                 return None;
             }
