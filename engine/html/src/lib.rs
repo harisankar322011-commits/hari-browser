@@ -1072,6 +1072,43 @@ mod tests {
     }
 
     #[test]
+    fn starting_a_definition_item_closes_the_previous_definition_item() {
+        let document = parse_document(
+            b"<dl><dt>term<dd>description<dt>next</dl>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let list = element(&document.children[0], "dl");
+        assert_eq!(list.children.len(), 3);
+        assert_eq!(element(&list.children[0], "dt").text_content(), "term");
+        assert_eq!(
+            element(&list.children[1], "dd").text_content(),
+            "description"
+        );
+        assert_eq!(element(&list.children[2], "dt").text_content(), "next");
+    }
+
+    #[test]
+    fn definition_item_closure_respects_general_scope_boundaries() {
+        let document = parse_document(
+            b"<dl><dt>outer<table><tr><td><dd>inner</dd></td></tr></table><dd>outer</dl>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let list = element(&document.children[0], "dl");
+        assert_eq!(list.children.len(), 2);
+
+        let term = element(&list.children[0], "dt");
+        let table = element(&term.children[1], "table");
+        let row = element(&table.children[0], "tr");
+        let cell = element(&row.children[0], "td");
+        assert_eq!(element(&cell.children[0], "dd").text_content(), "inner");
+        assert_eq!(element(&list.children[1], "dd").text_content(), "outer");
+    }
+
+    #[test]
     fn starting_a_block_element_closes_an_open_paragraph() {
         let document =
             parse_document(b"<p>intro<div>block</div>tail", &HtmlLimits::default()).unwrap();
