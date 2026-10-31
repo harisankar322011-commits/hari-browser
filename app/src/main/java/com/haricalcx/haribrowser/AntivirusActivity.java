@@ -219,6 +219,8 @@ public final class AntivirusActivity extends ComponentActivity {
             String apkReport = "";
             MalwareBazaarReputation.Result reputation = null;
             String failure = null;
+            // Read the encrypted key on this worker so the UI callback never decrypts.
+            boolean reputationKeyConfigured = false;
             try {
                 if (reportedSize > DownloadedFileScanner.MAX_SCAN_BYTES) {
                     throw new IOException("File exceeds the 100 MiB local-check limit; no clean verdict is available.");
@@ -245,7 +247,8 @@ public final class AntivirusActivity extends ComponentActivity {
                 // lookup. The reputation request sends only the stable hash.
                 if (!privateModeLaunch && scan != null && !scan.sha256.isEmpty()) {
                     String apiKey = secureStore.get(KEY_REPUTATION_PREF, "");
-                    if (!apiKey.isEmpty()) {
+                    reputationKeyConfigured = !apiKey.isEmpty();
+                    if (reputationKeyConfigured) {
                         reputation = MalwareBazaarReputation.lookup(scan.sha256, apiKey);
                     }
                 }
@@ -259,6 +262,7 @@ public final class AntivirusActivity extends ComponentActivity {
             String completedFailure = failure;
             String completedName = fileName;
             String completedMime = mime;
+            final boolean completedKeyConfigured = reputationKeyConfigured;
             runOnUiThread(() -> {
                 scanButton.setEnabled(true);
                 progress.setVisibility(View.GONE);
@@ -280,7 +284,7 @@ public final class AntivirusActivity extends ComponentActivity {
                 report.append(completedScan.details);
                 if (!completedApkReport.isEmpty()) report.append("\n\nAPK PACKAGE REVIEW\n").append(completedApkReport);
                 if (completedReputation != null) report.append("\n\nONLINE HASH REPUTATION\n").append(completedReputation.details);
-                else if (!privateModeLaunch && secureStore.get(KEY_REPUTATION_PREF, "").isEmpty()) {
+                else if (!privateModeLaunch && !completedKeyConfigured) {
                     report.append("\n\nONLINE HASH REPUTATION\nNot configured. Local checks remain available; no file data was sent.");
                 } else if (privateModeLaunch) {
                     report.append("\n\nONLINE HASH REPUTATION\nDisabled for this private browsing session.");
@@ -590,28 +594,39 @@ public final class AntivirusActivity extends ComponentActivity {
                 .show();
     }
 
+    /**
+     * Refresh the reputation summary without touching the encrypted store on the UI
+     * thread. The key read is dispatched to the serialized storage queue and the
+     * labels are applied only if this activity is still alive.
+     */
     private void refreshReputationStatus() {
         if (reputationStatus == null) return;
-        boolean configured = !privateModeLaunch && !secureStore.get(KEY_REPUTATION_PREF, "").isEmpty();
         if (privateModeLaunch) {
             reputationStatus.setText("Online hash reputation: disabled in private browsing.");
             reputationButton.setVisibility(View.GONE);
             if (urlCheckButton != null) urlCheckButton.setVisibility(View.GONE);
             if (urlAutoCheckButton != null) urlAutoCheckButton.setVisibility(View.GONE);
-        } else {
-            if (urlCheckButton != null) urlCheckButton.setVisibility(View.VISIBLE);
-            boolean autoEnabled = getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
-                    .getBoolean("auto_urlhaus_enabled", false);
-            if (urlAutoCheckButton != null) {
-                urlAutoCheckButton.setVisibility(View.VISIBLE);
-                urlAutoCheckButton.setText("Automatic URL reputation: " + (autoEnabled ? "ON" : "OFF"));
-                urlAutoCheckButton.setEnabled(true);
-            }
-            reputationStatus.setText((configured
-                    ? "Hash reputation: configured (SHA-256 only). "
-                    : "Hash reputation: not configured. ") +
-                    "Automatic URLhaus sharing: " + (autoEnabled ? "ON for normal browsing only." : "OFF."));
+            return;
         }
+        secureStore.getAsync(KEY_REPUTATION_PREF, "", getMainExecutor(), key -> {
+            if (isFinishing() || isDestroyed() || reputationStatus == null) return;
+            applyReputationStatus(key != null && !key.isEmpty());
+        });
+    }
+
+    private void applyReputationStatus(boolean configured) {
+        if (urlCheckButton != null) urlCheckButton.setVisibility(View.VISIBLE);
+        boolean autoEnabled = getSharedPreferences("hari_urlhaus_settings", MODE_PRIVATE)
+                .getBoolean("auto_urlhaus_enabled", false);
+        if (urlAutoCheckButton != null) {
+            urlAutoCheckButton.setVisibility(View.VISIBLE);
+            urlAutoCheckButton.setText("Automatic URL reputation: " + (autoEnabled ? "ON" : "OFF"));
+            urlAutoCheckButton.setEnabled(true);
+        }
+        reputationStatus.setText((configured
+                ? "Hash reputation: configured (SHA-256 only). "
+                : "Hash reputation: not configured. ") +
+                "Automatic URLhaus sharing: " + (autoEnabled ? "ON for normal browsing only." : "OFF."));
     }
 
     private String queryDisplayName(Uri uri) {
