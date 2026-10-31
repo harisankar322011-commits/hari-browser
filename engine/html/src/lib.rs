@@ -984,6 +984,34 @@ mod tests {
     }
 
     #[test]
+    fn starting_a_block_element_closes_an_open_paragraph() {
+        let document = parse_document(
+            b"<p>intro<div>block</div>tail",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert_eq!(document.children.len(), 3);
+        assert_eq!(element(&document.children[0], "p").text_content(), "intro");
+        assert_eq!(element(&document.children[1], "div").text_content(), "block");
+        assert_eq!(text(&document.children[2]), "tail");
+    }
+
+    #[test]
+    fn inline_elements_remain_inside_an_open_paragraph() {
+        let document = parse_document(
+            b"<p>one<span>two</span></p>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        assert_eq!(document.children.len(), 1);
+        let paragraph = element(&document.children[0], "p");
+        assert_eq!(paragraph.text_content(), "onetwo");
+        assert_eq!(paragraph.children.len(), 2);
+    }
+
+    #[test]
     fn raw_text_elements_keep_less_than_signs_as_text() {
         let document = parse_document(
             b"<script>if (a < b) { c(); }</script><p>done</p>",
