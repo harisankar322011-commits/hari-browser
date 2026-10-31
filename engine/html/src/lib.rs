@@ -435,6 +435,48 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Closes an open definition-list item when another `dt` or `dd` starts.
+    ///
+    /// General-scope boundaries prevent markup inside a table, button, or other
+    /// boundary from closing a definition item outside that scope.
+    fn close_open_definition_item(&mut self) {
+        let item_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "dt" || tag_name == "dd"
+            )
+        });
+        let Some(item_position) = item_position else {
+            return;
+        };
+
+        let scope_boundary_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name }
+                    if matches!(
+                        tag_name.as_str(),
+                        "applet"
+                            | "button"
+                            | "caption"
+                            | "html"
+                            | "marquee"
+                            | "object"
+                            | "table"
+                            | "td"
+                            | "template"
+                            | "th"
+                    )
+            )
+        });
+
+        if scope_boundary_position.is_some_and(|boundary| item_position < boundary) {
+            return;
+        }
+
+        self.open_elements.truncate(item_position);
+    }
+
     fn parse_start_tag(&mut self) -> Result<(), ParseError> {
         self.position += 1; // <
         let name_start = self.position;
@@ -547,6 +589,10 @@ impl<'a> Parser<'a> {
 
         if tag_name == "li" {
             self.close_open_list_item();
+        }
+
+        if matches!(tag_name.as_str(), "dt" | "dd") {
+            self.close_open_definition_item();
         }
 
         let is_void = is_void_element(&tag_name);
@@ -1069,6 +1115,43 @@ mod tests {
         assert_eq!(nested_list.children[0].text_content(), "inner");
         assert_eq!(nested_list.children[1].text_content(), "inner2");
         assert_eq!(outer_list.children[1].text_content(), "outer2");
+    }
+
+    #[test]
+    fn starting_a_definition_item_closes_the_previous_definition_item() {
+        let document = parse_document(
+            b"<dl><dt>term<dd>description<dt>next</dl>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let list = element(&document.children[0], "dl");
+        assert_eq!(list.children.len(), 3);
+        assert_eq!(element(&list.children[0], "dt").text_content(), "term");
+        assert_eq!(
+            element(&list.children[1], "dd").text_content(),
+            "description"
+        );
+        assert_eq!(element(&list.children[2], "dt").text_content(), "next");
+    }
+
+    #[test]
+    fn definition_item_closure_respects_general_scope_boundaries() {
+        let document = parse_document(
+            b"<dl><dt>outer<table><tr><td><dd>inner</dd></td></tr></table><dd>outer</dl>",
+            &HtmlLimits::default(),
+        )
+        .unwrap();
+
+        let list = element(&document.children[0], "dl");
+        assert_eq!(list.children.len(), 2);
+
+        let term = element(&list.children[0], "dt");
+        let table = element(&term.children[1], "table");
+        let row = element(&table.children[0], "tr");
+        let cell = element(&row.children[0], "td");
+        assert_eq!(element(&cell.children[0], "dd").text_content(), "inner");
+        assert_eq!(element(&list.children[1], "dd").text_content(), "outer");
     }
 
     #[test]
