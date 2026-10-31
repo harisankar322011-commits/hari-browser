@@ -321,6 +321,90 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Returns true for start tags that implicitly end a paragraph in this bounded parser.
+    fn start_tag_closes_paragraph(tag_name: &str) -> bool {
+        matches!(
+            tag_name,
+            "address"
+                | "article"
+                | "aside"
+                | "blockquote"
+                | "dd"
+                | "details"
+                | "dialog"
+                | "dir"
+                | "div"
+                | "dl"
+                | "fieldset"
+                | "figcaption"
+                | "figure"
+                | "footer"
+                | "form"
+                | "h1"
+                | "h2"
+                | "h3"
+                | "h4"
+                | "h5"
+                | "h6"
+                | "header"
+                | "hgroup"
+                | "hr"
+                | "li"
+                | "main"
+                | "menu"
+                | "nav"
+                | "ol"
+                | "p"
+                | "pre"
+                | "search"
+                | "section"
+                | "table"
+                | "ul"
+        )
+    }
+
+    /// Closes an open paragraph before a tag that cannot be its child.
+    ///
+    /// The search respects the nearest button-scope boundary. It is deliberately
+    /// a small recovery rule rather than a complete HTML insertion-mode model.
+    fn close_open_paragraph(&mut self) {
+        let paragraph_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "p"
+            )
+        });
+        let Some(paragraph_position) = paragraph_position else {
+            return;
+        };
+
+        let scope_boundary_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name }
+                    if matches!(
+                        tag_name.as_str(),
+                        "applet"
+                            | "button"
+                            | "caption"
+                            | "html"
+                            | "marquee"
+                            | "object"
+                            | "table"
+                            | "td"
+                            | "template"
+                            | "th"
+                    )
+            )
+        });
+
+        if scope_boundary_position.is_some_and(|boundary| paragraph_position < boundary) {
+            return;
+        }
+
+        self.open_elements.truncate(paragraph_position);
+    }
+
     /// Closes the current list item when another item starts in the same list.
     ///
     /// The nearest open list container bounds the search so a nested list item
@@ -455,6 +539,10 @@ impl<'a> Parser<'a> {
             {
                 attributes.push(Attribute { name, value });
             }
+        }
+
+        if Self::start_tag_closes_paragraph(&tag_name) {
+            self.close_open_paragraph();
         }
 
         if tag_name == "li" {
