@@ -435,6 +435,48 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Closes an open definition-list item when another `dt` or `dd` starts.
+    ///
+    /// General-scope boundaries prevent markup inside a table, button, or other
+    /// boundary from closing a definition item outside that scope.
+    fn close_open_definition_item(&mut self) {
+        let item_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "dt" || tag_name == "dd"
+            )
+        });
+        let Some(item_position) = item_position else {
+            return;
+        };
+
+        let scope_boundary_position = self.open_elements.iter().rposition(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name }
+                    if matches!(
+                        tag_name.as_str(),
+                        "applet"
+                            | "button"
+                            | "caption"
+                            | "html"
+                            | "marquee"
+                            | "object"
+                            | "table"
+                            | "td"
+                            | "template"
+                            | "th"
+                    )
+            )
+        });
+
+        if scope_boundary_position.is_some_and(|boundary| item_position < boundary) {
+            return;
+        }
+
+        self.open_elements.truncate(item_position);
+    }
+
     fn parse_start_tag(&mut self) -> Result<(), ParseError> {
         self.position += 1; // <
         let name_start = self.position;
@@ -547,6 +589,10 @@ impl<'a> Parser<'a> {
 
         if tag_name == "li" {
             self.close_open_list_item();
+        }
+
+        if matches!(tag_name.as_str(), "dt" | "dd") {
+            self.close_open_definition_item();
         }
 
         let is_void = is_void_element(&tag_name);
