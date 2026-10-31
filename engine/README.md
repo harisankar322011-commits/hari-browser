@@ -8,7 +8,7 @@ HARI Engine is a new, experimental browser-engine project being developed alongs
 A dependency-free Rust library that checks source byte length, UTF-8 validity, and forbidden control characters.
 
 ### HTML tokenizer/tree parser (`engine/html/`)
-Supports nested elements, basic end-tag unwinding, comments, doctypes, common void elements, quoted/unquoted/boolean attributes, script/style raw text, and title/textarea RCDATA. It decodes numeric references and the complete bundled 2,231-spelling HTML5 named-reference table in text, attributes, and RCDATA, including legacy semicolonless names and multi-codepoint replacements. It bounds document bytes, node count, nesting depth, and attributes per element.
+Supports nested elements, basic end-tag unwinding, bounded implicit end-tag recovery for repeated list items and paragraph/block boundaries, comments, doctypes, common void elements, quoted/unquoted/boolean attributes, script/style raw text, and title/textarea RCDATA. It decodes numeric references and the complete bundled 2,231-spelling HTML5 named-reference table in text, attributes, and RCDATA, including legacy semicolonless names and multi-codepoint replacements. It bounds document bytes, node count, nesting depth, and attributes per element.
 
 ### HARI DOM model (`engine/dom/`)
 An arena-backed tree with stable node IDs, controlled append/reparent/remove operations, parent/child consistency checks, cycle prevention, a small document lifecycle (`Building`, `Ready`, `Closed`), and resource limits. Node relationships are private; mutations go through `DomDocument`.
@@ -21,7 +21,7 @@ A CPU-based painter consumes HARI layout boxes and fills a bounded RGBA8888 off-
 
 ## Current limitations
 
-This is an early prototype, not an HTML Living Standard implementation or production browser DOM. The parser's malformed-markup recovery remains limited; the named-reference matching algorithm is HARI-owned and uses bundled HTML5 reference data. It does not execute JavaScript or fetch website resources. CSS support is a deliberately bounded subset rather than the complete CSS cascade or selector model; text uses fixed-width metrics with simplified whitespace and line-breaking behavior, and inline layout is not standards-complete. The painter does not decode images, shape real fonts, anti-alias text, composite alpha, apply transforms, or account for device scale. The tiny bitmap font is only a test renderer.
+This is an early prototype, not an HTML Living Standard implementation or production browser DOM. The parser's malformed-markup recovery remains limited: current implicit end-tag handling covers repeated list items and common paragraph/block boundaries, not the full HTML insertion-mode or scope algorithms. The named-reference matching algorithm is HARI-owned and uses bundled HTML5 reference data. It does not execute JavaScript or fetch website resources. CSS support is a deliberately bounded subset rather than the complete CSS cascade or selector model; text uses fixed-width metrics with simplified whitespace and line-breaking behavior, and inline layout is not standards-complete. The painter does not decode images, shape real fonts, anti-alias text, composite alpha, apply transforms, or account for device scale. The tiny bitmap font is only a test renderer.
 
 Successful parsing or layout is not a content-safety or malware verdict. Never render untrusted documents in a privileged context based on these components alone.
 
