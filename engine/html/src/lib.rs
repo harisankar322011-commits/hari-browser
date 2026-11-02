@@ -161,10 +161,17 @@ struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn new(source: &'a str, limits: &'a HtmlLimits) -> Self {
+        // HTML input-stream preprocessing discards exactly one leading BOM.
+        let position = if source.starts_with('\u{FEFF}') {
+            '\u{FEFF}'.len_utf8()
+        } else {
+            0
+        };
+
         Self {
             source,
             bytes: source.as_bytes(),
-            position: 0,
+            position,
             limits,
             nodes: vec![TempNode::new(NodeKind::Document, Vec::new())],
             open_elements: vec![0],
