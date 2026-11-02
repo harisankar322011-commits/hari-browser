@@ -8,7 +8,7 @@ HARI Engine is a new, experimental browser-engine project being developed alongs
 A dependency-free Rust library that checks source byte length, UTF-8 validity, and forbidden control characters.
 
 ### HTML tokenizer/tree parser (`engine/html/`)
-Supports nested elements, basic end-tag unwinding, bounded implicit end-tag recovery for repeated list items, definition-list items, and paragraph/block boundaries, comments, doctypes, common void elements, quoted/unquoted/boolean attributes, script/style raw text, and title/textarea RCDATA. It decodes numeric references and the complete bundled 2,231-spelling HTML5 named-reference table in text, attributes, and RCDATA, including legacy semicolonless names and multi-codepoint replacements. It bounds document bytes, node count, nesting depth, and attributes per element.
+Ignores a leading UTF-8 BOM, supports nested elements, basic end-tag unwinding, bounded implicit end-tag recovery for repeated list items, definition-list items, and paragraph/block boundaries, comments, doctypes, common void elements, quoted/unquoted/boolean attributes, script/style raw text, and title/textarea RCDATA. It decodes numeric references and the complete bundled 2,231-spelling HTML5 named-reference table in text, attributes, and RCDATA, including legacy semicolonless names and multi-codepoint replacements. It bounds document bytes, node count, nesting depth, and attributes per element.
 
 ### HARI DOM model (`engine/dom/`)
 An arena-backed tree with stable node IDs, controlled append/reparent/remove operations, parent/child consistency checks, cycle prevention, a small document lifecycle (`Building`, `Ready`, `Closed`), and resource limits. Node relationships are private; mutations go through `DomDocument`.
