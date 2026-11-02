@@ -417,6 +417,37 @@ impl<'a> Parser<'a> {
         self.open_elements.truncate(paragraph_position);
     }
 
+    /// Inserts a synthetic `tbody` when a row starts directly inside a table.
+    ///
+    /// This deliberately handles only the direct-table case; it is not a full
+    /// implementation of the HTML "in table" insertion mode.
+    fn insert_implied_tbody_for_direct_row(&mut self) -> Result<(), ParseError> {
+        let current_is_table = self.open_elements.last().is_some_and(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "table"
+            )
+        });
+        if !current_is_table {
+            return Ok(());
+        }
+
+        // The synthetic tbody and requested tr both consume one element level.
+        let current_depth = self.open_elements.len().saturating_sub(1);
+        if current_depth + 2 > self.limits.max_depth {
+            return Err(ParseError::DepthLimitExceeded);
+        }
+
+        let tbody_index = self.add_node(
+            NodeKind::Element {
+                tag_name: "tbody".to_owned(),
+            },
+            Vec::new(),
+        )?;
+        self.open_elements.push(tbody_index);
+        Ok(())
+    }
+
     /// Closes only a current option before a new option or optgroup starts.
     ///
     /// This bounded rule intentionally does not search past intervening elements.
@@ -627,6 +658,10 @@ impl<'a> Parser<'a> {
 
         if matches!(tag_name.as_str(), "option" | "optgroup") {
             self.close_current_option();
+        }
+
+        if tag_name == "tr" {
+            self.insert_implied_tbody_for_direct_row()?;
         }
 
         if tag_name == "li" {
@@ -1190,7 +1225,8 @@ mod tests {
 
         let term = element(&list.children[0], "dt");
         let table = element(&term.children[1], "table");
-        let row = element(&table.children[0], "tr");
+        let body = element(&table.children[0], "tbody");
+        let row = element(&body.children[0], "tr");
         let cell = element(&row.children[0], "td");
         assert_eq!(element(&cell.children[0], "dd").text_content(), "inner");
         assert_eq!(element(&list.children[1], "dd").text_content(), "outer");
