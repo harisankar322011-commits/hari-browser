@@ -11,11 +11,7 @@ fn element<'a>(node: &'a Node, name: &str) -> &'a Node {
 
 #[test]
 fn starting_a_heading_when_another_heading_is_current_closes_the_previous_heading() {
-    let document = parse_document(
-        b"<h1>one<h2>two<h3>three</h3>",
-        &HtmlLimits::default(),
-    )
-    .unwrap();
+    let document = parse_document(b"<h1>one<h2>two<h3>three</h3>", &HtmlLimits::default()).unwrap();
 
     assert_eq!(document.children.len(), 3);
     assert_eq!(element(&document, "h1").text_content(), "one");
