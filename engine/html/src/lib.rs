@@ -448,19 +448,29 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Returns the tag name at a position in the open-element stack.
+    fn open_element_tag(&self, stack_position: usize) -> Option<&str> {
+        let index = *self.open_elements.get(stack_position)?;
+        match &self.nodes[index].kind {
+            NodeKind::Element { tag_name } => Some(tag_name.as_str()),
+            _ => None,
+        }
+    }
+
     /// Inserts a synthetic `tr` when a cell starts directly in a table section.
     ///
-    /// This handles only a current `tbody`, `thead`, or `tfoot`; it does not
-    /// search through descendants or implement the full table insertion modes.
+    /// The section must be a direct child of a `table`; this does not implement
+    /// the full table insertion modes or search through intervening descendants.
     fn insert_implied_tr_for_direct_cell(&mut self) -> Result<(), ParseError> {
-        let current_is_table_section = self.open_elements.last().is_some_and(|&index| {
-            matches!(
-                &self.nodes[index].kind,
-                NodeKind::Element { tag_name }
-                    if matches!(tag_name.as_str(), "tbody" | "thead" | "tfoot")
-            )
-        });
-        if !current_is_table_section {
+        let Some(section_position) = self.open_elements.len().checked_sub(1) else {
+            return Ok(());
+        };
+        let current_is_direct_table_section = section_position >= 2
+            && self
+                .open_element_tag(section_position)
+                .is_some_and(|tag| matches!(tag, "tbody" | "thead" | "tfoot"))
+            && self.open_element_tag(section_position - 1) == Some("table");
+        if !current_is_direct_table_section {
             return Ok(());
         }
 
@@ -479,28 +489,47 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// Closes a cell only when it is the current open element.
+    /// Closes a current cell only inside a direct table-section row hierarchy.
     ///
     /// This conservative rule never searches through intervening descendants.
     fn close_current_table_cell(&mut self) {
-        if self.open_elements.last().is_some_and(|&index| {
-            matches!(
-                &self.nodes[index].kind,
-                NodeKind::Element { tag_name } if matches!(tag_name.as_str(), "td" | "th")
-            )
-        }) {
+        let Some(cell_position) = self.open_elements.len().checked_sub(1) else {
+            return;
+        };
+        if cell_position < 3 {
+            return;
+        }
+
+        let current_is_cell = self
+            .open_element_tag(cell_position)
+            .is_some_and(|tag| matches!(tag, "td" | "th"));
+        let parent_is_row = self.open_element_tag(cell_position - 1) == Some("tr");
+        let section_is_table_section = self
+            .open_element_tag(cell_position - 2)
+            .is_some_and(|tag| matches!(tag, "tbody" | "thead" | "tfoot"));
+        let table_is_parent = self.open_element_tag(cell_position - 3) == Some("table");
+
+        if current_is_cell && parent_is_row && section_is_table_section && table_is_parent {
             self.open_elements.pop();
         }
     }
 
-    /// Closes a row only when it is the current open element.
+    /// Closes a current row only when it belongs directly to a table section.
     fn close_current_table_row(&mut self) {
-        if self.open_elements.last().is_some_and(|&index| {
-            matches!(
-                &self.nodes[index].kind,
-                NodeKind::Element { tag_name } if tag_name == "tr"
-            )
-        }) {
+        let Some(row_position) = self.open_elements.len().checked_sub(1) else {
+            return;
+        };
+        if row_position < 3 {
+            return;
+        }
+
+        let current_is_row = self.open_element_tag(row_position) == Some("tr");
+        let parent_is_table_section = self
+            .open_element_tag(row_position - 1)
+            .is_some_and(|tag| matches!(tag, "tbody" | "thead" | "tfoot"));
+        let table_is_parent = self.open_element_tag(row_position - 2) == Some("table");
+
+        if current_is_row && parent_is_table_section && table_is_parent {
             self.open_elements.pop();
         }
     }
