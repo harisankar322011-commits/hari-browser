@@ -417,6 +417,20 @@ impl<'a> Parser<'a> {
         self.open_elements.truncate(paragraph_position);
     }
 
+    /// Closes only a current option before a new option or optgroup starts.
+    ///
+    /// This bounded rule intentionally does not search past intervening elements.
+    fn close_current_option(&mut self) {
+        if self.open_elements.last().is_some_and(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "option"
+            )
+        }) {
+            self.open_elements.pop();
+        }
+    }
+
     /// Closes the current list item when another item starts in the same list.
     ///
     /// The nearest open list container bounds the search so a nested list item
@@ -609,6 +623,10 @@ impl<'a> Parser<'a> {
             })
         {
             self.open_elements.pop();
+        }
+
+        if matches!(tag_name.as_str(), "option" | "optgroup") {
+            self.close_current_option();
         }
 
         if tag_name == "li" {
