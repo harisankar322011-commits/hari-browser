@@ -11,9 +11,11 @@ fn element<'a>(node: &'a Node, name: &str) -> &'a Node {
 
 #[test]
 fn starting_an_option_closes_the_current_option() {
-    let document =
-        parse_document(b"<select><option>one<option>two</select>", &HtmlLimits::default())
-            .unwrap();
+    let document = parse_document(
+        b"<select><option>one<option>two</select>",
+        &HtmlLimits::default(),
+    )
+    .unwrap();
 
     let select = element(&document, "select");
     assert_eq!(select.children.len(), 2);
