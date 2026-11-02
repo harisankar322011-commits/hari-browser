@@ -115,3 +115,55 @@ fn cells_outside_table_sections_do_not_gain_an_implied_row() {
     assert_eq!(container.children[0].tag_name(), Some("td"));
     assert_eq!(container.children[0].text_content(), "outside");
 }
+
+
+#[test]
+fn table_section_names_outside_a_table_do_not_create_implied_rows() {
+    let document = parse_document(
+        b"<div><tbody><td>outside</td></tbody></div>",
+        &HtmlLimits::default(),
+    )
+    .unwrap();
+
+    let container = element(&document, "div");
+    let section = element(container, "tbody");
+    assert_eq!(section.children.len(), 1);
+    assert_eq!(section.children[0].tag_name(), Some("td"));
+    assert_eq!(section.children[0].text_content(), "outside");
+}
+
+#[test]
+fn cell_closure_does_not_run_outside_a_table_section() {
+    let document = parse_document(
+        b"<div><tr><td>first<th>second</th></tr></div>",
+        &HtmlLimits::default(),
+    )
+    .unwrap();
+
+    let container = element(&document, "div");
+    let row = element(container, "tr");
+    assert_eq!(row.children.len(), 1);
+
+    let cell = element(row, "td");
+    assert_eq!(cell.children.len(), 2);
+    assert_eq!(cell.children[1].tag_name(), Some("th"));
+    assert_eq!(cell.children[1].text_content(), "second");
+}
+
+#[test]
+fn row_closure_does_not_run_outside_a_table_section() {
+    let document = parse_document(
+        b"<div><tr><td>first<tr><td>second</td></tr></div>",
+        &HtmlLimits::default(),
+    )
+    .unwrap();
+
+    let container = element(&document, "div");
+    let row = element(container, "tr");
+    assert_eq!(row.children.len(), 1);
+
+    let cell = element(row, "td");
+    assert_eq!(cell.children.len(), 2);
+    assert_eq!(cell.children[1].tag_name(), Some("tr"));
+    assert_eq!(element(cell, "tr").text_content(), "second");
+}
