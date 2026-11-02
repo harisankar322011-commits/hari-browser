@@ -448,6 +448,63 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Inserts a synthetic `tr` when a cell starts directly in a table section.
+    ///
+    /// This handles only a current `tbody`, `thead`, or `tfoot`; it does not
+    /// search through descendants or implement the full table insertion modes.
+    fn insert_implied_tr_for_direct_cell(&mut self) -> Result<(), ParseError> {
+        let current_is_table_section = self.open_elements.last().is_some_and(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name }
+                    if matches!(tag_name.as_str(), "tbody" | "thead" | "tfoot")
+            )
+        });
+        if !current_is_table_section {
+            return Ok(());
+        }
+
+        let current_depth = self.open_elements.len().saturating_sub(1);
+        if current_depth.saturating_add(1) > self.limits.max_depth {
+            return Err(ParseError::DepthLimitExceeded);
+        }
+
+        let row_index = self.add_node(
+            NodeKind::Element {
+                tag_name: "tr".to_owned(),
+            },
+            Vec::new(),
+        )?;
+        self.open_elements.push(row_index);
+        Ok(())
+    }
+
+    /// Closes a cell only when it is the current open element.
+    ///
+    /// This conservative rule never searches through intervening descendants.
+    fn close_current_table_cell(&mut self) {
+        if self.open_elements.last().is_some_and(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if matches!(tag_name.as_str(), "td" | "th")
+            )
+        }) {
+            self.open_elements.pop();
+        }
+    }
+
+    /// Closes a row only when it is the current open element.
+    fn close_current_table_row(&mut self) {
+        if self.open_elements.last().is_some_and(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "tr"
+            )
+        }) {
+            self.open_elements.pop();
+        }
+    }
+
     /// Closes only a current option before a new option or optgroup starts.
     ///
     /// This bounded rule intentionally does not search past intervening elements.
@@ -661,7 +718,14 @@ impl<'a> Parser<'a> {
         }
 
         if tag_name == "tr" {
+            self.close_current_table_cell();
+            self.close_current_table_row();
             self.insert_implied_tbody_for_direct_row()?;
+        }
+
+        if matches!(tag_name.as_str(), "td" | "th") {
+            self.close_current_table_cell();
+            self.insert_implied_tr_for_direct_cell()?;
         }
 
         if tag_name == "li" {
