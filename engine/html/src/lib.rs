@@ -328,6 +328,11 @@ impl<'a> Parser<'a> {
         }
     }
 
+    /// Returns true when a tag name is one of the six HTML heading elements.
+    fn is_heading_tag(tag_name: &str) -> bool {
+        matches!(tag_name, "h1" | "h2" | "h3" | "h4" | "h5" | "h6")
+    }
+
     /// Returns true for start tags that implicitly end a paragraph in this bounded parser.
     fn start_tag_closes_paragraph(tag_name: &str) -> bool {
         matches!(
@@ -592,6 +597,18 @@ impl<'a> Parser<'a> {
 
         if Self::start_tag_closes_paragraph(&tag_name) {
             self.close_open_paragraph();
+        }
+
+        // The HTML tree builder closes a heading only when it is the current node.
+        if Self::is_heading_tag(&tag_name)
+            && self.open_elements.last().is_some_and(|&index| {
+                matches!(
+                    &self.nodes[index].kind,
+                    NodeKind::Element { tag_name } if Self::is_heading_tag(tag_name)
+                )
+            })
+        {
+            self.open_elements.pop();
         }
 
         if tag_name == "li" {
