@@ -116,7 +116,6 @@ fn cells_outside_table_sections_do_not_gain_an_implied_row() {
     assert_eq!(container.children[0].text_content(), "outside");
 }
 
-
 #[test]
 fn table_section_names_outside_a_table_do_not_create_implied_rows() {
     let document = parse_document(
