@@ -1225,7 +1225,8 @@ mod tests {
 
         let term = element(&list.children[0], "dt");
         let table = element(&term.children[1], "table");
-        let row = element(&table.children[0], "tr");
+        let body = element(&table.children[0], "tbody");
+        let row = element(&body.children[0], "tr");
         let cell = element(&row.children[0], "td");
         assert_eq!(element(&cell.children[0], "dd").text_content(), "inner");
         assert_eq!(element(&list.children[1], "dd").text_content(), "outer");
