@@ -21,8 +21,10 @@ fn direct_table_rows_are_inserted_under_one_implied_tbody() {
     assert_eq!(table.children.len(), 1);
     let body = element(table, "tbody");
     assert_eq!(body.children.len(), 2);
-    assert_eq!(element(&body.children[0], "tr").text_content(), "one");
-    assert_eq!(element(&body.children[1], "tr").text_content(), "two");
+    assert_eq!(body.children[0].tag_name(), Some("tr"));
+    assert_eq!(body.children[0].text_content(), "one");
+    assert_eq!(body.children[1].tag_name(), Some("tr"));
+    assert_eq!(body.children[1].text_content(), "two");
 }
 
 #[test]
@@ -37,7 +39,8 @@ fn explicit_tbody_is_not_duplicated() {
     assert_eq!(table.children.len(), 1);
     let body = element(table, "tbody");
     assert_eq!(body.children.len(), 1);
-    assert_eq!(element(&body.children[0], "tr").text_content(), "explicit");
+    assert_eq!(body.children[0].tag_name(), Some("tr"));
+    assert_eq!(body.children[0].text_content(), "explicit");
 }
 
 #[test]
