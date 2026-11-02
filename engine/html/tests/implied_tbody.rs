@@ -42,8 +42,11 @@ fn explicit_tbody_is_not_duplicated() {
 
 #[test]
 fn a_row_outside_a_direct_table_context_does_not_gain_an_implied_tbody() {
-    let document =
-        parse_document(b"<div><tr><td>outside</td></tr></div>", &HtmlLimits::default()).unwrap();
+    let document = parse_document(
+        b"<div><tr><td>outside</td></tr></div>",
+        &HtmlLimits::default(),
+    )
+    .unwrap();
 
     let container = element(&document, "div");
     assert_eq!(container.children[0].tag_name(), Some("tr"));
