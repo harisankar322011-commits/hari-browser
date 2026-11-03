@@ -742,5 +742,4 @@ mod tests {
         assert_eq!(63, index.document_count());
         assert_eq!(63, index.search("z", 100).len());
     }
-
 }
