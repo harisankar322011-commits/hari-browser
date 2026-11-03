@@ -1366,10 +1366,8 @@ mod tests {
             &DomLimits::default(),
         )
         .unwrap();
-        let stylesheet = StyleSheet::parse(
-            "#box { padding: 4px; background-color: red; }",
-        )
-        .unwrap();
+        let stylesheet =
+            StyleSheet::parse("#box { padding: 4px; background-color: red; }").unwrap();
         let layout = compute_layout(
             &document,
             &stylesheet,
@@ -1385,10 +1383,12 @@ mod tests {
         let next = layout
             .children
             .iter()
-            .find_map(|child| child.children.iter().find(|node| {
-                matches!(&node.kind, BoxKind::Element { tag_name } if tag_name == "p")
-                    && node.rect.y > box_node.rect.y
-            }))
+            .find_map(|child| {
+                child.children.iter().find(|node| {
+                    matches!(&node.kind, BoxKind::Element { tag_name } if tag_name == "p")
+                        && node.rect.y > box_node.rect.y
+                })
+            })
             .unwrap();
 
         assert_eq!(box_node.rect.width, 100);
@@ -1400,11 +1400,8 @@ mod tests {
 
     #[test]
     fn padding_is_part_of_the_background_box_for_fixed_dimensions() {
-        let document = DomDocument::from_html(
-            b"<div id=box>content</div>",
-            &DomLimits::default(),
-        )
-        .unwrap();
+        let document =
+            DomDocument::from_html(b"<div id=box>content</div>", &DomLimits::default()).unwrap();
         let stylesheet = StyleSheet::parse(
             "#box { width: 20px; height: 10px; padding: 3px; background-color: blue; }",
         )
@@ -1423,5 +1420,4 @@ mod tests {
         assert_eq!(box_node.rect.width, 26);
         assert_eq!(box_node.rect.height, 16);
     }
-
 }
