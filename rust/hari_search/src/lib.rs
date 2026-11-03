@@ -1,11 +1,11 @@
-mod snapshot;
-
-pub use snapshot::SnapshotError;
-
 //! HARI-owned local search indexing and retrieval core.
 //!
 //! This crate deliberately performs no network access. A separately reviewed
 //! crawler/service will be responsible for discovering and supplying pages.
+
+mod snapshot;
+
+pub use snapshot::SnapshotError;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
