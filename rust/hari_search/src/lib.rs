@@ -715,5 +715,4 @@ mod tests {
 
         assert_eq!(100, index.search("common", usize::MAX).len());
     }
-
 }
