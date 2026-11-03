@@ -317,6 +317,10 @@ impl<'a> Parser<'a> {
         if tag_name.is_empty() {
             return;
         }
+        if self.close_scoped_list_end_tag(&tag_name) {
+            return;
+        }
+
         let matching_index = self.open_elements.iter().rposition(|&index| {
             matches!(
                 &self.nodes[index].kind,
@@ -326,6 +330,65 @@ impl<'a> Parser<'a> {
         if let Some(index) = matching_index {
             self.open_elements.truncate(index);
         }
+    }
+
+    /// Closes list-item end tags only when their target is in the relevant scope.
+    ///
+    /// A nested list or scope boundary prevents a stray end tag from unwinding an
+    /// outer list item. Other end tags retain the parser's existing bounded unwind.
+    fn close_scoped_list_end_tag(&mut self, tag_name: &str) -> bool {
+        match tag_name {
+            "li" => {
+                for position in (0..self.open_elements.len()).rev() {
+                    let Some(open_tag) = self.open_element_tag(position) else {
+                        continue;
+                    };
+                    if open_tag == "li" {
+                        self.open_elements.truncate(position);
+                        return true;
+                    }
+                    if matches!(open_tag, "ol" | "ul")
+                        || Self::is_implicit_closure_scope_boundary(open_tag)
+                    {
+                        return true;
+                    }
+                }
+                true
+            }
+            "dt" | "dd" => {
+                for position in (0..self.open_elements.len()).rev() {
+                    let Some(open_tag) = self.open_element_tag(position) else {
+                        continue;
+                    };
+                    if open_tag == tag_name {
+                        self.open_elements.truncate(position);
+                        return true;
+                    }
+                    if Self::is_implicit_closure_scope_boundary(open_tag) {
+                        return true;
+                    }
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+
+    /// Returns true for a boundary used by this parser's bounded implicit closures.
+    fn is_implicit_closure_scope_boundary(tag_name: &str) -> bool {
+        matches!(
+            tag_name,
+            "applet"
+                | "button"
+                | "caption"
+                | "html"
+                | "marquee"
+                | "object"
+                | "table"
+                | "td"
+                | "template"
+                | "th"
+        )
     }
 
     /// Returns true when a tag name is one of the six HTML heading elements.
@@ -394,19 +457,7 @@ impl<'a> Parser<'a> {
             matches!(
                 &self.nodes[index].kind,
                 NodeKind::Element { tag_name }
-                    if matches!(
-                        tag_name.as_str(),
-                        "applet"
-                            | "button"
-                            | "caption"
-                            | "html"
-                            | "marquee"
-                            | "object"
-                            | "table"
-                            | "td"
-                            | "template"
-                            | "th"
-                    )
+                    if Self::is_implicit_closure_scope_boundary(tag_name)
             )
         });
 
