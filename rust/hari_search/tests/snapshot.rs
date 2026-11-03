@@ -73,7 +73,12 @@ fn snapshot_bytes_are_deterministic_for_the_same_documents() {
 fn snapshot_checksum_detects_payload_corruption() {
     let mut index = SearchIndex::new();
     index
-        .add_document(document("one", "https://example.org/", "A title", "some text"))
+        .add_document(document(
+            "one",
+            "https://example.org/",
+            "A title",
+            "some text",
+        ))
         .unwrap();
     let mut bytes = Vec::new();
     index.write_snapshot(&mut bytes).unwrap();
