@@ -62,7 +62,9 @@ impl fmt::Display for IndexError {
             }
             Self::DocumentTooLarge => "document exceeds an indexing size or token limit",
             Self::TooManyDocuments => "the configured document-count limit has been reached",
-            Self::IndexCapacityExceeded => "the configured aggregate index capacity has been reached",
+            Self::IndexCapacityExceeded => {
+                "the configured aggregate index capacity has been reached"
+            }
         };
         formatter.write_str(message)
     }
