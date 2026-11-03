@@ -49,7 +49,9 @@ Implement and test bounded indexing, document updates/deletes, multilingual-safe
 
 ### Stage 2 — Ingestion and persistent storage
 
-Design an HARI-owned ingestion pipeline and durable index. Add safe HTML-to-text extraction, canonical URL handling, content hashing, duplicate detection, transactional updates, recovery, index versioning, backups, and measurable storage limits. Evaluate storage/index formats against the current prototype with repeatable relevance and resource benchmarks.
+**Current incremental milestone: versioned local snapshot codec.** The prototype can now write a deterministic snapshot of indexed source documents and rebuild the in-memory inverted index from a validated snapshot. The format has a magic header, explicit version and flags, document count, payload length, and an FNV-1a checksum for accidental-corruption detection. Loading is bounded, rejects malformed/truncated/trailing data, unsupported versions, duplicate IDs, invalid URLs, and documents that exceed the normal indexing budgets. The checksum is not authentication or tamper protection; the caller must keep snapshots in app-private storage and use a safe replacement strategy.
+
+This is not yet a production persistent store: there is no automatic file location, encryption, crash-safe transaction manager, incremental write path, backup/restore UI, or browser integration. Next work is to specify atomic file lifecycle and recovery behavior, add property/fuzz tests for hostile snapshot inputs, measure memory and I/O costs, and only then consider HTML-to-text ingestion, canonical URL handling, content hashing, and duplicate detection.
 
 ### Stage 3 — Controlled web crawler
 
