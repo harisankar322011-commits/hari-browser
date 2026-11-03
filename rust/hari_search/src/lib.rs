@@ -715,4 +715,32 @@ mod tests {
 
         assert_eq!(100, index.search("common", usize::MAX).len());
     }
+    #[test]
+    fn enforces_the_aggregate_source_byte_budget() {
+        let mut index = SearchIndex::new();
+        let large_body = "z".repeat(262_144);
+
+        for number in 0..63 {
+            index
+                .add_document(document(
+                    &format!("large-{number:02}"),
+                    &format!("https://example.com/large/{number}"),
+                    "Large",
+                    &large_body,
+                ))
+                .unwrap();
+        }
+
+        assert_eq!(63, index.document_count());
+        let over_budget = index.add_document(document(
+            "large-63",
+            "https://example.com/large/63",
+            "Large",
+            &large_body,
+        ));
+        assert_eq!(Err(IndexError::IndexCapacityExceeded), over_budget);
+        assert_eq!(63, index.document_count());
+        assert_eq!(63, index.search("z", 100).len());
+    }
+
 }
