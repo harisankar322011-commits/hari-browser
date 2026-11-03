@@ -195,8 +195,7 @@ impl SearchIndex {
         self.total_title_tokens -= stored.title_length;
         self.total_body_tokens -= stored.body_length;
 
-        let mut document_terms: BTreeSet<String> =
-            stored.title_terms.keys().cloned().collect();
+        let mut document_terms: BTreeSet<String> = stored.title_terms.keys().cloned().collect();
         document_terms.extend(stored.body_terms.keys().cloned());
 
         let mut empty_terms = Vec::new();
@@ -268,8 +267,7 @@ impl SearchIndex {
                 let document_length =
                     stored.body_length as f64 + stored.title_length as f64 * TITLE_WEIGHT;
                 let normalization = weighted_frequency
-                    + BM25_K1
-                        * (1.0 - BM25_B + BM25_B * document_length / average_length);
+                    + BM25_K1 * (1.0 - BM25_B + BM25_B * document_length / average_length);
 
                 if normalization <= 0.0 {
                     continue;
