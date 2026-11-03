@@ -101,6 +101,7 @@ struct ElementStyle {
     width: Option<u32>,
     height: Option<u32>,
     margin: Option<u32>,
+    padding: Option<u32>,
     color: Option<[u8; 4]>,
     background_color: Option<[u8; 4]>,
 }
@@ -431,6 +432,7 @@ impl StyleSheet {
                     "width" => style.width = Some(parse_px(&value)?),
                     "height" => style.height = Some(parse_px(&value)?),
                     "margin" => style.margin = Some(parse_px(&value)?),
+                    "padding" => style.padding = Some(parse_px(&value)?),
                     "color" => style.color = Some(parse_css_color(&value)?),
                     "background-color" => style.background_color = Some(parse_css_color(&value)?),
                     _ => return Err(CssError::UnsupportedProperty),
@@ -486,6 +488,7 @@ impl StyleSheet {
             width: None,
             height: None,
             margin: Some(0),
+            padding: Some(0),
             color: None,
             background_color: None,
         };
@@ -518,6 +521,9 @@ impl StyleSheet {
             }
             if let Some(value) = rule.style.margin {
                 computed.margin = Some(value);
+            }
+            if let Some(value) = rule.style.padding {
+                computed.padding = Some(value);
             }
             if let Some(value) = rule.style.color {
                 computed.color = Some(value);
@@ -661,66 +667,74 @@ fn layout_node(
         return Ok(None);
     }
 
-    let (box_kind, display, width, height, margin, text_color, background_color) = match kind {
-        NodeKind::Document => (
-            BoxKind::Document,
-            Display::Block,
-            containing_width,
-            None,
-            0,
-            inherited_text_color,
-            None,
-        ),
-        NodeKind::Element { tag_name } => {
-            let style = stylesheet.style_for(document, node_id, &tag_name);
-            let display = style.display.unwrap_or(Display::Block);
-            if display == Display::None {
-                return Ok(None);
-            }
-            let margin = style.margin.unwrap_or(0);
-            let available_width = containing_width.saturating_sub(margin.saturating_mul(2));
-            let intrinsic_width = if display == Display::Inline {
-                measure_inline_content_width(
-                    document,
-                    stylesheet,
-                    node_id,
-                    options.character_width,
-                )?
-            } else {
-                available_width
-            };
-            let text_color = style.color.or(inherited_text_color);
-            (
-                BoxKind::Element { tag_name },
-                display,
-                style.width.unwrap_or(intrinsic_width).min(available_width),
-                style.height,
-                margin,
-                text_color,
-                style.background_color,
-            )
-        }
-        NodeKind::Text(value) => {
-            let measured_height = measure_text_height(
-                &value,
+    let (box_kind, display, width, height, margin, padding, text_color, background_color) =
+        match kind {
+            NodeKind::Document => (
+                BoxKind::Document,
+                Display::Block,
                 containing_width,
-                options.character_width,
-                options.default_line_height,
-            );
-            let measured_width =
-                measure_text_width(&value, containing_width, options.character_width);
-            (
-                BoxKind::Text(value),
-                Display::Inline,
-                measured_width,
-                Some(measured_height),
+                None,
+                0,
                 0,
                 inherited_text_color,
                 None,
-            )
-        }
-        NodeKind::Comment(_) | NodeKind::Doctype(_) => return Ok(None),
-    };
+            ),
+            NodeKind::Element { tag_name } => {
+                let style = stylesheet.style_for(document, node_id, &tag_name);
+                let display = style.display.unwrap_or(Display::Block);
+                if display == Display::None {
+                    return Ok(None);
+                }
+                let margin = style.margin.unwrap_or(0);
+                let padding = style.padding.unwrap_or(0);
+                let available_width = containing_width.saturating_sub(margin.saturating_mul(2));
+                let available_content_width =
+                    available_width.saturating_sub(padding.saturating_mul(2));
+                let intrinsic_width = if display == Display::Inline {
+                    measure_inline_content_width(
+                        document,
+                        stylesheet,
+                        node_id,
+                        options.character_width,
+                    )?
+                    .saturating_sub(padding.saturating_mul(2))
+                } else {
+                    available_content_width
+                };
+                let text_color = style.color.or(inherited_text_color);
+                (
+                    BoxKind::Element { tag_name },
+                    display,
+                    style.width.unwrap_or(intrinsic_width).min(available_content_width),
+                    style.height,
+                    margin,
+                    padding,
+                    text_color,
+                    style.background_color,
+                )
+            }
+            NodeKind::Text(value) => {
+                let measured_height = measure_text_height(
+                    &value,
+                    containing_width,
+                    options.character_width,
+                    options.default_line_height,
+                );
+                let measured_width =
+                    measure_text_width(&value, containing_width, options.character_width);
+                (
+                    BoxKind::Text(value),
+                    Display::Inline,
+                    measured_width,
+                    Some(measured_height),
+                    0,
+                    0,
+                    inherited_text_color,
+                    None,
+                )
+            }
+            NodeKind::Comment(_) | NodeKind::Doctype(_) => return Ok(None),
+        };
 
     *generated_boxes = generated_boxes.saturating_add(1);
     if *generated_boxes > max_boxes {
@@ -730,8 +744,12 @@ fn layout_node(
     let box_x = x.saturating_add(margin.min(i32::MAX as u32) as i32);
     let box_y = flow_y.saturating_add(margin.min(i32::MAX as u32) as i32);
     let content_width = width.max(1);
+    let padding_extent = padding.saturating_mul(2);
+    let box_width = content_width.saturating_add(padding_extent);
+    let content_x = box_x.saturating_add(padding.min(i32::MAX as u32) as i32);
+    let content_y = box_y.saturating_add(padding.min(i32::MAX as u32) as i32);
     let mut children = Vec::new();
-    let mut cursor_y = box_y;
+    let mut cursor_y = content_y;
     let mut inline_x = 0u32;
     let mut inline_line_height = options.default_line_height;
     let child_ids = document
@@ -754,7 +772,7 @@ fn layout_node(
                 inline_line_height = options.default_line_height;
             }
 
-            let child_x = box_x.saturating_add(inline_x.min(i32::MAX as u32) as i32);
+            let child_x = content_x.saturating_add(inline_x.min(i32::MAX as u32) as i32);
             let child_width = content_width.saturating_sub(inline_x).max(1);
             if let Some(child) = layout_node(
                 document,
@@ -783,7 +801,7 @@ fn layout_node(
                 document,
                 stylesheet,
                 child_id,
-                box_x,
+                content_x,
                 cursor_y,
                 content_width,
                 text_color,
@@ -797,9 +815,10 @@ fn layout_node(
         }
     }
 
-    let natural_height = (cursor_y.saturating_sub(box_y).max(0) as u32)
+    let natural_content_height = (cursor_y.saturating_sub(content_y).max(0) as u32)
         .saturating_add(if inline_x > 0 { inline_line_height } else { 0 });
-    let box_height = height.unwrap_or(natural_height);
+    let content_height = height.unwrap_or(natural_content_height);
+    let box_height = content_height.saturating_add(padding_extent);
     let flow_advance = box_height.saturating_add(margin.saturating_mul(2));
 
     Ok(Some(LayoutBox {
@@ -809,7 +828,7 @@ fn layout_node(
         rect: Rect {
             x: box_x,
             y: box_y,
-            width,
+            width: box_width,
             height: box_height,
         },
         margin,
@@ -845,12 +864,37 @@ fn measure_inline_content_width(
     let node = document.node(node_id).map_err(LayoutError::Dom)?;
     match node.kind() {
         NodeKind::Text(value) => Ok(measure_text_width(value, HARD_MAX_CSS_PX, character_width)),
-        NodeKind::Element { tag_name }
-            if stylesheet.style_for(document, node_id, tag_name).display == Some(Display::None) =>
-        {
-            Ok(0)
+        NodeKind::Element { tag_name } => {
+            let style = stylesheet.style_for(document, node_id, tag_name);
+            if style.display == Some(Display::None) {
+                return Ok(0);
+            }
+
+            let mut width = 0u32;
+            let child_ids = document
+                .children(node_id)
+                .map_err(LayoutError::Dom)?
+                .to_vec();
+            for child_id in child_ids {
+                width = width.saturating_add(measure_inline_content_width(
+                    document,
+                    stylesheet,
+                    child_id,
+                    character_width,
+                )?);
+                if width >= HARD_MAX_CSS_PX {
+                    return Ok(HARD_MAX_CSS_PX);
+                }
+            }
+
+            let inline_padding = if style.display == Some(Display::Inline) {
+                style.padding.unwrap_or(0).saturating_mul(2)
+            } else {
+                0
+            };
+            Ok(width.saturating_add(inline_padding).min(HARD_MAX_CSS_PX))
         }
-        NodeKind::Element { .. } | NodeKind::Document => {
+        NodeKind::Document => {
             let mut width = 0u32;
             let child_ids = document
                 .children(node_id)
