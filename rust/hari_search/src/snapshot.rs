@@ -9,8 +9,8 @@ use std::fmt;
 use std::io::{Read, Write};
 
 use super::{
-    Document, SearchIndex, MAX_BODY_BYTES, MAX_DOCUMENTS, MAX_ID_BYTES,
-    MAX_INDEX_SOURCE_BYTES, MAX_TITLE_BYTES, MAX_URL_BYTES,
+    Document, SearchIndex, MAX_BODY_BYTES, MAX_DOCUMENTS, MAX_ID_BYTES, MAX_INDEX_SOURCE_BYTES,
+    MAX_TITLE_BYTES, MAX_URL_BYTES,
 };
 
 const SNAPSHOT_MAGIC: &[u8; 8] = b"HARISEA1";
