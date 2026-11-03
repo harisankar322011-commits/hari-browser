@@ -1490,9 +1490,9 @@ mod tests {
         let spans: Vec<_> = paragraph
             .children
             .iter()
-            .filter(|child| {
-                matches!(&child.kind, BoxKind::Element { tag_name } if tag_name == "span")
-            })
+            .filter(
+                |child| matches!(&child.kind, BoxKind::Element { tag_name } if tag_name == "span"),
+            )
             .collect();
 
         assert_eq!(2, spans.len());
