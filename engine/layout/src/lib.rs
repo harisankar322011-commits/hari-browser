@@ -1467,4 +1467,38 @@ mod tests {
         assert_eq!(box_node.rect.width, 26);
         assert_eq!(box_node.rect.height, 16);
     }
+    #[test]
+    fn inline_padding_contributes_to_sibling_line_wrapping() {
+        let document = DomDocument::from_html(
+            b"<p><span>hi</span><span>yo</span></p>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse("span { padding: 4px; }").unwrap();
+        let layout = compute_layout(
+            &document,
+            &stylesheet,
+            &LayoutOptions {
+                viewport_width: 40,
+                character_width: 8,
+                default_line_height: 18,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
+        let paragraph = find_tag(&layout, "p").unwrap();
+        let spans: Vec<_> = paragraph
+            .children
+            .iter()
+            .filter(|child| {
+                matches!(&child.kind, BoxKind::Element { tag_name } if tag_name == "span")
+            })
+            .collect();
+
+        assert_eq!(2, spans.len());
+        assert_eq!(24, spans[0].rect.width);
+        assert_eq!(24, spans[1].rect.width);
+        assert_eq!(spans[0].rect.y + 18, spans[1].rect.y);
+    }
+
 }
