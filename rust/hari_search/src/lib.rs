@@ -423,8 +423,8 @@ fn is_combining_mark(character: char) -> bool {
     )
 }
 
-//! Acceptance tests for the first HARI-owned search-index milestone.
-//! These tests intentionally precede the implementation (TDD RED stage).
+// Acceptance tests for the first HARI-owned search-index milestone.
+// They were added before the implementation (TDD test-first stage).
 
 #[cfg(test)]
 mod tests {
