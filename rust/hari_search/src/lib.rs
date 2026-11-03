@@ -54,7 +54,9 @@ impl fmt::Display for IndexError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let message = match self {
             Self::InvalidId => "document ID is empty, padded, or too long",
-            Self::InvalidUrl => "document URL must be a valid HTTP or HTTPS URL without credentials",
+            Self::InvalidUrl => {
+                "document URL must be a valid HTTP or HTTPS URL without credentials"
+            }
             Self::DocumentTooLarge => "document exceeds an indexing size or token limit",
             Self::TooManyDocuments => "the configured document-count limit has been reached",
         };
@@ -137,13 +139,11 @@ impl SearchIndex {
             return Err(IndexError::DocumentTooLarge);
         }
 
-        let (title_terms, title_length) =
-            token_frequencies(&document.title, MAX_DOCUMENT_TOKENS)
-                .ok_or(IndexError::DocumentTooLarge)?;
+        let (title_terms, title_length) = token_frequencies(&document.title, MAX_DOCUMENT_TOKENS)
+            .ok_or(IndexError::DocumentTooLarge)?;
         let body_token_limit = MAX_DOCUMENT_TOKENS.saturating_sub(title_length);
-        let (body_terms, body_length) =
-            token_frequencies(&document.body, body_token_limit)
-                .ok_or(IndexError::DocumentTooLarge)?;
+        let (body_terms, body_length) = token_frequencies(&document.body, body_token_limit)
+            .ok_or(IndexError::DocumentTooLarge)?;
 
         let replacing_existing = self.documents.contains_key(&document.id);
         if !replacing_existing && self.documents.len() >= MAX_DOCUMENTS {
@@ -166,8 +166,7 @@ impl SearchIndex {
         self.total_title_tokens += stored.title_length;
         self.total_body_tokens += stored.body_length;
 
-        let mut document_terms: BTreeSet<String> =
-            stored.title_terms.keys().cloned().collect();
+        let mut document_terms: BTreeSet<String> = stored.title_terms.keys().cloned().collect();
         document_terms.extend(stored.body_terms.keys().cloned());
 
         for term in document_terms {
@@ -256,8 +255,7 @@ impl SearchIndex {
 
             let document_frequency = term_postings.len() as f64;
             let inverse_document_frequency = (1.0
-                + (document_count - document_frequency + 0.5)
-                    / (document_frequency + 0.5))
+                + (document_count - document_frequency + 0.5) / (document_frequency + 0.5))
                 .ln();
 
             for (document_id, posting) in term_postings {
@@ -265,10 +263,10 @@ impl SearchIndex {
                     continue;
                 };
 
-                let weighted_frequency = posting.body_frequency as f64
-                    + posting.title_frequency as f64 * TITLE_WEIGHT;
-                let document_length = stored.body_length as f64
-                    + stored.title_length as f64 * TITLE_WEIGHT;
+                let weighted_frequency =
+                    posting.body_frequency as f64 + posting.title_frequency as f64 * TITLE_WEIGHT;
+                let document_length =
+                    stored.body_length as f64 + stored.title_length as f64 * TITLE_WEIGHT;
                 let normalization = weighted_frequency
                     + BM25_K1
                         * (1.0 - BM25_B + BM25_B * document_length / average_length);
@@ -317,26 +315,14 @@ fn token_frequencies(text: &str, max_tokens: usize) -> Option<(BTreeMap<String, 
     let mut token_count = 0;
 
     for character in text.chars() {
-        if character.is_alphanumeric()
-            || (!token.is_empty() && is_combining_mark(character))
-        {
+        if character.is_alphanumeric() || (!token.is_empty() && is_combining_mark(character)) {
             token.extend(character.to_lowercase());
-        } else if !push_token(
-            &mut token,
-            &mut frequencies,
-            &mut token_count,
-            max_tokens,
-        ) {
+        } else if !push_token(&mut token, &mut frequencies, &mut token_count, max_tokens) {
             return None;
         }
     }
 
-    if !push_token(
-        &mut token,
-        &mut frequencies,
-        &mut token_count,
-        max_tokens,
-    ) {
+    if !push_token(&mut token, &mut frequencies, &mut token_count, max_tokens) {
         return None;
     }
 
@@ -487,10 +473,7 @@ mod tests {
             .unwrap();
 
         assert_eq!("space", index.search("SPACE EXPLORATION", 5)[0].document_id);
-        assert_eq!(
-            "malayalam",
-            index.search("കേരള ചരിത്രം", 5)[0].document_id
-        );
+        assert_eq!("malayalam", index.search("കേരള ചരിത്രം", 5)[0].document_id);
     }
 
     #[test]
