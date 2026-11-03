@@ -702,4 +702,32 @@ mod tests {
         assert_eq!(surface.pixel(2, 0), None);
         assert_eq!(surface.pixel(0, 2), None);
     }
+    #[test]
+    fn paints_padding_background_around_inset_text_content() {
+        let layout_options = LayoutOptions {
+            viewport_width: 96,
+            character_width: 8,
+            default_line_height: 18,
+            ..LayoutOptions::default()
+        };
+        let paint_options = PaintOptions {
+            width: 96,
+            height: 80,
+            character_width: 8,
+            line_height: 18,
+            ..PaintOptions::default()
+        };
+        let surface = render_html_to_surface(
+            b"<div>HARI</div>",
+            "div { width: 32px; padding: 4px; background-color: #ff0000; }",
+            &DomLimits::default(),
+            &layout_options,
+            &paint_options,
+        )
+        .unwrap();
+
+        assert_eq!(surface.pixel(1, 1), Some([255, 0, 0, 255]));
+        assert_eq!(surface.pixel(4, 4), Some(paint_options.text_color));
+    }
+
 }
