@@ -1346,4 +1346,82 @@ mod tests {
         assert!(matches!(layout.kind, BoxKind::Document));
         assert!(matches!(layout.display, Display::Block));
     }
+    #[test]
+    fn parses_bounded_uniform_padding_values() {
+        assert!(StyleSheet::parse("div { padding: 4px; }").is_ok());
+        assert_eq!(
+            StyleSheet::parse("div { padding: -1px; }"),
+            Err(CssError::InvalidValue)
+        );
+        assert_eq!(
+            StyleSheet::parse("div { padding: 1000001px; }"),
+            Err(CssError::InvalidValue)
+        );
+    }
+
+    #[test]
+    fn padding_reduces_auto_content_width_and_offsets_children() {
+        let document = DomDocument::from_html(
+            b"<body><div id=box><p>inside</p></div><p id=next>after</p></body>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse(
+            "#box { padding: 4px; background-color: red; }",
+        )
+        .unwrap();
+        let layout = compute_layout(
+            &document,
+            &stylesheet,
+            &LayoutOptions {
+                viewport_width: 100,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
+
+        let box_node = find_tag(&layout, "div").unwrap();
+        let inside = find_text(&layout, "inside").unwrap();
+        let next = layout
+            .children
+            .iter()
+            .find_map(|child| child.children.iter().find(|node| {
+                matches!(&node.kind, BoxKind::Element { tag_name } if tag_name == "p")
+                    && node.rect.y > box_node.rect.y
+            }))
+            .unwrap();
+
+        assert_eq!(box_node.rect.width, 100);
+        assert_eq!(box_node.rect.height, 26);
+        assert_eq!(inside.rect.x, box_node.rect.x + 4);
+        assert_eq!(inside.rect.y, box_node.rect.y + 4);
+        assert_eq!(next.rect.y, box_node.rect.y + box_node.rect.height as i32);
+    }
+
+    #[test]
+    fn padding_is_part_of_the_background_box_for_fixed_dimensions() {
+        let document = DomDocument::from_html(
+            b"<div id=box>content</div>",
+            &DomLimits::default(),
+        )
+        .unwrap();
+        let stylesheet = StyleSheet::parse(
+            "#box { width: 20px; height: 10px; padding: 3px; background-color: blue; }",
+        )
+        .unwrap();
+        let layout = compute_layout(
+            &document,
+            &stylesheet,
+            &LayoutOptions {
+                viewport_width: 100,
+                ..LayoutOptions::default()
+            },
+        )
+        .unwrap();
+        let box_node = find_tag(&layout, "div").unwrap();
+
+        assert_eq!(box_node.rect.width, 26);
+        assert_eq!(box_node.rect.height, 16);
+    }
+
 }
