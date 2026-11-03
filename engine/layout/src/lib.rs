@@ -1498,6 +1498,6 @@ mod tests {
         assert_eq!(2, spans.len());
         assert_eq!(24, spans[0].rect.width);
         assert_eq!(24, spans[1].rect.width);
-        assert_eq!(spans[0].rect.y + 18, spans[1].rect.y);
+        assert_eq!(spans[0].rect.y + spans[0].rect.height as i32, spans[1].rect.y);
     }
 }
