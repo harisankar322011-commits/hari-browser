@@ -9,6 +9,8 @@ use std::fmt;
 use url::Url;
 
 const MAX_DOCUMENTS: usize = 50_000;
+const MAX_INDEX_SOURCE_BYTES: usize = 16 * 1024 * 1024;
+const MAX_INDEX_TOKENS: usize = 250_000;
 const MAX_ID_BYTES: usize = 128;
 const MAX_URL_BYTES: usize = 4_096;
 const MAX_TITLE_BYTES: usize = 1_024;
@@ -48,6 +50,7 @@ pub enum IndexError {
     InvalidUrl,
     DocumentTooLarge,
     TooManyDocuments,
+    IndexCapacityExceeded,
 }
 
 impl fmt::Display for IndexError {
@@ -59,6 +62,7 @@ impl fmt::Display for IndexError {
             }
             Self::DocumentTooLarge => "document exceeds an indexing size or token limit",
             Self::TooManyDocuments => "the configured document-count limit has been reached",
+            Self::IndexCapacityExceeded => "the configured aggregate index capacity has been reached",
         };
         formatter.write_str(message)
     }
@@ -78,6 +82,7 @@ struct StoredDocument {
     body_terms: BTreeMap<String, u32>,
     title_length: usize,
     body_length: usize,
+    source_bytes: usize,
 }
 
 /// An in-memory inverted index with bounded input and deterministic BM25 ranking.
@@ -90,6 +95,7 @@ pub struct SearchIndex {
     postings: BTreeMap<String, BTreeMap<String, Posting>>,
     total_title_tokens: usize,
     total_body_tokens: usize,
+    total_source_bytes: usize,
 }
 
 impl SearchIndex {
@@ -145,9 +151,26 @@ impl SearchIndex {
         let (body_terms, body_length) = token_frequencies(&document.body, body_token_limit)
             .ok_or(IndexError::DocumentTooLarge)?;
 
-        let replacing_existing = self.documents.contains_key(&document.id);
+        let existing = self.documents.get(&document.id);
+        let replacing_existing = existing.is_some();
         if !replacing_existing && self.documents.len() >= MAX_DOCUMENTS {
             return Err(IndexError::TooManyDocuments);
+        }
+
+        let existing_tokens = existing
+            .map(|stored| stored.title_length + stored.body_length)
+            .unwrap_or(0);
+        let existing_bytes = existing.map(|stored| stored.source_bytes).unwrap_or(0);
+        let new_tokens = title_length + body_length;
+        let new_source_bytes =
+            document.id.len() + document.url.len() + document.title.len() + document.body.len();
+
+        let remaining_tokens = self.total_title_tokens + self.total_body_tokens - existing_tokens;
+        let remaining_bytes = self.total_source_bytes - existing_bytes;
+        if remaining_tokens + new_tokens > MAX_INDEX_TOKENS
+            || remaining_bytes + new_source_bytes > MAX_INDEX_SOURCE_BYTES
+        {
+            return Err(IndexError::IndexCapacityExceeded);
         }
 
         let document_id = document.id.clone();
@@ -157,6 +180,7 @@ impl SearchIndex {
             body_terms,
             title_length,
             body_length,
+            source_bytes: new_source_bytes,
         };
 
         if replacing_existing {
@@ -165,6 +189,7 @@ impl SearchIndex {
 
         self.total_title_tokens += stored.title_length;
         self.total_body_tokens += stored.body_length;
+        self.total_source_bytes += stored.source_bytes;
 
         let mut document_terms: BTreeSet<String> = stored.title_terms.keys().cloned().collect();
         document_terms.extend(stored.body_terms.keys().cloned());
@@ -194,6 +219,7 @@ impl SearchIndex {
 
         self.total_title_tokens -= stored.title_length;
         self.total_body_tokens -= stored.body_length;
+        self.total_source_bytes -= stored.source_bytes;
 
         let mut document_terms: BTreeSet<String> = stored.title_terms.keys().cloned().collect();
         document_terms.extend(stored.body_terms.keys().cloned());
