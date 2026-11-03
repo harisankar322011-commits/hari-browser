@@ -1,3 +1,7 @@
+mod snapshot;
+
+pub use snapshot::SnapshotError;
+
 //! HARI-owned local search indexing and retrieval core.
 //!
 //! This crate deliberately performs no network access. A separately reviewed
