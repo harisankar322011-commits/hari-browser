@@ -43,8 +43,5 @@ fn definition_item_end_tag_does_not_cross_a_scope_boundary() {
     let button = element(term, "button");
     assert_eq!(element(button, "span").text_content(), "inside");
     assert_eq!(term.text_content(), "terminsidetail");
-    assert_eq!(
-        element(definition_list, "dd").text_content(),
-        "definition"
-    );
+    assert_eq!(element(definition_list, "dd").text_content(), "definition");
 }
