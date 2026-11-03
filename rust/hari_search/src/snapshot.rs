@@ -16,8 +16,7 @@ use super::{
 const SNAPSHOT_MAGIC: &[u8; 8] = b"HARISEA1";
 const SNAPSHOT_VERSION: u16 = 1;
 const HEADER_SIZE: usize = 32;
-const MAX_SNAPSHOT_BYTES: usize =
-    MAX_INDEX_SOURCE_BYTES + MAX_DOCUMENTS * 16 + HEADER_SIZE;
+const MAX_SNAPSHOT_BYTES: usize = MAX_INDEX_SOURCE_BYTES + MAX_DOCUMENTS * 16 + HEADER_SIZE;
 
 /// Errors returned when a HARI Search snapshot cannot be written or loaded.
 #[derive(Debug, Clone, PartialEq, Eq)]
