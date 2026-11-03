@@ -608,4 +608,84 @@ mod tests {
         assert_eq!("doc-a", hits[0].document_id);
         assert_eq!("doc-b", hits[1].document_id);
     }
+    #[test]
+    fn rejects_non_web_and_credential_bearing_urls_without_replacing_existing_data() {
+        let mut index = SearchIndex::new();
+        index
+            .add_document(document(
+                "protected",
+                "https://example.com/original",
+                "Original astronomy page",
+                "stars planets",
+            ))
+            .unwrap();
+
+        let ftp = index.add_document(document(
+            "ftp",
+            "ftp://example.com/file",
+            "FTP page",
+            "not web content",
+        ));
+        assert_eq!(Err(IndexError::InvalidUrl), ftp);
+
+        let credentials = index.add_document(document(
+            "protected",
+            "https://user:password@example.com/replacement",
+            "Replacement",
+            "different content",
+        ));
+        assert_eq!(Err(IndexError::InvalidUrl), credentials);
+
+        let hits = index.search("astronomy stars", 5);
+        assert_eq!(1, hits.len());
+        assert_eq!("https://example.com/original", hits[0].url);
+        assert_eq!("Original astronomy page", hits[0].title);
+    }
+
+    #[test]
+    fn enforces_an_aggregate_index_token_budget_without_partial_insertions() {
+        let mut index = SearchIndex::new();
+        let repeated_terms = "x ".repeat(12_499);
+
+        for number in 0..20 {
+            index
+                .add_document(document(
+                    &format!("doc-{number:02}"),
+                    &format!("https://example.com/{number}"),
+                    "Title",
+                    &repeated_terms,
+                ))
+                .unwrap();
+        }
+
+        assert_eq!(20, index.document_count());
+
+        let over_budget = index.add_document(document(
+            "over-budget",
+            "https://example.com/over-budget",
+            "Title",
+            "x",
+        ));
+        assert_eq!(Err(IndexError::IndexCapacityExceeded), over_budget);
+        assert_eq!(20, index.document_count());
+        assert_eq!(20, index.search("x", 100).len());
+    }
+
+    #[test]
+    fn caps_returned_results_even_when_the_requested_limit_is_larger() {
+        let mut index = SearchIndex::new();
+        for number in 0..105 {
+            index
+                .add_document(document(
+                    &format!("doc-{number:03}"),
+                    &format!("https://example.com/{number}"),
+                    "Common astronomy",
+                    "common learning resource",
+                ))
+                .unwrap();
+        }
+
+        assert_eq!(100, index.search("common", usize::MAX).len());
+    }
+
 }
