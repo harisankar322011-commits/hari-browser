@@ -10,3 +10,4 @@ name = "hari_search"
 path = "src/lib.rs"
 
 [dependencies]
+url = "=2.5.8"
