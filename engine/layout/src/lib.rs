@@ -705,7 +705,10 @@ fn layout_node(
                 (
                     BoxKind::Element { tag_name },
                     display,
-                    style.width.unwrap_or(intrinsic_width).min(available_content_width),
+                    style
+                        .width
+                        .unwrap_or(intrinsic_width)
+                        .min(available_content_width),
                     style.height,
                     margin,
                     padding,
