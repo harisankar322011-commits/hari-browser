@@ -77,8 +77,7 @@ impl SearchIndex {
 
         let document_count =
             u32::try_from(self.documents.len()).map_err(|_| SnapshotError::TooLarge)?;
-        let payload_length =
-            u64::try_from(payload.len()).map_err(|_| SnapshotError::TooLarge)?;
+        let payload_length = u64::try_from(payload.len()).map_err(|_| SnapshotError::TooLarge)?;
         let checksum = payload_checksum(&payload);
 
         let mut header = Vec::with_capacity(HEADER_SIZE);
