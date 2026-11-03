@@ -47,38 +47,18 @@ fn snapshot_round_trip_rebuilds_the_search_index() {
 fn snapshot_bytes_are_deterministic_for_the_same_documents() {
     let mut first = SearchIndex::new();
     first
-        .add_document(document(
-            "b",
-            "https://example.org/b",
-            "Beta",
-            "shared",
-        ))
+        .add_document(document("b", "https://example.org/b", "Beta", "shared"))
         .unwrap();
     first
-        .add_document(document(
-            "a",
-            "https://example.org/a",
-            "Alpha",
-            "shared",
-        ))
+        .add_document(document("a", "https://example.org/a", "Alpha", "shared"))
         .unwrap();
 
     let mut second = SearchIndex::new();
     second
-        .add_document(document(
-            "a",
-            "https://example.org/a",
-            "Alpha",
-            "shared",
-        ))
+        .add_document(document("a", "https://example.org/a", "Alpha", "shared"))
         .unwrap();
     second
-        .add_document(document(
-            "b",
-            "https://example.org/b",
-            "Beta",
-            "shared",
-        ))
+        .add_document(document("b", "https://example.org/b", "Beta", "shared"))
         .unwrap();
 
     let mut first_bytes = Vec::new();
@@ -93,12 +73,7 @@ fn snapshot_bytes_are_deterministic_for_the_same_documents() {
 fn snapshot_checksum_detects_payload_corruption() {
     let mut index = SearchIndex::new();
     index
-        .add_document(document(
-            "one",
-            "https://example.org/",
-            "A title",
-            "some text",
-        ))
+        .add_document(document("one", "https://example.org/", "A title", "some text"))
         .unwrap();
     let mut bytes = Vec::new();
     index.write_snapshot(&mut bytes).unwrap();
@@ -116,12 +91,7 @@ fn snapshot_checksum_detects_payload_corruption() {
 fn snapshot_reader_rejects_truncation_and_trailing_bytes() {
     let mut index = SearchIndex::new();
     index
-        .add_document(document(
-            "one",
-            "https://example.org/",
-            "A title",
-            "some text",
-        ))
+        .add_document(document("one", "https://example.org/", "A title", "some text"))
         .unwrap();
     let mut bytes = Vec::new();
     index.write_snapshot(&mut bytes).unwrap();
@@ -143,12 +113,7 @@ fn snapshot_reader_rejects_truncation_and_trailing_bytes() {
 fn snapshot_reader_rejects_unknown_format_versions() {
     let mut index = SearchIndex::new();
     index
-        .add_document(document(
-            "one",
-            "https://example.org/",
-            "A title",
-            "some text",
-        ))
+        .add_document(document("one", "https://example.org/", "A title", "some text"))
         .unwrap();
     let mut bytes = Vec::new();
     index.write_snapshot(&mut bytes).unwrap();
