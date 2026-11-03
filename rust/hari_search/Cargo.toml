@@ -1,0 +1,12 @@
+[package]
+name = "hari_search"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "HARI-owned, bounded search indexing and ranking core"
+
+[lib]
+name = "hari_search"
+path = "src/lib.rs"
+
+[dependencies]
