@@ -729,5 +729,4 @@ mod tests {
         assert_eq!(surface.pixel(1, 1), Some([255, 0, 0, 255]));
         assert_eq!(surface.pixel(4, 4), Some(paint_options.text_color));
     }
-
 }
