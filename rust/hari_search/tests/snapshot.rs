@@ -123,7 +123,12 @@ fn snapshot_reader_rejects_truncation_and_trailing_bytes() {
 fn snapshot_reader_rejects_unknown_format_versions() {
     let mut index = SearchIndex::new();
     index
-        .add_document(document("one", "https://example.org/", "A title", "some text"))
+        .add_document(document(
+            "one",
+            "https://example.org/",
+            "A title",
+            "some text",
+        ))
         .unwrap();
     let mut bytes = Vec::new();
     index.write_snapshot(&mut bytes).unwrap();
