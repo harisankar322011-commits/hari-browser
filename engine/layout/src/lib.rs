@@ -1500,5 +1500,4 @@ mod tests {
         assert_eq!(24, spans[1].rect.width);
         assert_eq!(spans[0].rect.y + 18, spans[1].rect.y);
     }
-
 }
