@@ -71,10 +71,10 @@ fn rejects_excessive_declared_document_counts_before_payload_decoding() {
     let mut snapshot = valid_snapshot();
     snapshot[12..16].copy_from_slice(&u32::MAX.to_le_bytes());
 
-    assert_eq!(
-        Err(SnapshotError::TooLarge),
-        SearchIndex::read_snapshot(Cursor::new(snapshot))
-    );
+    assert!(matches!(
+        SearchIndex::read_snapshot(Cursor::new(snapshot)),
+        Err(SnapshotError::TooLarge)
+    ));
 }
 
 #[test]
@@ -82,10 +82,10 @@ fn rejects_payload_lengths_that_do_not_match_the_bounded_input() {
     let mut snapshot = valid_snapshot();
     snapshot[16..24].copy_from_slice(&u64::MAX.to_le_bytes());
 
-    assert_eq!(
-        Err(SnapshotError::InvalidFormat),
-        SearchIndex::read_snapshot(Cursor::new(snapshot))
-    );
+    assert!(matches!(
+        SearchIndex::read_snapshot(Cursor::new(snapshot)),
+        Err(SnapshotError::InvalidFormat)
+    ));
 }
 
 #[test]
@@ -97,10 +97,10 @@ fn rejects_oversized_field_lengths_even_with_a_valid_payload_checksum() {
     snapshot[HEADER_SIZE..HEADER_SIZE + 4].copy_from_slice(&u32::MAX.to_le_bytes());
     refresh_checksum(&mut snapshot);
 
-    assert_eq!(
-        Err(SnapshotError::TooLarge),
-        SearchIndex::read_snapshot(Cursor::new(snapshot))
-    );
+    assert!(matches!(
+        SearchIndex::read_snapshot(Cursor::new(snapshot)),
+        Err(SnapshotError::TooLarge)
+    ));
 }
 
 #[test]
@@ -111,10 +111,10 @@ fn rejects_invalid_utf8_even_when_the_payload_checksum_is_valid() {
     snapshot[HEADER_SIZE + 4] = 0xff;
     refresh_checksum(&mut snapshot);
 
-    assert_eq!(
-        Err(SnapshotError::InvalidFormat),
-        SearchIndex::read_snapshot(Cursor::new(snapshot))
-    );
+    assert!(matches!(
+        SearchIndex::read_snapshot(Cursor::new(snapshot)),
+        Err(SnapshotError::InvalidFormat)
+    ));
 }
 
 struct RepeatingReader {
@@ -133,9 +133,9 @@ impl Read for RepeatingReader {
 fn caps_stream_consumption_at_the_snapshot_limit_plus_one_byte() {
     let mut reader = RepeatingReader { bytes_read: 0 };
 
-    assert_eq!(
-        Err(SnapshotError::TooLarge),
-        SearchIndex::read_snapshot(&mut reader)
-    );
+    assert!(matches!(
+        SearchIndex::read_snapshot(&mut reader),
+        Err(SnapshotError::TooLarge)
+    ));
     assert_eq!(MAX_SNAPSHOT_BYTES + 1, reader.bytes_read);
 }
