@@ -31,7 +31,9 @@ cargo test --manifest-path rust/hari_search/Cargo.toml
 cargo clippy --manifest-path rust/hari_search/Cargo.toml --all-targets -- -D warnings
 ```
 
-The dedicated GitHub Actions workflow runs these checks for changes to this crate. The snapshot hostile-input integration suite exercises every truncated prefix and every single-bit mutation of a valid sample, malformed declared counts and lengths, checksum-preserving invalid UTF-8, and the reader's maximum byte-consumption boundary. This deterministic mutation suite is useful regression coverage, not a substitute for coverage-guided fuzzing.
+The dedicated GitHub Actions workflow runs these checks for changes to this crate. The snapshot hostile-input integration suite exercises every truncated prefix and every single-bit mutation of a valid sample, malformed declared counts and lengths, checksum-preserving invalid UTF-8, and the reader's maximum byte-consumption boundary.
+
+A separate `cargo-fuzz` target, `snapshot_decode`, exercises arbitrary byte streams and mutations of a known-valid snapshot. The HARI Search Snapshot Fuzz Smoke workflow runs a bounded 30-second campaign with a 16 KiB input ceiling. This is crash-resistance and parser-path exploration, not exhaustive fuzzing, cryptographic authentication, or proof of production security.
 
 ## Known limitations
 
@@ -49,9 +51,9 @@ Implement and test bounded indexing, document updates/deletes, multilingual-safe
 
 ### Stage 2 — Ingestion and persistent storage
 
-**Current incremental milestone: versioned local snapshot codec.** The prototype can now write a deterministic snapshot of indexed source documents and rebuild the in-memory inverted index from a validated snapshot. The format has a magic header, explicit version and flags, document count, payload length, and an FNV-1a checksum for accidental-corruption detection. Loading is bounded, rejects malformed/truncated/trailing data, unsupported versions, duplicate IDs, invalid URLs, and documents that exceed the normal indexing budgets. The checksum is not authentication or tamper protection; the caller must keep snapshots in app-private storage and use a safe replacement strategy.
+**Current incremental milestone: versioned local snapshot codec plus hostile-input fuzz infrastructure.** The prototype can write a deterministic snapshot of indexed source documents and rebuild the in-memory inverted index from a validated snapshot. The format has a magic header, explicit version and flags, document count, payload length, and an FNV-1a checksum for accidental-corruption detection. Loading is bounded, rejects malformed/truncated/trailing data, unsupported versions, duplicate IDs, invalid URLs, and documents that exceed the normal indexing budgets. The checksum is not authentication or tamper protection; the caller must keep snapshots in app-private storage and use a safe replacement strategy.
 
-This is not yet a production persistent store: there is no automatic file location, encryption, crash-safe transaction manager, incremental write path, backup/restore UI, or browser integration. Next work is to specify atomic file lifecycle and recovery behavior, add coverage-guided property/fuzz tests for hostile snapshot inputs, measure memory and I/O costs, and only then consider HTML-to-text ingestion, canonical URL handling, content hashing, and duplicate detection.
+The decoder now has deterministic hostile-input regression tests and a coverage-guided fuzz target. This is not yet a production persistent store: there is no automatic file location, encryption, crash-safe transaction manager, incremental write path, backup/restore UI, or browser integration. Next work is to specify atomic file lifecycle and recovery behavior, measure memory and I/O costs, and only then consider HTML-to-text ingestion, canonical URL handling, content hashing, and duplicate detection.
 
 ### Stage 3 — Controlled web crawler
 
