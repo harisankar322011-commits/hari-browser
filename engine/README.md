@@ -35,16 +35,24 @@ Successful parsing or layout is not a content-safety or malware verdict. Never r
 
 ## Coverage-guided fuzzing
 
-The separate `engine/fuzz/` package provides a `cargo-fuzz` target for the HTML parser. It uses a 16 KiB input ceiling and tighter node, depth, and per-element attribute budgets so fuzz runs stay bounded. Successful parses are traversed iteratively to check tree invariants. This is useful for finding crashes and invariant violations, but it is not a substitute for HTML conformance tests, long-running fuzz campaigns, or security review.
+The separate `engine/fuzz/` package provides three `cargo-fuzz` targets:
+
+- `html_parser` exercises arbitrary HTML input and checks tree invariants after successful parses.
+- `stylesheet_parser` exercises the CSS parser directly with arbitrary input and with bounded selector, declaration, and value contexts, so malformed bytes can reach deeper stylesheet parsing paths without requiring a valid HTML wrapper.
+- `render_pipeline` accepts framed HTML/CSS input and exercises the complete HTML → DOM → stylesheet → layout → paint path.
+
+Each target has a 16 KiB input ceiling. The render target additionally bounds the DOM to 256 nodes / 32 levels, layout to 256 boxes, and the output surface to 64×64 pixels. These bounded campaigns are useful for finding crashes and invariant violations, but they are not substitutes for conformance tests, long-running fuzzing, or security review.
 
 Install the tools with nightly Rust active, then run from the repository root:
 
 ```sh
 cargo install cargo-fuzz --locked
 cargo fuzz run --fuzz-dir=engine/fuzz html_parser -- -max_total_time=30 -max_len=16384
+cargo fuzz run --fuzz-dir=engine/fuzz stylesheet_parser -- -max_total_time=30 -max_len=16384
+cargo fuzz run --fuzz-dir=engine/fuzz render_pipeline -- -max_total_time=30 -max_len=16384
 ```
 
-The `HARI Engine Fuzz Smoke` GitHub Actions workflow runs a bounded 30-second smoke test for engine changes and also supports scheduled and manual runs.
+The `HARI Engine Fuzz Smoke` GitHub Actions workflow runs all three bounded 30-second campaigns for engine changes and also supports scheduled and manual runs.
 
 ## Safety and compatibility rules
 
@@ -81,4 +89,4 @@ cargo test --manifest-path engine/paint/Cargo.toml
 cargo clippy --manifest-path engine/paint/Cargo.toml --all-targets -- -D warnings
 ```
 
-A dedicated GitHub Actions workflow runs these checks for engine changes. Android app build and tests remain separate from these engine checks.
+A dedicated GitHub Actions workflow runs these checks for all five crates. Android app build and tests remain separate from these engine checks.
