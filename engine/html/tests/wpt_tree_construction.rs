@@ -584,6 +584,9 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if case.scripting_mode.is_some() {
         return Some("WPT scripting-mode variants are not implemented");
     }
+    if case.has_parse_errors || case.has_new_errors {
+        return Some("parse-error diagnostics are not exposed by the HARI parser");
+    }
     if contains_ascii_case_insensitive(&case.input, "<template") {
         return Some("template contents are not represented by the HARI tree model");
     }
@@ -712,7 +715,6 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let mut exact_tree_passes = 0usize;
     let mut body_projection_passes = 0usize;
     let mut unsupported = BTreeMap::<&'static str, usize>::new();
-    let mut parse_error_diagnostics_unverified = 0usize;
     let mut failures = Vec::new();
 
     for fixture in &fixtures {
@@ -721,9 +723,6 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 
         for (case_index, case) in cases.iter().enumerate() {
             total_cases += 1;
-            if case.has_parse_errors || case.has_new_errors {
-                parse_error_diagnostics_unverified += 1;
-            }
             match evaluate_case(&fixture.name, case) {
                 CaseResult::Passed(ComparisonMode::ExactTree) => exact_tree_passes += 1,
                 CaseResult::Passed(ComparisonMode::BodyProjection) => body_projection_passes += 1,
@@ -745,14 +744,13 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let passed = exact_tree_passes + body_projection_passes;
     let unsupported_total: usize = unsupported.values().sum();
     eprintln!(
-        "HARI HTML Conformance v1 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, failed={}, unsupported={}, parse-error-diagnostics-unverified={}",
+        "HARI HTML Conformance v1 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, failed={}, unsupported={}",
         fixtures.len(),
         total_cases,
         exact_tree_passes,
         body_projection_passes,
         failures.len(),
-        unsupported_total,
-        parse_error_diagnostics_unverified
+        unsupported_total
     );
     for (reason, count) in &unsupported {
         eprintln!("  unsupported / {reason}: {count}");
@@ -775,7 +773,7 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 #[cfg(test)]
 mod tests {
     use super::{
-        CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case, parse_fixture_cases,
+        CaseResult, DumpNode, TestCase, evaluate_case, parse_fixture_cases,
         parse_reference_tree, project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
@@ -847,7 +845,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_error_diagnostics_are_unverified_without_skipping_tree_comparison() {
+    fn parse_error_diagnostics_are_reported_as_unsupported() {
         let case = TestCase {
             description: "tree comparison remains useful when diagnostics are expected".to_owned(),
             input: "<p>HARI".to_owned(),
@@ -867,7 +865,7 @@ mod tests {
 
         assert!(matches!(
             evaluate_case("inbody01", &case),
-            CaseResult::Passed(ComparisonMode::BodyProjection)
+            CaseResult::Unsupported("parse-error diagnostics are not exposed by the HARI parser")
         ));
     }
 
