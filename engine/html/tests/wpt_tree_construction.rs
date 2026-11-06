@@ -774,8 +774,7 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 mod tests {
     use super::{
         CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case, parse_fixture_cases,
-        parse_reference_tree,
-        project_implicit_body, serialize_hari_node,
+        parse_reference_tree, project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
 
