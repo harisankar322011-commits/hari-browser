@@ -127,10 +127,7 @@ fn parse_fixture_cases(source: &str) -> Result<Vec<TestCase>, String> {
             if cursor >= lines.len() {
                 return Err("description section is not followed by #data".to_owned());
             }
-            description = lines[description_start..cursor]
-                .join(" ")
-                .trim()
-                .to_owned();
+            description = lines[description_start..cursor].join(" ").trim().to_owned();
         }
 
         if lines.get(cursor) != Some(&"#data") {
@@ -218,10 +215,7 @@ fn parse_fixture_cases(source: &str) -> Result<Vec<TestCase>, String> {
                 while next < lines.len() && lines[next].is_empty() {
                     next += 1;
                 }
-                if next >= lines.len()
-                    || lines[next] == "#data"
-                    || lines[next] == "#description"
-                {
+                if next >= lines.len() || lines[next] == "#data" || lines[next] == "#description" {
                     cursor = next;
                     break;
                 }
@@ -260,7 +254,10 @@ fn parse_dump_line(line: &str) -> Result<(usize, &str), DumpError> {
         )));
     };
 
-    let spaces = rest.chars().take_while(|character| *character == ' ').count();
+    let spaces = rest
+        .chars()
+        .take_while(|character| *character == ' ')
+        .count();
     if spaces % 2 != 0 {
         return Err(DumpError::Invalid(format!(
             "tree indentation is not a multiple of two: {line:?}"
@@ -309,7 +306,10 @@ fn parse_dump_nodes(
             )));
         }
 
-        if let Some(doctype) = content.strip_prefix("<!DOCTYPE ").and_then(|s| s.strip_suffix('>')) {
+        if let Some(doctype) = content
+            .strip_prefix("<!DOCTYPE ")
+            .and_then(|s| s.strip_suffix('>'))
+        {
             let names: Vec<&str> = doctype.split_ascii_whitespace().collect();
             if names.len() != 1 {
                 return Err(DumpError::Unsupported(
@@ -420,7 +420,9 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
             }
             let name = parts.next().ok_or("doctype has no name")?;
             if parts.next().is_some() {
-                return Err("public/system doctype identifiers are not represented by HARI NodeKind");
+                return Err(
+                    "public/system doctype identifiers are not represented by HARI NodeKind",
+                );
             }
             Ok(DumpNode::Doctype(name.to_ascii_lowercase()))
         }
@@ -438,9 +440,8 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
         }
         NodeKind::Element { tag_name } => {
             let mut attributes: Vec<&Attribute> = node.attributes.iter().collect();
-            attributes.sort_by(|left, right| {
-                left.name.encode_utf16().cmp(right.name.encode_utf16())
-            });
+            attributes
+                .sort_by(|left, right| left.name.encode_utf16().cmp(right.name.encode_utf16()));
 
             let mut serialized_attributes = Vec::with_capacity(attributes.len());
             for attribute in attributes {
@@ -448,7 +449,9 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
                     return Err("namespaced attributes are not represented by the HARI tree model");
                 }
                 if attribute.value.contains('\n') {
-                    return Err("multiline attribute values are unsupported by the v1 dump comparator");
+                    return Err(
+                        "multiline attribute values are unsupported by the v1 dump comparator",
+                    );
                 }
                 serialized_attributes.push((attribute.name.clone(), attribute.value.clone()));
             }
@@ -473,11 +476,7 @@ fn serialize_hari_document(document: &Node) -> Result<Vec<DumpNode>, &'static st
         return Err("parser root is not a document node");
     }
 
-    document
-        .children
-        .iter()
-        .map(serialize_hari_node)
-        .collect()
+    document.children.iter().map(serialize_hari_node).collect()
 }
 
 fn wrapper_flags(node: &Node, flags: &mut [bool; 3]) {
@@ -679,9 +678,16 @@ fn evaluate_case(case: &TestCase) -> CaseResult {
 #[test]
 fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let fixtures = load_fixtures();
-    let unique_names: HashSet<&str> = fixtures.iter().map(|fixture| fixture.name.as_str()).collect();
+    let unique_names: HashSet<&str> = fixtures
+        .iter()
+        .map(|fixture| fixture.name.as_str())
+        .collect();
     assert_eq!(fixtures.len(), 50, "the v1 corpus must contain 50 fixtures");
-    assert_eq!(unique_names.len(), fixtures.len(), "fixture names must be unique");
+    assert_eq!(
+        unique_names.len(),
+        fixtures.len(),
+        "fixture names must be unique"
+    );
 
     let mut total_cases = 0usize;
     let mut exact_tree_passes = 0usize;
@@ -690,9 +696,8 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let mut failures = Vec::new();
 
     for fixture in &fixtures {
-        let cases = parse_fixture_cases(&fixture.source).unwrap_or_else(|error| {
-            panic!("failed to read WPT fixture {}: {error}", fixture.name)
-        });
+        let cases = parse_fixture_cases(&fixture.source)
+            .unwrap_or_else(|error| panic!("failed to read WPT fixture {}: {error}", fixture.name));
 
         for (case_index, case) in cases.iter().enumerate() {
             total_cases += 1;
@@ -732,7 +737,10 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
         eprintln!("  FAIL / {failure}");
     }
 
-    assert!(passed > 0, "the v1 harness must compare at least one supported case");
+    assert!(
+        passed > 0,
+        "the v1 harness must compare at least one supported case"
+    );
     assert!(
         failures.is_empty(),
         "{} supported WPT tree-construction cases failed; see the deterministic diagnostics above",
@@ -743,8 +751,8 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 #[cfg(test)]
 mod tests {
     use super::{
-        DumpNode, parse_fixture_cases, parse_reference_tree,
-        project_implicit_body, serialize_hari_node,
+        DumpNode, parse_fixture_cases, parse_reference_tree, project_implicit_body,
+        serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
 
