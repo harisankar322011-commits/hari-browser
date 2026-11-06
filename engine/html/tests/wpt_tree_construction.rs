@@ -506,15 +506,14 @@ fn serialize_hari_document(document: &Node) -> Result<Vec<DumpNode>, &'static st
 }
 
 fn has_unimplemented_pre_like_leading_lf(node: &Node) -> bool {
-    if let NodeKind::Element { tag_name } = &node.kind {
-        if matches!(tag_name.as_str(), "pre" | "textarea" | "listing")
-            && matches!(
-                node.children.first().map(|child| &child.kind),
-                Some(NodeKind::Text(value)) if value.starts_with('\n')
-            )
-        {
-            return true;
-        }
+    if let NodeKind::Element { tag_name } = &node.kind
+        && matches!(tag_name.as_str(), "pre" | "textarea" | "listing")
+        && matches!(
+            node.children.first().map(|child| &child.kind),
+            Some(NodeKind::Text(value)) if value.starts_with('\n')
+        )
+    {
+        return true;
     }
 
     node.children
