@@ -290,11 +290,6 @@ fn parse_dump_nodes(
         }
 
         let (line_depth, content) = parse_dump_line(&lines[*cursor])?;
-        if content.starts_with('\"') && (content.len() < 2 || !content.ends_with('\"')) {
-            return Err(DumpError::Unsupported(
-                "multiline text in reference tree dump",
-            ));
-        }
         if line_depth < depth {
             break;
         }
@@ -347,9 +342,40 @@ fn parse_dump_nodes(
             ));
         }
 
-        if content.starts_with('"') && content.ends_with('"') && content.len() >= 2 {
-            nodes.push(DumpNode::Text(content[1..content.len() - 1].to_owned()));
-            *cursor += 1;
+        if let Some(first_line) = content.strip_prefix('"') {
+            let text = if let Some(single_line) = first_line.strip_suffix('"') {
+                *cursor += 1;
+                single_line.to_owned()
+            } else {
+                let mut text = first_line.to_owned();
+                *cursor += 1;
+                let mut terminated = false;
+
+                while *cursor < lines.len() {
+                    let continuation = &lines[*cursor];
+                    text.push('\n');
+
+                    if let Some(final_text) = continuation.strip_suffix('"') {
+                        text.push_str(final_text);
+                        *cursor += 1;
+                        terminated = true;
+                        break;
+                    }
+
+                    text.push_str(continuation);
+                    *cursor += 1;
+                }
+
+                if !terminated {
+                    return Err(DumpError::Invalid(
+                        "unterminated multiline text node in reference tree dump".to_owned(),
+                    ));
+                }
+
+                text
+            };
+
+            nodes.push(DumpNode::Text(text));
             continue;
         }
 
@@ -437,12 +463,7 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
             }
             Ok(DumpNode::Comment(value.clone()))
         }
-        NodeKind::Text(value) => {
-            if value.contains('\n') {
-                return Err("multiline text is not supported by the v1 dump comparator");
-            }
-            Ok(DumpNode::Text(value.clone()))
-        }
+        NodeKind::Text(value) => Ok(DumpNode::Text(value.clone())),
         NodeKind::Element { tag_name } => {
             let mut attributes: Vec<&Attribute> = node.attributes.iter().collect();
             attributes
