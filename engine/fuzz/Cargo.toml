@@ -22,6 +22,13 @@ doc = false
 bench = false
 
 [[bin]]
+name = "stylesheet_parser"
+path = "fuzz_targets/stylesheet_parser.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
 name = "render_pipeline"
 path = "fuzz_targets/render_pipeline.rs"
 test = false
