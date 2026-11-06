@@ -290,9 +290,7 @@ fn parse_dump_nodes(
         }
 
         let (line_depth, content) = parse_dump_line(&lines[*cursor])?;
-        if content.starts_with('\"')
-            && (content.len() < 2 || !content.ends_with('\"'))
-        {
+        if content.starts_with('\"') && (content.len() < 2 || !content.ends_with('\"')) {
             return Err(DumpError::Unsupported(
                 "multiline text in reference tree dump",
             ));
@@ -604,7 +602,9 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if let Some(close_tag) = lower_input.rfind("</html>") {
         let trailing = &lower_input[close_tag + "</html>".len()..];
         if !trailing.is_empty() && trailing.bytes().all(|byte| byte.is_ascii_whitespace()) {
-            return Some("trailing document whitespace after an explicit html end tag is not preserved by the current parser");
+            return Some(
+                "trailing document whitespace after an explicit html end tag is not preserved by the current parser",
+            );
         }
     }
     if contains_ascii_case_insensitive(&case.input, "<isindex") {
