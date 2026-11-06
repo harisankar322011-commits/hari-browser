@@ -946,7 +946,7 @@ mod tests {
                         tag_name: "pre".to_owned(),
                         attributes: Vec::new(),
                         children: vec![DumpNode::Text(
-                            "first\\n| literal tree prefix\\n\\nthird".to_owned(),
+                            "first\n| literal tree prefix\n\nthird".to_owned(),
                         )],
                     }],
                 },
@@ -957,13 +957,13 @@ mod tests {
         assert_eq!(parsed, expected);
 
         let text = Node {
-            kind: NodeKind::Text("first\\n| literal tree prefix\\n\\nthird".to_owned()),
+            kind: NodeKind::Text("first\n| literal tree prefix\n\nthird".to_owned()),
             attributes: Vec::new(),
             children: Vec::new(),
         };
         assert_eq!(
             serialize_hari_node(&text).unwrap(),
-            DumpNode::Text("first\\n| literal tree prefix\\n\\nthird".to_owned())
+            DumpNode::Text("first\n| literal tree prefix\n\nthird".to_owned())
         );
     }
 
