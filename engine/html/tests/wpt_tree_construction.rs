@@ -510,7 +510,7 @@ fn has_unimplemented_pre_like_leading_lf(node: &Node) -> bool {
         if matches!(tag_name.as_str(), "pre" | "textarea" | "listing")
             && matches!(
                 node.children.first().map(|child| &child.kind),
-                Some(NodeKind::Text(value)) if value.starts_with('\\n')
+                Some(NodeKind::Text(value)) if value.starts_with('\n')
             )
         {
             return true;
@@ -1015,7 +1015,7 @@ mod tests {
                 },
                 attributes: Vec::new(),
                 children: vec![Node {
-                    kind: NodeKind::Text("\\ntext".to_owned()),
+                    kind: NodeKind::Text("\ntext".to_owned()),
                     attributes: Vec::new(),
                     children: Vec::new(),
                 }],
@@ -1029,7 +1029,7 @@ mod tests {
             },
             attributes: Vec::new(),
             children: vec![Node {
-                kind: NodeKind::Text("\\ntext".to_owned()),
+                kind: NodeKind::Text("\ntext".to_owned()),
                 attributes: Vec::new(),
                 children: Vec::new(),
             }],
