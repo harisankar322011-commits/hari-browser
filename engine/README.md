@@ -33,6 +33,12 @@ Successful parsing or layout is not a content-safety or malware verdict. Never r
 4. **Networking and storage** — origin model, TLS policy, cache/cookie isolation, safe redirects and downloads.
 5. **Android integration** — a separate opt-in prototype behind an explicit feature boundary after the parser, layout, and paint work matures.
 
+## HTML tree-construction conformance
+
+`engine/html/tests/wpt_tree_construction.rs` runs a deterministic v1 comparator against 50 vendored Web Platform Tests tree-construction fixtures. The selected `.dat` payloads are pinned to WPT revision `b4cd3d853150fb8e704a56f0099d6fbff2b9550f` and retain BSD 3-Clause attribution in `engine/html/tests/fixtures/wpt/`.
+
+The harness reports exact-tree passes, controlled body-projection passes, failures, and unsupported cases by reason. It compares exact trees when authored `html`, `head`, and `body` wrappers are all present. It uses body-content projection only when none of those wrappers was authored and the reference `head` is empty. It never strips authored wrappers. Fragment parsing, scripting modes, parse-error diagnostics, foreign namespaces, template contents, processing instructions, public/system doctype identifiers, and unsupported wrapper synthesis are reported as unsupported. Supported mismatches fail the existing HARI Engine Core test workflow. This is a conformance baseline, not a claim of complete HTML Living Standard support; the milestone does not change parser behavior.
+
 ## Coverage-guided fuzzing
 
 The separate `engine/fuzz/` package provides a `cargo-fuzz` target for the HTML parser. It uses a 16 KiB input ceiling and tighter node, depth, and per-element attribute budgets so fuzz runs stay bounded. Successful parses are traversed iteratively to check tree invariants. This is useful for finding crashes and invariant violations, but it is not a substitute for HTML conformance tests, long-running fuzz campaigns, or security review.
