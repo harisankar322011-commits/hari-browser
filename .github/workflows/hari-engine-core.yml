@@ -38,7 +38,7 @@ jobs:
       - name: Check HTML formatting
         run: cargo fmt --manifest-path engine/html/Cargo.toml -- --check
       - name: Test HTML parser, Core dependency, and WPT conformance harness
-        run: cargo test --manifest-path engine/html/Cargo.toml
+        run: cargo test --manifest-path engine/html/Cargo.toml -- --nocapture
       - name: Lint HTML parser
         run: cargo clippy --manifest-path engine/html/Cargo.toml --all-targets -- -D warnings
       - name: Check DOM formatting
