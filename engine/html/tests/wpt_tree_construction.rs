@@ -469,7 +469,7 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
 }
 
 fn serialize_hari_document(document: &Node) -> Result<Vec<DumpNode>, &'static str> {
-    if !matches!(document.kind, NodeKind::Document) {
+    if !matches!(&document.kind, NodeKind::Document) {
         return Err("parser root is not a document node");
     }
 
@@ -743,7 +743,7 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 #[cfg(test)]
 mod tests {
     use super::{
-        ComparisonMode, DumpNode, parse_fixture_cases, parse_reference_tree,
+        DumpNode, parse_fixture_cases, parse_reference_tree,
         project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
@@ -839,6 +839,5 @@ mod tests {
         };
         assert_eq!(attributes[0].0, "\u{10000}");
         assert_eq!(attributes[1].0, "\u{E000}");
-        assert_eq!(ComparisonMode::ExactTree, ComparisonMode::ExactTree);
     }
 }
