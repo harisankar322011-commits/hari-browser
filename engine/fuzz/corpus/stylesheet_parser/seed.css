@@ -1,0 +1,5 @@
+/* baseline CSS parser corpus seed */
+p { color: red; }
+main > p.note { width: 24px; margin: 2px; }
+#main .notice { background-color: rebeccapurple; }
+p { color: #12ab; }
