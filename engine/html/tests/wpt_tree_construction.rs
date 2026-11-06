@@ -505,6 +505,23 @@ fn serialize_hari_document(document: &Node) -> Result<Vec<DumpNode>, &'static st
     document.children.iter().map(serialize_hari_node).collect()
 }
 
+fn has_unimplemented_pre_like_leading_lf(node: &Node) -> bool {
+    if let NodeKind::Element { tag_name } = &node.kind {
+        if matches!(tag_name.as_str(), "pre" | "textarea" | "listing")
+            && matches!(
+                node.children.first().map(|child| &child.kind),
+                Some(NodeKind::Text(value)) if value.starts_with('\\n')
+            )
+        {
+            return true;
+        }
+    }
+
+    node.children
+        .iter()
+        .any(has_unimplemented_pre_like_leading_lf)
+}
+
 fn wrapper_flags(node: &Node, flags: &mut [bool; 3]) {
     if let NodeKind::Element { tag_name } = &node.kind {
         match tag_name.as_str() {
@@ -681,6 +698,12 @@ fn evaluate_case(fixture_name: &str, case: &TestCase) -> CaseResult {
             return CaseResult::Failed(format!("HARI parser rejected input: {error:?}"));
         }
     };
+
+    if has_unimplemented_pre_like_leading_lf(&document) {
+        return CaseResult::Unsupported(
+            "initial LF suppression for pre, textarea, and listing is not implemented",
+        );
+    }
 
     let expected = match parse_reference_tree(&case.expected_tree) {
         Ok(expected) => expected,
@@ -980,6 +1003,39 @@ mod tests {
         assert!(matches!(
             parse_reference_tree(&lines),
             Err(super::DumpError::Invalid(_))
+        ));
+    }
+
+    #[test]
+    fn leading_lf_gap_is_reported_only_for_pre_like_first_text_children() {
+        for tag_name in ["pre", "textarea", "listing"] {
+            let element = Node {
+                kind: NodeKind::Element {
+                    tag_name: tag_name.to_owned(),
+                },
+                attributes: Vec::new(),
+                children: vec![Node {
+                    kind: NodeKind::Text("\\ntext".to_owned()),
+                    attributes: Vec::new(),
+                    children: Vec::new(),
+                }],
+            };
+            assert!(super::has_unimplemented_pre_like_leading_lf(&element));
+        }
+
+        let ordinary_element = Node {
+            kind: NodeKind::Element {
+                tag_name: "div".to_owned(),
+            },
+            attributes: Vec::new(),
+            children: vec![Node {
+                kind: NodeKind::Text("\\ntext".to_owned()),
+                attributes: Vec::new(),
+                children: Vec::new(),
+            }],
+        };
+        assert!(!super::has_unimplemented_pre_like_leading_lf(
+            &ordinary_element
         ));
     }
 
