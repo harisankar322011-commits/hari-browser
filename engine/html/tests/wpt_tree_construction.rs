@@ -898,6 +898,71 @@ mod tests {
     }
 
     #[test]
+    fn reference_dump_preserves_multiline_text_nodes() {
+        let lines = vec![
+            "| <html>".to_owned(),
+            "|   <head>".to_owned(),
+            "|   <body>".to_owned(),
+            "|     <pre>".to_owned(),
+            "|       \"first".to_owned(),
+            "| literal tree prefix".to_owned(),
+            String::new(),
+            "third\"".to_owned(),
+        ];
+        let expected = vec![DumpNode::Element {
+            tag_name: "html".to_owned(),
+            attributes: Vec::new(),
+            children: vec![
+                DumpNode::Element {
+                    tag_name: "head".to_owned(),
+                    attributes: Vec::new(),
+                    children: Vec::new(),
+                },
+                DumpNode::Element {
+                    tag_name: "body".to_owned(),
+                    attributes: Vec::new(),
+                    children: vec![DumpNode::Element {
+                        tag_name: "pre".to_owned(),
+                        attributes: Vec::new(),
+                        children: vec![DumpNode::Text(
+                            "first\\n| literal tree prefix\\n\\nthird".to_owned(),
+                        )],
+                    }],
+                },
+            ],
+        }];
+
+        let parsed = parse_reference_tree(&lines).unwrap();
+        assert_eq!(parsed, expected);
+
+        let text = Node {
+            kind: NodeKind::Text("first\\n| literal tree prefix\\n\\nthird".to_owned()),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+        assert_eq!(
+            serialize_hari_node(&text).unwrap(),
+            DumpNode::Text("first\\n| literal tree prefix\\n\\nthird".to_owned())
+        );
+    }
+
+    #[test]
+    fn unterminated_multiline_text_dump_is_invalid() {
+        let lines = vec![
+            "| <html>".to_owned(),
+            "|   <head>".to_owned(),
+            "|   <body>".to_owned(),
+            "|     \"unfinished".to_owned(),
+            "text".to_owned(),
+        ];
+
+        assert!(matches!(
+            parse_reference_tree(&lines),
+            Err(super::DumpError::Invalid(_))
+        ));
+    }
+
+    #[test]
     fn serializer_orders_attributes_by_utf16_code_units() {
         let node = Node {
             kind: NodeKind::Element {
