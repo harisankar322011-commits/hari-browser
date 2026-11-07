@@ -230,8 +230,12 @@ impl<'a> Parser<'a> {
         if let Some(end) = self.find_raw_closing(self.position, tag_name) {
             if end > self.position {
                 let raw = &self.source[self.position..end];
+                let (raw, skipped_cr_line_ending) =
+                    skip_initial_cr_line_ending(raw, ignore_initial_lf);
                 let mut value = decode_raw_text_content(tag_name, raw);
-                suppress_initial_lf_character(&mut value, ignore_initial_lf);
+                if !skipped_cr_line_ending {
+                    suppress_initial_lf_character(&mut value, ignore_initial_lf);
+                }
                 self.position = end;
                 self.add_node(NodeKind::Text(value), Vec::new())?;
             } else {
@@ -242,8 +246,12 @@ impl<'a> Parser<'a> {
             }
         } else {
             let raw = &self.source[self.position..];
+            let (raw, skipped_cr_line_ending) =
+                skip_initial_cr_line_ending(raw, ignore_initial_lf);
             let mut value = decode_raw_text_content(tag_name, raw);
-            suppress_initial_lf_character(&mut value, ignore_initial_lf);
+            if !skipped_cr_line_ending {
+                suppress_initial_lf_character(&mut value, ignore_initial_lf);
+            }
             self.position = self.bytes.len();
             if !value.is_empty() {
                 self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -865,8 +873,12 @@ impl<'a> Parser<'a> {
             end = (start + 1).min(self.bytes.len());
         }
 
-        let mut value = decode_character_references(&self.source[start..end], false);
-        suppress_initial_lf_character(&mut value, ignore_initial_lf);
+        let raw = &self.source[start..end];
+        let (raw, skipped_cr_line_ending) = skip_initial_cr_line_ending(raw, ignore_initial_lf);
+        let mut value = decode_character_references(raw, false);
+        if !skipped_cr_line_ending {
+            suppress_initial_lf_character(&mut value, ignore_initial_lf);
+        }
         self.position = end;
         if !value.is_empty() {
             self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -1130,6 +1142,22 @@ fn normalize_numeric_reference(value: u32) -> u32 {
         0x9F => 0x0178,
         _ => value,
     }
+}
+
+/// Skips a raw CRLF or CR that input-stream preprocessing turns into one LF.
+fn skip_initial_cr_line_ending(input: &str, should_suppress: bool) -> (&str, bool) {
+    if !should_suppress {
+        return (input, false);
+    }
+
+    if let Some(rest) = input.strip_prefix("\r\n") {
+        return (rest, true);
+    }
+    if let Some(rest) = input.strip_prefix('\r') {
+        return (rest, true);
+    }
+
+    (input, false)
 }
 
 /// Ignores the first LF character token after a pre-like start tag.
