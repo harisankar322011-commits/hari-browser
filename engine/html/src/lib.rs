@@ -832,6 +832,14 @@ impl<'a> Parser<'a> {
         if !is_void {
             self.open_elements.push(node_index);
         }
+
+        // The HTML tree builder ignores one immediate LF after these start tags.
+        if matches!(tag_name.as_str(), "pre" | "textarea" | "listing")
+            && self.bytes.get(self.position) == Some(&b'\n')
+        {
+            self.position += 1;
+        }
+
         Ok(())
     }
 
