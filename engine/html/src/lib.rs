@@ -157,6 +157,7 @@ struct Parser<'a> {
     limits: &'a HtmlLimits,
     nodes: Vec<TempNode>,
     open_elements: Vec<usize>,
+    ignore_next_lf: bool,
 }
 
 impl<'a> Parser<'a> {
@@ -175,13 +176,18 @@ impl<'a> Parser<'a> {
             limits,
             nodes: vec![TempNode::new(NodeKind::Document, Vec::new())],
             open_elements: vec![0],
+            ignore_next_lf: false,
         }
     }
 
     fn parse(&mut self) -> Result<(), ParseError> {
         while self.position < self.bytes.len() {
+            // The tree builder rule applies to the next token, not the next raw byte.
+            // Taking the flag here also ensures comments and tags consume the opportunity.
+            let ignore_initial_lf = std::mem::take(&mut self.ignore_next_lf);
+
             if let Some(tag_name) = self.current_raw_text_element() {
-                self.consume_raw_text(tag_name)?;
+                self.consume_raw_text(tag_name, ignore_initial_lf)?;
                 continue;
             }
 
@@ -196,7 +202,7 @@ impl<'a> Parser<'a> {
             } else if self.is_start_tag_start(self.position) {
                 self.parse_start_tag()?;
             } else {
-                self.parse_text()?;
+                self.parse_text(ignore_initial_lf)?;
             }
         }
         Ok(())
@@ -216,11 +222,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn consume_raw_text(&mut self, tag_name: &str) -> Result<(), ParseError> {
+    fn consume_raw_text(
+        &mut self,
+        tag_name: &str,
+        ignore_initial_lf: bool,
+    ) -> Result<(), ParseError> {
         if let Some(end) = self.find_raw_closing(self.position, tag_name) {
             if end > self.position {
                 let raw = &self.source[self.position..end];
-                let value = decode_raw_text_content(tag_name, raw);
+                let mut value = decode_raw_text_content(tag_name, raw);
+                suppress_initial_lf_character(&mut value, ignore_initial_lf);
                 self.position = end;
                 self.add_node(NodeKind::Text(value), Vec::new())?;
             } else {
@@ -231,7 +242,8 @@ impl<'a> Parser<'a> {
             }
         } else {
             let raw = &self.source[self.position..];
-            let value = decode_raw_text_content(tag_name, raw);
+            let mut value = decode_raw_text_content(tag_name, raw);
+            suppress_initial_lf_character(&mut value, ignore_initial_lf);
             self.position = self.bytes.len();
             if !value.is_empty() {
                 self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -683,7 +695,7 @@ impl<'a> Parser<'a> {
         }
 
         if name_start == self.position {
-            return self.parse_text();
+            return self.parse_text(false);
         }
 
         let tag_name = self.source[name_start..self.position].to_ascii_lowercase();
@@ -833,17 +845,13 @@ impl<'a> Parser<'a> {
             self.open_elements.push(node_index);
         }
 
-        // The HTML tree builder ignores one immediate LF after these start tags.
-        if matches!(tag_name.as_str(), "pre" | "textarea" | "listing")
-            && self.bytes.get(self.position) == Some(&b'\n')
-        {
-            self.position += 1;
-        }
+        // The next character token is ignored only for these three start tags.
+        self.ignore_next_lf = matches!(tag_name.as_str(), "pre" | "textarea" | "listing");
 
         Ok(())
     }
 
-    fn parse_text(&mut self) -> Result<(), ParseError> {
+    fn parse_text(&mut self, ignore_initial_lf: bool) -> Result<(), ParseError> {
         let start = self.position;
         let mut end = start;
 
@@ -857,7 +865,8 @@ impl<'a> Parser<'a> {
             end = (start + 1).min(self.bytes.len());
         }
 
-        let value = decode_character_references(&self.source[start..end], false);
+        let mut value = decode_character_references(&self.source[start..end], false);
+        suppress_initial_lf_character(&mut value, ignore_initial_lf);
         self.position = end;
         if !value.is_empty() {
             self.add_node(NodeKind::Text(value), Vec::new())?;
@@ -1120,6 +1129,13 @@ fn normalize_numeric_reference(value: u32) -> u32 {
         0x9E => 0x017E,
         0x9F => 0x0178,
         _ => value,
+    }
+}
+
+/// Ignores the first LF character token after a pre-like start tag.
+fn suppress_initial_lf_character(value: &mut String, should_suppress: bool) {
+    if should_suppress && value.starts_with('\n') {
+        value.remove(0);
     }
 }
 
