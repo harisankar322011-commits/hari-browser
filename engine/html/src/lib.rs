@@ -237,7 +237,9 @@ impl<'a> Parser<'a> {
                     suppress_initial_lf_character(&mut value, ignore_initial_lf);
                 }
                 self.position = end;
-                self.add_node(NodeKind::Text(value), Vec::new())?;
+                if !value.is_empty() {
+                    self.add_node(NodeKind::Text(value), Vec::new())?;
+                }
             } else {
                 // A closing tag at the current position must be handled now,
                 // otherwise an empty raw-text element would loop forever.
