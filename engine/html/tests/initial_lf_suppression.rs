@@ -45,3 +45,13 @@ fn suppression_applies_to_lf_character_references_too() {
     assert_eq!(parse_text_content("<pre>&#10;&#10;A</pre>"), "\nA");
     assert_eq!(parse_text_content("<textarea>&#10;&#10;A</textarea>"), "\nA");
 }
+
+#[test]
+fn suppression_treats_cr_line_endings_as_the_preprocessed_lf() {
+    for tag_name in ["pre", "textarea", "listing"] {
+        let crlf = format!("<{tag_name}>\r\ntext</{tag_name}>");
+        let cr = format!("<{tag_name}>\rtext</{tag_name}>");
+        assert_eq!(parse_text_content(&crlf), "text", "{tag_name} CRLF");
+        assert_eq!(parse_text_content(&cr), "text", "{tag_name} CR");
+    }
+}
