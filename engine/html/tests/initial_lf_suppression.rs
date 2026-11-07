@@ -1,0 +1,68 @@
+//! Regression coverage for the HTML initial-LF suppression rule.
+
+use hari_engine_html::{HtmlLimits, parse_document};
+
+fn parse_text_content(source: &str) -> String {
+    parse_document(source.as_bytes(), &HtmlLimits::default())
+        .expect("valid HTML input")
+        .text_content()
+}
+
+#[test]
+fn pre_textarea_and_listing_suppress_one_immediate_lf() {
+    for tag_name in ["pre", "textarea", "listing"] {
+        let source = format!("<{tag_name}>\nfirst\nsecond</{tag_name}>");
+        assert_eq!(
+            parse_text_content(&source),
+            "first\nsecond",
+            "{tag_name} must suppress exactly its first LF"
+        );
+    }
+}
+
+#[test]
+fn suppression_removes_only_one_lf_and_preserves_the_next() {
+    assert_eq!(parse_text_content("<pre>\n\ntext</pre>"), "\ntext");
+}
+
+#[test]
+fn suppression_requires_lf_to_be_the_immediate_next_character() {
+    assert_eq!(parse_text_content("<pre> \ntext</pre>"), " \ntext");
+    assert_eq!(
+        parse_text_content("<pre><!-- comment -->\ntext</pre>"),
+        "\ntext"
+    );
+    assert_eq!(parse_text_content("<div>\ntext</div>"), "\ntext");
+}
+
+#[test]
+fn textarea_still_decodes_references_after_suppressing_the_initial_lf() {
+    assert_eq!(parse_text_content("<textarea>\n&amp;\n</textarea>"), "&\n");
+}
+
+#[test]
+fn suppression_applies_to_lf_character_references_too() {
+    assert_eq!(parse_text_content("<pre>&#10;&#10;A</pre>"), "\nA");
+    assert_eq!(
+        parse_text_content("<textarea>&#10;&#10;A</textarea>"),
+        "\nA"
+    );
+}
+
+#[test]
+fn suppression_treats_cr_line_endings_as_the_preprocessed_lf() {
+    for tag_name in ["pre", "textarea", "listing"] {
+        let crlf = format!("<{tag_name}>\r\ntext</{tag_name}>");
+        let cr = format!("<{tag_name}>\rtext</{tag_name}>");
+        assert_eq!(parse_text_content(&crlf), "text", "{tag_name} CRLF");
+        assert_eq!(parse_text_content(&cr), "text", "{tag_name} CR");
+    }
+}
+
+#[test]
+fn a_suppressed_only_textarea_lf_does_not_create_an_empty_text_node() {
+    for source in ["<textarea>\n</textarea>", "<textarea>&#10;</textarea>"] {
+        let document = parse_document(source.as_bytes(), &HtmlLimits::default()).unwrap();
+        assert!(document.children[0].children.is_empty(), "{source}");
+    }
+}
