@@ -39,3 +39,9 @@ fn suppression_requires_lf_to_be_the_immediate_next_character() {
 fn textarea_still_decodes_references_after_suppressing_the_initial_lf() {
     assert_eq!(parse_text_content("<textarea>\n&amp;\n</textarea>"), "&\n");
 }
+
+#[test]
+fn suppression_applies_to_lf_character_references_too() {
+    assert_eq!(parse_text_content("<pre>&#10;&#10;A</pre>"), "\nA");
+    assert_eq!(parse_text_content("<textarea>&#10;&#10;A</textarea>"), "\nA");
+}
