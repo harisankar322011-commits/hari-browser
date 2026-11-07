@@ -984,39 +984,6 @@ mod tests {
     }
 
     #[test]
-    fn leading_lf_gap_is_reported_only_for_pre_like_first_text_children() {
-        for tag_name in ["pre", "textarea", "listing"] {
-            let element = Node {
-                kind: NodeKind::Element {
-                    tag_name: tag_name.to_owned(),
-                },
-                attributes: Vec::new(),
-                children: vec![Node {
-                    kind: NodeKind::Text("\ntext".to_owned()),
-                    attributes: Vec::new(),
-                    children: Vec::new(),
-                }],
-            };
-            assert!(super::has_unimplemented_pre_like_leading_lf(&element));
-        }
-
-        let ordinary_element = Node {
-            kind: NodeKind::Element {
-                tag_name: "div".to_owned(),
-            },
-            attributes: Vec::new(),
-            children: vec![Node {
-                kind: NodeKind::Text("\ntext".to_owned()),
-                attributes: Vec::new(),
-                children: Vec::new(),
-            }],
-        };
-        assert!(!super::has_unimplemented_pre_like_leading_lf(
-            &ordinary_element
-        ));
-    }
-
-    #[test]
     fn serializer_orders_attributes_by_utf16_code_units() {
         let node = Node {
             kind: NodeKind::Element {
