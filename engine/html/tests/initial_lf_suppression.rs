@@ -58,3 +58,11 @@ fn suppression_treats_cr_line_endings_as_the_preprocessed_lf() {
         assert_eq!(parse_text_content(&cr), "text", "{tag_name} CR");
     }
 }
+
+#[test]
+fn a_suppressed_only_textarea_lf_does_not_create_an_empty_text_node() {
+    for source in ["<textarea>\n</textarea>", "<textarea>&#10;</textarea>"] {
+        let document = parse_document(source.as_bytes(), &HtmlLimits::default()).unwrap();
+        assert!(document.children[0].children.is_empty(), "{source}");
+    }
+}
