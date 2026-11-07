@@ -246,8 +246,7 @@ impl<'a> Parser<'a> {
             }
         } else {
             let raw = &self.source[self.position..];
-            let (raw, skipped_cr_line_ending) =
-                skip_initial_cr_line_ending(raw, ignore_initial_lf);
+            let (raw, skipped_cr_line_ending) = skip_initial_cr_line_ending(raw, ignore_initial_lf);
             let mut value = decode_raw_text_content(tag_name, raw);
             if !skipped_cr_line_ending {
                 suppress_initial_lf_character(&mut value, ignore_initial_lf);
