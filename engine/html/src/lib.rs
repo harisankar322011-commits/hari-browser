@@ -214,6 +214,7 @@ impl<'a> Parser<'a> {
             NodeKind::Element { tag_name } => match tag_name.as_str() {
                 "script" => Some("script"),
                 "style" => Some("style"),
+                "iframe" => Some("iframe"),
                 "textarea" => Some("textarea"),
                 "title" => Some("title"),
                 _ => None,
