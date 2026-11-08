@@ -123,7 +123,7 @@ impl TempNode {
 ///
 /// This parser is intentionally conservative in scope: it supports element nesting,
 /// end-tag unwinding, comments, doctypes, quoted/unquoted/boolean attributes, void
-/// elements, script/style raw text, title/textarea RCDATA, and a limited character
+/// elements, script/style/iframe raw text, title/textarea RCDATA, and a limited character
 /// reference subset. It performs no JavaScript execution or networking. Callers must
 /// not treat successful parsing as a content-safety verdict.
 pub fn parse_document(bytes: &[u8], limits: &HtmlLimits) -> Result<Node, ParseError> {
@@ -214,6 +214,7 @@ impl<'a> Parser<'a> {
             NodeKind::Element { tag_name } => match tag_name.as_str() {
                 "script" => Some("script"),
                 "style" => Some("style"),
+                "iframe" => Some("iframe"),
                 "textarea" => Some("textarea"),
                 "title" => Some("title"),
                 _ => None,
