@@ -10,10 +10,7 @@ fn parse(source: &str) -> hari_engine_html::Node {
 fn iframe_content_is_text_and_character_references_are_not_decoded() {
     let document = parse("<iframe><b>literal</b> &amp; text</iframe><p>after</p>");
 
-    assert_eq!(
-        document.text_content(),
-        "<b>literal</b> &amp; textafter"
-    );
+    assert_eq!(document.text_content(), "<b>literal</b> &amp; textafter");
     assert_eq!(document.children.len(), 2);
     assert!(matches!(
         &document.children[0].kind,
@@ -42,10 +39,7 @@ fn iframe_end_tag_is_ascii_case_insensitive_and_resumes_data_parsing() {
 fn iframe_name_prefix_is_not_mistaken_for_an_end_tag() {
     let document = parse("<iframe>inside</iframex><p>after</p>");
 
-    assert_eq!(
-        document.text_content(),
-        "inside</iframex><p>after</p>"
-    );
+    assert_eq!(document.text_content(), "inside</iframex><p>after</p>");
     assert_eq!(document.children.len(), 1);
     assert_eq!(document.children[0].children.len(), 1);
 }
