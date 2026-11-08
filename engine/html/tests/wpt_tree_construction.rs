@@ -619,9 +619,6 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if contains_ascii_case_insensitive(&case.input, "<noscript") {
         return Some("noscript parsing depends on an unimplemented scripting flag");
     }
-    if contains_ascii_case_insensitive(&case.input, "<iframe") {
-        return Some("iframe raw-text tokenizer state is not implemented");
-    }
     let lower_input = case.input.to_ascii_lowercase();
     if let Some(close_tag) = lower_input.rfind("</html>") {
         let trailing = &lower_input[close_tag + "</html>".len()..];
