@@ -10,6 +10,10 @@ use std::collections::{BTreeMap, HashSet};
 use hari_engine_html::{Attribute, HtmlLimits, Node, NodeKind, parse_document};
 
 const WPT_REVISION: &str = "b4cd3d853150fb8e704a56f0099d6fbff2b9550f";
+// The first v1.2 audit exposed these expected-error evaluation gaps. They are
+// reported separately and never counted as passes; new cases must not increase
+// this pinned baseline without an explicit review.
+const MAX_EXPECTED_ERROR_EVALUATION_FAILURES: usize = 227;
 const BUNDLES: &[&str] = &[
     include_str!("fixtures/wpt/part-01.bundle"),
     include_str!("fixtures/wpt/part-02.bundle"),
@@ -64,6 +68,7 @@ enum DumpError {
 enum CaseResult {
     Passed(ComparisonMode),
     Unsupported(&'static str),
+    Invalid(String),
     Failed(String),
 }
 
@@ -598,15 +603,16 @@ fn contains_ascii_case_insensitive(source: &str, needle: &str) -> bool {
         .any(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
 }
 
+fn expects_error_metadata(case: &TestCase) -> bool {
+    case.has_parse_errors || case.has_new_errors
+}
+
 fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if case.fragment_context.is_some() || case.fragment_output {
         return Some("HTML fragment parsing is not implemented");
     }
     if case.scripting_mode.is_some() {
         return Some("WPT scripting-mode variants are not implemented");
-    }
-    if case.has_parse_errors || case.has_new_errors {
-        return Some("parse-error diagnostics are not exposed by the HARI parser");
     }
     if contains_ascii_case_insensitive(&case.input, "<template") {
         return Some("template contents are not represented by the HARI tree model");
@@ -675,7 +681,7 @@ fn evaluate_case(fixture_name: &str, case: &TestCase) -> CaseResult {
     let document = match parse_document(case.input.as_bytes(), &HtmlLimits::default()) {
         Ok(document) => document,
         Err(error) => {
-            return CaseResult::Failed(format!("HARI parser rejected input: {error:?}"));
+            return CaseResult::Invalid(format!("HARI parser rejected input: {error:?}"));
         }
     };
 
@@ -683,7 +689,7 @@ fn evaluate_case(fixture_name: &str, case: &TestCase) -> CaseResult {
         Ok(expected) => expected,
         Err(DumpError::Unsupported(reason)) => return CaseResult::Unsupported(reason),
         Err(DumpError::Invalid(reason)) => {
-            return CaseResult::Failed(format!("invalid WPT reference dump: {reason}"));
+            return CaseResult::Invalid(format!("invalid WPT reference dump: {reason}"));
         }
     };
 
@@ -732,8 +738,14 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let mut total_cases = 0usize;
     let mut exact_tree_passes = 0usize;
     let mut body_projection_passes = 0usize;
+    let mut expected_error_metadata_cases = 0usize;
+    let mut expected_new_error_cases = 0usize;
+    let mut tree_compared_error_cases = 0usize;
+    let mut tree_passed_error_cases = 0usize;
     let mut unsupported = BTreeMap::<&'static str, usize>::new();
     let mut failures = Vec::new();
+    let mut expected_error_tree_mismatches = Vec::new();
+    let mut expected_error_precomparison_failures = Vec::new();
 
     for fixture in &fixtures {
         let cases = parse_fixture_cases(&fixture.source)
@@ -741,7 +753,23 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 
         for (case_index, case) in cases.iter().enumerate() {
             total_cases += 1;
-            match evaluate_case(&fixture.name, case) {
+            let expects_errors = expects_error_metadata(case);
+            if expects_errors {
+                expected_error_metadata_cases += 1;
+            }
+            if case.has_new_errors {
+                expected_new_error_cases += 1;
+            }
+
+            let result = evaluate_case(&fixture.name, case);
+            if expects_errors && matches!(&result, CaseResult::Passed(_) | CaseResult::Failed(_)) {
+                tree_compared_error_cases += 1;
+            }
+            if expects_errors && matches!(&result, CaseResult::Passed(_)) {
+                tree_passed_error_cases += 1;
+            }
+
+            match result {
                 CaseResult::Passed(ComparisonMode::ExactTree) => exact_tree_passes += 1,
                 CaseResult::Passed(ComparisonMode::BodyProjection) => body_projection_passes += 1,
                 CaseResult::Unsupported(reason) => {
@@ -753,7 +781,25 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
                     } else {
                         case.description.clone()
                     };
-                    failures.push(format!("{} / {label}: {reason}", fixture.name));
+                    let failure = format!("{} / {label}: {reason}", fixture.name);
+                    if expects_errors {
+                        expected_error_tree_mismatches.push(failure);
+                    } else {
+                        failures.push(failure);
+                    }
+                }
+                CaseResult::Invalid(reason) => {
+                    let label = if case.description.is_empty() {
+                        format!("case {}", case_index + 1)
+                    } else {
+                        case.description.clone()
+                    };
+                    let failure = format!("{} / {label}: {reason}", fixture.name);
+                    if expects_errors {
+                        expected_error_precomparison_failures.push(failure);
+                    } else {
+                        failures.push(failure);
+                    }
                 }
             }
         }
@@ -761,14 +807,24 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 
     let passed = exact_tree_passes + body_projection_passes;
     let unsupported_total: usize = unsupported.values().sum();
+    let expected_error_evaluation_failures =
+        expected_error_tree_mismatches.len() + expected_error_precomparison_failures.len();
     eprintln!(
-        "HARI HTML Conformance v1 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, failed={}, unsupported={}",
+        "HARI HTML Conformance v1.2 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, non-error-failures={}, expected-error-evaluation-failures={}, expected-error-tree-mismatches={}, expected-error-precomparison-failures={}, unsupported={}, expected-error-metadata={}, expected-new-error-metadata={}, tree-compared-error-cases={}, tree-passed-error-cases={}, diagnostics-unavailable={}",
         fixtures.len(),
         total_cases,
         exact_tree_passes,
         body_projection_passes,
         failures.len(),
-        unsupported_total
+        expected_error_evaluation_failures,
+        expected_error_tree_mismatches.len(),
+        expected_error_precomparison_failures.len(),
+        unsupported_total,
+        expected_error_metadata_cases,
+        expected_new_error_cases,
+        tree_compared_error_cases,
+        tree_passed_error_cases,
+        expected_error_metadata_cases
     );
     for (reason, count) in &unsupported {
         eprintln!("  unsupported / {reason}: {count}");
@@ -776,10 +832,28 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     for failure in failures.iter().take(20) {
         eprintln!("  FAIL / {failure}");
     }
+    for failure in expected_error_tree_mismatches.iter().take(20) {
+        eprintln!("  EXPECTED-ERROR TREE MISMATCH / {failure}");
+    }
+    for failure in expected_error_precomparison_failures.iter().take(20) {
+        eprintln!("  EXPECTED-ERROR PRE-COMPARISON FAILURE / {failure}");
+    }
 
     assert!(
-        passed > 0,
-        "the v1 harness must compare at least one supported case"
+        expected_error_metadata_cases >= 50,
+        "the pinned WPT corpus must contain at least 50 cases with expected parse-error metadata; found {expected_error_metadata_cases}"
+    );
+    assert!(
+        tree_compared_error_cases >= 50,
+        "at least 50 expected-error cases must reach tree comparison; found {tree_compared_error_cases}"
+    );
+    assert!(
+        passed >= 66,
+        "WPT v1.2 must preserve the existing 66-pass v1 baseline; found {passed}"
+    );
+    assert!(
+        expected_error_evaluation_failures <= MAX_EXPECTED_ERROR_EVALUATION_FAILURES,
+        "expected-error evaluation gaps increased beyond the pinned v1.2 baseline of {MAX_EXPECTED_ERROR_EVALUATION_FAILURES}; found {expected_error_evaluation_failures}"
     );
     assert!(
         failures.is_empty(),
@@ -890,13 +964,12 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn parse_error_diagnostics_are_reported_as_unsupported() {
-        let case = TestCase {
-            description: "tree comparison remains useful when diagnostics are expected".to_owned(),
+    fn simple_error_case(has_parse_errors: bool, has_new_errors: bool) -> TestCase {
+        TestCase {
+            description: "simple body tree with expected parse-error metadata".to_owned(),
             input: "<p>HARI".to_owned(),
-            has_parse_errors: true,
-            has_new_errors: false,
+            has_parse_errors,
+            has_new_errors,
             fragment_context: None,
             fragment_output: false,
             scripting_mode: None,
@@ -907,12 +980,37 @@ mod tests {
                 "|     <p>".to_owned(),
                 "|       \"HARI\"".to_owned(),
             ],
-        };
+        }
+    }
+
+    #[test]
+    fn parse_error_expectations_do_not_block_tree_comparison() {
+        let case = simple_error_case(true, false);
 
         assert!(matches!(
             evaluate_case("inbody01", &case),
-            CaseResult::Unsupported("parse-error diagnostics are not exposed by the HARI parser")
+            CaseResult::Passed(ComparisonMode::BodyProjection)
         ));
+    }
+
+    #[test]
+    fn new_error_expectations_do_not_block_tree_comparison() {
+        let case = simple_error_case(false, true);
+
+        assert!(matches!(
+            evaluate_case("inbody01", &case),
+            CaseResult::Passed(ComparisonMode::BodyProjection)
+        ));
+    }
+
+    #[test]
+    fn fixture_reader_preserves_error_metadata_separately() {
+        let fixture = "#data\n<p>HARI\n#errors\n(1,1): expected-doctype-but-got-start-tag\n#new-errors\n(1,1): unexpected-token\n#document\n| <html>\n|   <head>\n|   <body>\n|     <p>\n|       \"HARI\"\n";
+        let cases = parse_fixture_cases(fixture).unwrap();
+
+        assert_eq!(cases.len(), 1);
+        assert!(cases[0].has_parse_errors);
+        assert!(cases[0].has_new_errors);
     }
 
     #[test]
