@@ -762,12 +762,7 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
             }
 
             let result = evaluate_case(&fixture.name, case);
-            if expects_errors
-                && matches!(
-                    &result,
-                    CaseResult::Passed(_) | CaseResult::Failed(_)
-                )
-            {
+            if expects_errors && matches!(&result, CaseResult::Passed(_) | CaseResult::Failed(_)) {
                 tree_compared_error_cases += 1;
             }
             if expects_errors && matches!(&result, CaseResult::Passed(_)) {
