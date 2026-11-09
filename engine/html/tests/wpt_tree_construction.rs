@@ -890,13 +890,12 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn parse_error_diagnostics_are_reported_as_unsupported() {
-        let case = TestCase {
-            description: "tree comparison remains useful when diagnostics are expected".to_owned(),
+    fn simple_error_case(has_parse_errors: bool, has_new_errors: bool) -> TestCase {
+        TestCase {
+            description: "simple body tree with expected parse-error metadata".to_owned(),
             input: "<p>HARI".to_owned(),
-            has_parse_errors: true,
-            has_new_errors: false,
+            has_parse_errors,
+            has_new_errors,
             fragment_context: None,
             fragment_output: false,
             scripting_mode: None,
@@ -907,12 +906,37 @@ mod tests {
                 "|     <p>".to_owned(),
                 "|       \"HARI\"".to_owned(),
             ],
-        };
+        }
+    }
+
+    #[test]
+    fn parse_error_expectations_do_not_block_tree_comparison() {
+        let case = simple_error_case(true, false);
 
         assert!(matches!(
             evaluate_case("inbody01", &case),
-            CaseResult::Unsupported("parse-error diagnostics are not exposed by the HARI parser")
+            CaseResult::Passed(ComparisonMode::BodyProjection)
         ));
+    }
+
+    #[test]
+    fn new_error_expectations_do_not_block_tree_comparison() {
+        let case = simple_error_case(false, true);
+
+        assert!(matches!(
+            evaluate_case("inbody01", &case),
+            CaseResult::Passed(ComparisonMode::BodyProjection)
+        ));
+    }
+
+    #[test]
+    fn fixture_reader_preserves_error_metadata_separately() {
+        let fixture = "#data\n<p>HARI\n#errors\n(1,1): expected-doctype-but-got-start-tag\n#new-errors\n(1,1): unexpected-token\n#document\n| <html>\n|   <head>\n|   <body>\n|     <p>\n|       \"HARI\"\n";
+        let cases = parse_fixture_cases(fixture).unwrap();
+
+        assert_eq!(cases.len(), 1);
+        assert!(cases[0].has_parse_errors);
+        assert!(cases[0].has_new_errors);
     }
 
     #[test]
