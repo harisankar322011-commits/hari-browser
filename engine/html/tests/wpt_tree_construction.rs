@@ -598,15 +598,16 @@ fn contains_ascii_case_insensitive(source: &str, needle: &str) -> bool {
         .any(|window| window.eq_ignore_ascii_case(needle.as_bytes()))
 }
 
+fn expects_error_metadata(case: &TestCase) -> bool {
+    case.has_parse_errors || case.has_new_errors
+}
+
 fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if case.fragment_context.is_some() || case.fragment_output {
         return Some("HTML fragment parsing is not implemented");
     }
     if case.scripting_mode.is_some() {
         return Some("WPT scripting-mode variants are not implemented");
-    }
-    if case.has_parse_errors || case.has_new_errors {
-        return Some("parse-error diagnostics are not exposed by the HARI parser");
     }
     if contains_ascii_case_insensitive(&case.input, "<template") {
         return Some("template contents are not represented by the HARI tree model");
@@ -732,6 +733,10 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let mut total_cases = 0usize;
     let mut exact_tree_passes = 0usize;
     let mut body_projection_passes = 0usize;
+    let mut expected_error_metadata_cases = 0usize;
+    let mut expected_new_error_cases = 0usize;
+    let mut tree_compared_error_cases = 0usize;
+    let mut tree_passed_error_cases = 0usize;
     let mut unsupported = BTreeMap::<&'static str, usize>::new();
     let mut failures = Vec::new();
 
@@ -741,7 +746,23 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 
         for (case_index, case) in cases.iter().enumerate() {
             total_cases += 1;
-            match evaluate_case(&fixture.name, case) {
+            let expects_errors = expects_error_metadata(case);
+            if expects_errors {
+                expected_error_metadata_cases += 1;
+            }
+            if case.has_new_errors {
+                expected_new_error_cases += 1;
+            }
+
+            let result = evaluate_case(&fixture.name, case);
+            if expects_errors && !matches!(&result, CaseResult::Unsupported(_)) {
+                tree_compared_error_cases += 1;
+            }
+            if expects_errors && matches!(&result, CaseResult::Passed(_)) {
+                tree_passed_error_cases += 1;
+            }
+
+            match result {
                 CaseResult::Passed(ComparisonMode::ExactTree) => exact_tree_passes += 1,
                 CaseResult::Passed(ComparisonMode::BodyProjection) => body_projection_passes += 1,
                 CaseResult::Unsupported(reason) => {
@@ -762,13 +783,18 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let passed = exact_tree_passes + body_projection_passes;
     let unsupported_total: usize = unsupported.values().sum();
     eprintln!(
-        "HARI HTML Conformance v1 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, failed={}, unsupported={}",
+        "HARI HTML Conformance v1.2 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, failed={}, unsupported={}, expected-error-metadata={}, expected-new-error-metadata={}, tree-compared-error-cases={}, tree-passed-error-cases={}, diagnostics-unavailable={}",
         fixtures.len(),
         total_cases,
         exact_tree_passes,
         body_projection_passes,
         failures.len(),
-        unsupported_total
+        unsupported_total,
+        expected_error_metadata_cases,
+        expected_new_error_cases,
+        tree_compared_error_cases,
+        tree_passed_error_cases,
+        expected_error_metadata_cases
     );
     for (reason, count) in &unsupported {
         eprintln!("  unsupported / {reason}: {count}");
@@ -778,8 +804,16 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     }
 
     assert!(
-        passed > 0,
-        "the v1 harness must compare at least one supported case"
+        expected_error_metadata_cases >= 50,
+        "the pinned WPT corpus must contain at least 50 cases with expected parse-error metadata; found {expected_error_metadata_cases}"
+    );
+    assert!(
+        tree_compared_error_cases >= 50,
+        "at least 50 expected-error cases must reach tree comparison; found {tree_compared_error_cases}"
+    );
+    assert!(
+        passed >= 66,
+        "WPT v1.2 must preserve the existing 66-pass v1 baseline; found {passed}"
     );
     assert!(
         failures.is_empty(),
