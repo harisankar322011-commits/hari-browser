@@ -68,6 +68,7 @@ enum DumpError {
 enum CaseResult {
     Passed(ComparisonMode),
     Unsupported(&'static str),
+    Invalid(String),
     Failed(String),
 }
 
@@ -680,7 +681,7 @@ fn evaluate_case(fixture_name: &str, case: &TestCase) -> CaseResult {
     let document = match parse_document(case.input.as_bytes(), &HtmlLimits::default()) {
         Ok(document) => document,
         Err(error) => {
-            return CaseResult::Failed(format!("HARI parser rejected input: {error:?}"));
+            return CaseResult::Invalid(format!("HARI parser rejected input: {error:?}"));
         }
     };
 
@@ -688,7 +689,7 @@ fn evaluate_case(fixture_name: &str, case: &TestCase) -> CaseResult {
         Ok(expected) => expected,
         Err(DumpError::Unsupported(reason)) => return CaseResult::Unsupported(reason),
         Err(DumpError::Invalid(reason)) => {
-            return CaseResult::Failed(format!("invalid WPT reference dump: {reason}"));
+            return CaseResult::Invalid(format!("invalid WPT reference dump: {reason}"));
         }
     };
 
@@ -743,7 +744,8 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     let mut tree_passed_error_cases = 0usize;
     let mut unsupported = BTreeMap::<&'static str, usize>::new();
     let mut failures = Vec::new();
-    let mut expected_error_evaluation_failures = Vec::new();
+    let mut expected_error_tree_mismatches = Vec::new();
+    let mut expected_error_precomparison_failures = Vec::new();
 
     for fixture in &fixtures {
         let cases = parse_fixture_cases(&fixture.source)
@@ -760,7 +762,12 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
             }
 
             let result = evaluate_case(&fixture.name, case);
-            if expects_errors && !matches!(&result, CaseResult::Unsupported(_)) {
+            if expects_errors
+                && matches!(
+                    &result,
+                    CaseResult::Passed(_) | CaseResult::Failed(_)
+                )
+            {
                 tree_compared_error_cases += 1;
             }
             if expects_errors && matches!(&result, CaseResult::Passed(_)) {
@@ -781,7 +788,20 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
                     };
                     let failure = format!("{} / {label}: {reason}", fixture.name);
                     if expects_errors {
-                        expected_error_evaluation_failures.push(failure);
+                        expected_error_tree_mismatches.push(failure);
+                    } else {
+                        failures.push(failure);
+                    }
+                }
+                CaseResult::Invalid(reason) => {
+                    let label = if case.description.is_empty() {
+                        format!("case {}", case_index + 1)
+                    } else {
+                        case.description.clone()
+                    };
+                    let failure = format!("{} / {label}: {reason}", fixture.name);
+                    if expects_errors {
+                        expected_error_precomparison_failures.push(failure);
                     } else {
                         failures.push(failure);
                     }
@@ -792,14 +812,18 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 
     let passed = exact_tree_passes + body_projection_passes;
     let unsupported_total: usize = unsupported.values().sum();
+    let expected_error_evaluation_failures =
+        expected_error_tree_mismatches.len() + expected_error_precomparison_failures.len();
     eprintln!(
-        "HARI HTML Conformance v1.2 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, non-error-failures={}, expected-error-evaluation-failures={}, unsupported={}, expected-error-metadata={}, expected-new-error-metadata={}, tree-compared-error-cases={}, tree-passed-error-cases={}, diagnostics-unavailable={}",
+        "HARI HTML Conformance v1.2 (WPT {WPT_REVISION}): fixtures={}, cases={}, exact-tree-pass={}, body-projection-pass={}, non-error-failures={}, expected-error-evaluation-failures={}, expected-error-tree-mismatches={}, expected-error-precomparison-failures={}, unsupported={}, expected-error-metadata={}, expected-new-error-metadata={}, tree-compared-error-cases={}, tree-passed-error-cases={}, diagnostics-unavailable={}",
         fixtures.len(),
         total_cases,
         exact_tree_passes,
         body_projection_passes,
         failures.len(),
-        expected_error_evaluation_failures.len(),
+        expected_error_evaluation_failures,
+        expected_error_tree_mismatches.len(),
+        expected_error_precomparison_failures.len(),
         unsupported_total,
         expected_error_metadata_cases,
         expected_new_error_cases,
@@ -813,8 +837,11 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
     for failure in failures.iter().take(20) {
         eprintln!("  FAIL / {failure}");
     }
-    for failure in expected_error_evaluation_failures.iter().take(20) {
-        eprintln!("  EXPECTED-ERROR EVALUATION GAP / {failure}");
+    for failure in expected_error_tree_mismatches.iter().take(20) {
+        eprintln!("  EXPECTED-ERROR TREE MISMATCH / {failure}");
+    }
+    for failure in expected_error_precomparison_failures.iter().take(20) {
+        eprintln!("  EXPECTED-ERROR PRE-COMPARISON FAILURE / {failure}");
     }
 
     assert!(
@@ -830,9 +857,8 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
         "WPT v1.2 must preserve the existing 66-pass v1 baseline; found {passed}"
     );
     assert!(
-        expected_error_evaluation_failures.len() <= MAX_EXPECTED_ERROR_EVALUATION_FAILURES,
-        "expected-error evaluation gaps increased beyond the pinned v1.2 baseline of {MAX_EXPECTED_ERROR_EVALUATION_FAILURES}; found {}",
-        expected_error_evaluation_failures.len()
+        expected_error_evaluation_failures <= MAX_EXPECTED_ERROR_EVALUATION_FAILURES,
+        "expected-error evaluation gaps increased beyond the pinned v1.2 baseline of {MAX_EXPECTED_ERROR_EVALUATION_FAILURES}; found {expected_error_evaluation_failures}"
     );
     assert!(
         failures.is_empty(),
