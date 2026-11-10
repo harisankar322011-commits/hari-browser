@@ -634,6 +634,22 @@ fn is_supported_direct_select_table_token_case(input: &str) -> bool {
     after_opening_bracket[token_end + 1..].trim().is_empty()
 }
 
+fn is_supported_plaintext_case(input: &str) -> bool {
+    let normalized = input.trim().to_ascii_lowercase();
+    let mut remaining = normalized.as_str();
+
+    if let Some(after_doctype) = remaining.strip_prefix("<!doctype html>") {
+        remaining = after_doctype.trim_start();
+    }
+    if let Some(after_paragraph) = remaining.strip_prefix("<p>") {
+        remaining = after_paragraph;
+    }
+
+    // Keep this WPT expansion limited to a standalone plaintext start tag,
+    // optionally preceded by a doctype and an empty paragraph start tag.
+    remaining.starts_with("<plaintext>")
+}
+
 fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if case.fragment_context.is_some() || case.fragment_output {
         return Some("HTML fragment parsing is not implemented");
@@ -669,8 +685,10 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     {
         return Some("frameset insertion mode is not implemented");
     }
-    if contains_ascii_case_insensitive(&case.input, "<plaintext") {
-        return Some("plaintext tokenizer state is not implemented");
+    if contains_ascii_case_insensitive(&case.input, "<plaintext")
+        && !is_supported_plaintext_case(&case.input)
+    {
+        return Some("plaintext cases outside the bounded standalone subset are unsupported");
     }
     if contains_ascii_case_insensitive(&case.input, "<select")
         && !is_supported_direct_select_table_token_case(&case.input)
@@ -897,8 +915,8 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 mod tests {
     use super::{
         CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case,
-        is_supported_direct_select_table_token_case, parse_fixture_cases, parse_reference_tree,
-        project_implicit_body, serialize_hari_node,
+        is_supported_direct_select_table_token_case, is_supported_plaintext_case,
+        parse_fixture_cases, parse_reference_tree, project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
 
@@ -1052,6 +1070,35 @@ mod tests {
         assert!(!is_supported_direct_select_table_token_case(
             "<!doctype html><selectx><tr>"
         ));
+    }
+
+    #[test]
+    fn standalone_plaintext_cases_are_eligible_for_comparison() {
+        for input in [
+            "<plaintext></plaintext>",
+            "<!doctype html><plaintext></plaintext>",
+            "<!doctype html><p><plaintext>",
+        ] {
+            assert!(
+                is_supported_plaintext_case(input),
+                "standalone plaintext input should be compared: {input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn plaintext_in_complex_tree_contexts_remains_unsupported() {
+        for input in [
+            "<!doctype html><table><plaintext></plaintext>",
+            "<!doctype html><select><plaintext></plaintext>",
+            "<!doctype html><template><plaintext>text",
+            "<!doctype html><svg><plaintext>text",
+        ] {
+            assert!(
+                !is_supported_plaintext_case(input),
+                "complex plaintext context must remain unsupported: {input:?}"
+            );
+        }
     }
 
     #[test]
