@@ -607,6 +607,29 @@ fn expects_error_metadata(case: &TestCase) -> bool {
     case.has_parse_errors || case.has_new_errors
 }
 
+fn select_is_inside_unclosed_table(input: &str) -> bool {
+    let lower_input = input.to_ascii_lowercase();
+    let Some(select_start) = lower_input.find("<select") else {
+        return false;
+    };
+    let before_select = &lower_input[..select_start];
+    let Some(table_start) = before_select.rfind("<table") else {
+        return false;
+    };
+    let table_name_end = table_start + "<table".len();
+    if !before_select
+        .as_bytes()
+        .get(table_name_end)
+        .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(byte, b'>' | b'/'))
+    {
+        return false;
+    }
+
+    before_select
+        .rfind("</table>")
+        .is_none_or(|table_end| table_end < table_start)
+}
+
 fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if case.fragment_context.is_some() || case.fragment_output {
         return Some("HTML fragment parsing is not implemented");
@@ -645,8 +668,8 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if contains_ascii_case_insensitive(&case.input, "<plaintext") {
         return Some("plaintext tokenizer state is not implemented");
     }
-    if contains_ascii_case_insensitive(&case.input, "<select") {
-        return Some("select insertion mode is not implemented");
+    if select_is_inside_unclosed_table(&case.input) {
+        return Some("select-in-table insertion handling is not implemented");
     }
     None
 }
@@ -981,6 +1004,27 @@ mod tests {
                 "|       \"HARI\"".to_owned(),
             ],
         }
+    }
+
+    #[test]
+    fn direct_select_cases_are_not_classified_as_select_in_table() {
+        assert!(!select_is_inside_unclosed_table(
+            "<!doctype html><select><tr>"
+        ));
+    }
+
+    #[test]
+    fn select_inside_open_table_remains_unsupported() {
+        assert!(select_is_inside_unclosed_table(
+            "<!doctype html><table><select><tr>"
+        ));
+    }
+
+    #[test]
+    fn select_after_closed_table_is_not_classified_as_select_in_table() {
+        assert!(!select_is_inside_unclosed_table(
+            "<!doctype html><table></table><select><tr>"
+        ));
     }
 
     #[test]
