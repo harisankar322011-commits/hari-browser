@@ -522,6 +522,39 @@ impl<'a> Parser<'a> {
     }
 
     /// Returns the tag name at a position in the open-element stack.
+    /// Returns true only when a plain, non-table select is the current node.
+    ///
+    /// Select-in-table has a distinct insertion-mode rule and remains unsupported;
+    /// this bounded helper must not apply ordinary select handling inside a table.
+    fn is_plain_select_current_node(&self) -> bool {
+        let Some(&current_index) = self.open_elements.last() else {
+            return false;
+        };
+        let current_is_select = matches!(
+            &self.nodes[current_index].kind,
+            NodeKind::Element { tag_name } if tag_name == "select"
+        );
+        current_is_select
+            && !self
+                .open_elements
+                .iter()
+                .take(self.open_elements.len().saturating_sub(1))
+                .any(|&index| {
+                    matches!(
+                        &self.nodes[index].kind,
+                        NodeKind::Element { tag_name } if tag_name == "table"
+                    )
+                })
+    }
+
+    /// Table-structural start tags ignored by the bounded direct-select rule.
+    fn is_ignored_table_start_tag_in_select(tag_name: &str) -> bool {
+        matches!(
+            tag_name,
+            "caption" | "table" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th"
+        )
+    }
+
     fn open_element_tag(&self, stack_position: usize) -> Option<&str> {
         let index = *self.open_elements.get(stack_position)?;
         match &self.nodes[index].kind {
@@ -797,6 +830,14 @@ impl<'a> Parser<'a> {
             {
                 attributes.push(Attribute { name, value });
             }
+        }
+
+        // In the bounded direct-select subset, table-structural start tags
+        // are ignored. Select-in-table requires a separate insertion mode.
+        if self.is_plain_select_current_node()
+            && Self::is_ignored_table_start_tag_in_select(&tag_name)
+        {
+            return Ok(());
         }
 
         if Self::start_tag_closes_paragraph(&tag_name) {
