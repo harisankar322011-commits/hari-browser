@@ -545,7 +545,7 @@ impl<'a> Parser<'a> {
 
     /// Returns true when any table element is open on the stack.
     ///
-    /// The bounded body-mode recovery below does not replace table insertion modes.
+    /// The direct-select subset deliberately does not apply inside a table.
     fn has_open_table_ancestor(&self) -> bool {
         self.open_elements.iter().any(|&index| {
             matches!(
@@ -553,23 +553,6 @@ impl<'a> Parser<'a> {
                 NodeKind::Element { tag_name } if tag_name == "table"
             )
         })
-    }
-
-    /// Start tags ignored by the bounded "in body" subset outside table context.
-    fn is_ignored_body_start_tag(tag_name: &str) -> bool {
-        matches!(
-            tag_name,
-            "caption"
-                | "col"
-                | "colgroup"
-                | "frame"
-                | "tbody"
-                | "td"
-                | "tfoot"
-                | "th"
-                | "thead"
-                | "tr"
-        )
     }
 
     /// Returns the tag name at a position in the open-element stack.
