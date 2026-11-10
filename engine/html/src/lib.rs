@@ -521,6 +521,40 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Returns true only when a plain select is the current node.
+    ///
+    /// A select nested in an open table uses a different, currently unsupported path.
+    fn is_plain_select_current_node(&self) -> bool {
+        let Some(&current_index) = self.open_elements.last() else {
+            return false;
+        };
+        let current_is_select = matches!(
+            &self.nodes[current_index].kind,
+            NodeKind::Element { tag_name } if tag_name == "select"
+        );
+        current_is_select && !self.has_open_table_ancestor()
+    }
+
+    /// Table-structural start tags ignored by this bounded direct-select subset.
+    fn is_ignored_table_start_tag_in_select(tag_name: &str) -> bool {
+        matches!(
+            tag_name,
+            "caption" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th"
+        )
+    }
+
+    /// Returns true when any table element is open on the stack.
+    ///
+    /// The direct-select subset deliberately does not apply inside a table.
+    fn has_open_table_ancestor(&self) -> bool {
+        self.open_elements.iter().any(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "table"
+            )
+        })
+    }
+
     /// Returns the tag name at a position in the open-element stack.
     fn open_element_tag(&self, stack_position: usize) -> Option<&str> {
         let index = *self.open_elements.get(stack_position)?;
@@ -797,6 +831,14 @@ impl<'a> Parser<'a> {
             {
                 attributes.push(Attribute { name, value });
             }
+        }
+
+        // In this bounded direct-select subset, table-structural start tags
+        // are ignored only when select is current and no table ancestor is open.
+        if self.is_plain_select_current_node()
+            && Self::is_ignored_table_start_tag_in_select(&tag_name)
+        {
+            return Ok(());
         }
 
         if Self::start_tag_closes_paragraph(&tag_name) {

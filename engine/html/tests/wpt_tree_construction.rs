@@ -607,6 +607,33 @@ fn expects_error_metadata(case: &TestCase) -> bool {
     case.has_parse_errors || case.has_new_errors
 }
 
+fn is_supported_direct_select_table_token_case(input: &str) -> bool {
+    let normalized = input.trim().to_ascii_lowercase();
+    let mut remaining = normalized.as_str();
+    if let Some(after_doctype) = remaining.strip_prefix("<!doctype html>") {
+        remaining = after_doctype.trim_start();
+    }
+
+    let Some(after_select) = remaining.strip_prefix("<select>") else {
+        return false;
+    };
+    let Some(after_opening_bracket) = after_select.strip_prefix('<') else {
+        return false;
+    };
+    let Some(token_end) = after_opening_bracket.find('>') else {
+        return false;
+    };
+    let tag_name = &after_opening_bracket[..token_end];
+    if !matches!(
+        tag_name,
+        "caption" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th"
+    ) {
+        return false;
+    }
+
+    after_opening_bracket[token_end + 1..].trim().is_empty()
+}
+
 fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if case.fragment_context.is_some() || case.fragment_output {
         return Some("HTML fragment parsing is not implemented");
@@ -645,8 +672,12 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if contains_ascii_case_insensitive(&case.input, "<plaintext") {
         return Some("plaintext tokenizer state is not implemented");
     }
-    if contains_ascii_case_insensitive(&case.input, "<select") {
-        return Some("select insertion mode is not implemented");
+    if contains_ascii_case_insensitive(&case.input, "<select")
+        && !is_supported_direct_select_table_token_case(&case.input)
+    {
+        return Some(
+            "select cases beyond the bounded direct structural-token subset are unsupported",
+        );
     }
     None
 }
@@ -865,8 +896,9 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 #[cfg(test)]
 mod tests {
     use super::{
-        CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case, parse_fixture_cases,
-        parse_reference_tree, project_implicit_body, serialize_hari_node,
+        CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case,
+        is_supported_direct_select_table_token_case, parse_fixture_cases, parse_reference_tree,
+        project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
 
@@ -981,6 +1013,45 @@ mod tests {
                 "|       \"HARI\"".to_owned(),
             ],
         }
+    }
+
+    #[test]
+    fn seven_direct_select_table_token_cases_are_eligible_for_comparison() {
+        for tag_name in ["caption", "tbody", "tfoot", "thead", "tr", "td", "th"] {
+            let input = format!("<!doctype html><select><{tag_name}>");
+            assert!(
+                is_supported_direct_select_table_token_case(&input),
+                "{tag_name} should be compared"
+            );
+        }
+    }
+
+    #[test]
+    fn other_select_content_remains_unsupported() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><select><option>one</option></select>"
+        ));
+    }
+
+    #[test]
+    fn select_inside_open_table_remains_unsupported() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><table><select><tr>"
+        ));
+    }
+
+    #[test]
+    fn select_after_other_markup_remains_unsupported() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><table></table><select><tr>"
+        ));
+    }
+
+    #[test]
+    fn select_like_tag_name_prefix_is_not_eligible() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><selectx><tr>"
+        ));
     }
 
     #[test]
