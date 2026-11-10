@@ -20,9 +20,7 @@ fn table_structural_start_tags_are_ignored_when_select_is_current() {
     for tag_name in [
         "caption", "table", "tbody", "tfoot", "thead", "tr", "td", "th",
     ] {
-        let source = format!(
-            "<select><{tag_name} data-probe=\"ignored\">tail</select>"
-        );
+        let source = format!("<select><{tag_name} data-probe=\"ignored\">tail</select>");
         let document = parse_document(source.as_bytes(), &HtmlLimits::default())
             .expect("valid bounded HTML input");
         let select = find_element(&document, "select").expect("select element");
