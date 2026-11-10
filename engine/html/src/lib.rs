@@ -521,36 +521,33 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// Returns true only when a plain, non-table select is the current node.
+    /// Returns true when any table element is open on the stack.
     ///
-    /// Select-in-table has a distinct insertion-mode rule and remains unsupported;
-    /// this bounded helper must not apply ordinary select handling inside a table.
-    fn is_plain_select_current_node(&self) -> bool {
-        let Some(&current_index) = self.open_elements.last() else {
-            return false;
-        };
-        let current_is_select = matches!(
-            &self.nodes[current_index].kind,
-            NodeKind::Element { tag_name } if tag_name == "select"
-        );
-        current_is_select
-            && !self
-                .open_elements
-                .iter()
-                .take(self.open_elements.len().saturating_sub(1))
-                .any(|&index| {
-                    matches!(
-                        &self.nodes[index].kind,
-                        NodeKind::Element { tag_name } if tag_name == "table"
-                    )
-                })
+    /// The bounded body-mode recovery below does not replace table insertion modes.
+    fn has_open_table_ancestor(&self) -> bool {
+        self.open_elements.iter().any(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "table"
+            )
+        })
     }
 
-    /// Table-structural start tags ignored by the bounded direct-select rule.
-    fn is_ignored_table_start_tag_in_select(tag_name: &str) -> bool {
+    /// Start tags ignored by the bounded body-mode subset outside table context.
+    fn is_ignored_table_structure_start_tag(tag_name: &str) -> bool {
         matches!(
             tag_name,
-            "caption" | "table" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th"
+            "caption"
+                | "col"
+                | "colgroup"
+                | "frame"
+                | "head"
+                | "tbody"
+                | "td"
+                | "tfoot"
+                | "th"
+                | "thead"
+                | "tr"
         )
     }
 
@@ -832,10 +829,10 @@ impl<'a> Parser<'a> {
             }
         }
 
-        // In the bounded direct-select subset, table-structural start tags
-        // are ignored. Select-in-table requires a separate insertion mode.
-        if self.is_plain_select_current_node()
-            && Self::is_ignored_table_start_tag_in_select(&tag_name)
+        // In the bounded body-mode subset, these structural start tags are
+        // ignored outside table context. Select-in-table remains separate.
+        if !self.has_open_table_ancestor()
+            && Self::is_ignored_table_structure_start_tag(&tag_name)
         {
             return Ok(());
         }
