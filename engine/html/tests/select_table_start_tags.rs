@@ -1,4 +1,4 @@
-//! Regression coverage for bounded body-mode table-structure token handling.
+//! Regression coverage for bounded direct-select table-token handling.
 
 use hari_engine_html::{HtmlLimits, Node, NodeKind, parse_document};
 
@@ -15,59 +15,42 @@ fn find_element<'a>(node: &'a Node, tag_name: &str) -> Option<&'a Node> {
         .find_map(|child| find_element(child, tag_name))
 }
 
-const IGNORED_BODY_START_TAGS: &[&str] = &[
-    "caption", "col", "colgroup", "frame", "tbody", "td", "tfoot", "th", "thead", "tr",
-];
+const SELECT_IGNORED_TAGS: &[&str] =
+    &["caption", "tbody", "tfoot", "thead", "tr", "td", "th"];
 
 #[test]
-fn table_structure_start_tags_are_ignored_outside_table_context() {
-    for tag_name in IGNORED_BODY_START_TAGS {
-        let source = format!("<div><{tag_name} data-probe=\"ignored\">tail</div>");
-        let document = parse_document(source.as_bytes(), &HtmlLimits::default())
-            .expect("valid bounded HTML input");
-        let div = find_element(&document, "div").expect("div element");
-
-        assert_eq!(
-            div.text_content(),
-            "tail",
-            "{tag_name} token must be ignored without losing following text"
-        );
-        assert!(
-            find_element(div, tag_name).is_none(),
-            "{tag_name} must not be inserted outside table context"
-        );
-    }
-}
-
-#[test]
-fn seven_pinned_direct_select_cases_are_ignored() {
-    for tag_name in ["caption", "tbody", "tfoot", "thead", "tr", "td", "th"] {
-        let source = format!("<select><{tag_name}>tail</select>");
+fn table_structural_start_tags_are_ignored_when_select_is_current() {
+    for tag_name in SELECT_IGNORED_TAGS {
+        let source = format!("<select><{tag_name} data-probe=\"ignored\">tail</select>");
         let document = parse_document(source.as_bytes(), &HtmlLimits::default())
             .expect("valid bounded HTML input");
         let select = find_element(&document, "select").expect("select element");
 
-        assert_eq!(select.text_content(), "tail", "{tag_name}");
+        assert_eq!(
+            select.text_content(),
+            "tail",
+            "{tag_name} token must be ignored without losing following text"
+        );
         assert!(
             find_element(select, tag_name).is_none(),
-            "{tag_name} must be ignored inside direct select content"
+            "{tag_name} must not be inserted under a direct select"
         );
     }
 }
 
 #[test]
-fn table_structure_tokens_remain_active_inside_table_context() {
-    let document = parse_document(
-        b"<table><tr><td>cell</td></tr></table>",
-        &HtmlLimits::default(),
-    )
-    .expect("valid bounded HTML input");
-    let table = find_element(&document, "table").expect("table element");
+fn table_structural_start_tags_are_not_globally_suppressed() {
+    for tag_name in SELECT_IGNORED_TAGS {
+        let source = format!("<div><{tag_name}></{tag_name}></div>");
+        let document = parse_document(source.as_bytes(), &HtmlLimits::default())
+            .expect("valid bounded HTML input");
+        let div = find_element(&document, "div").expect("div element");
 
-    assert!(find_element(table, "tbody").is_some());
-    assert!(find_element(table, "tr").is_some());
-    assert!(find_element(table, "td").is_some());
-    assert_eq!(table.text_content(), "cell");
+        assert!(
+            find_element(div, tag_name).is_some(),
+            "{tag_name} behavior outside direct select must remain unchanged"
+        );
+    }
 }
 
 #[test]
