@@ -607,35 +607,31 @@ fn expects_error_metadata(case: &TestCase) -> bool {
     case.has_parse_errors || case.has_new_errors
 }
 
-fn select_is_inside_unclosed_table(input: &str) -> bool {
-    let lower_input = input.to_ascii_lowercase();
-    let Some(select_start) = lower_input.find("<select") else {
-        return false;
-    };
-    let select_name_end = select_start + "<select".len();
-    if !lower_input
-        .as_bytes()
-        .get(select_name_end)
-        .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(*byte, b'>' | b'/'))
-    {
-        return false;
+fn is_supported_direct_select_table_token_case(input: &str) -> bool {
+    let normalized = input.trim().to_ascii_lowercase();
+    let mut remaining = normalized.as_str();
+    if let Some(after_doctype) = remaining.strip_prefix("<!doctype html>") {
+        remaining = after_doctype.trim_start();
     }
-    let before_select = &lower_input[..select_start];
-    let Some(table_start) = before_select.rfind("<table") else {
+
+    let Some(after_select) = remaining.strip_prefix("<select>") else {
         return false;
     };
-    let table_name_end = table_start + "<table".len();
-    if !before_select
-        .as_bytes()
-        .get(table_name_end)
-        .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(*byte, b'>' | b'/'))
-    {
+    let Some(after_opening_bracket) = after_select.strip_prefix('<') else {
+        return false;
+    };
+    let Some(token_end) = after_opening_bracket.find('>') else {
+        return false;
+    };
+    let tag_name = &after_opening_bracket[..token_end];
+    if !matches!(
+        tag_name,
+        "caption" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th"
+    ) {
         return false;
     }
 
-    before_select
-        .rfind("</table>")
-        .is_none_or(|table_end| table_end < table_start)
+    after_opening_bracket[token_end + 1..].trim().is_empty()
 }
 
 fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
@@ -676,10 +672,10 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if contains_ascii_case_insensitive(&case.input, "<plaintext") {
         return Some("plaintext tokenizer state is not implemented");
     }
-    if select_is_inside_unclosed_table(&case.input) {
-        return Some(
-            "select inside an open table context is outside the bounded table-mode subset",
-        );
+    if contains_ascii_case_insensitive(&case.input, "<select")
+        && !is_supported_direct_select_table_token_case(&case.input)
+    {
+        return Some("select cases beyond the bounded direct structural-token subset are unsupported");
     }
     None
 }
@@ -899,8 +895,8 @@ fn pinned_wpt_tree_construction_fixtures_are_compared_deterministically() {
 mod tests {
     use super::{
         CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case, parse_fixture_cases,
-        parse_reference_tree, project_implicit_body, select_is_inside_unclosed_table,
-        serialize_hari_node,
+        is_supported_direct_select_table_token_case, parse_reference_tree,
+        project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
 
@@ -1018,30 +1014,41 @@ mod tests {
     }
 
     #[test]
-    fn direct_select_cases_are_not_classified_as_select_in_table() {
-        assert!(!select_is_inside_unclosed_table(
-            "<!doctype html><select><tr>"
+    fn seven_direct_select_table_token_cases_are_eligible_for_comparison() {
+        for tag_name in ["caption", "tbody", "tfoot", "thead", "tr", "td", "th"] {
+            let input = format!("<!doctype html><select><{tag_name}>");
+            assert!(
+                is_supported_direct_select_table_token_case(&input),
+                "{tag_name} should be compared"
+            );
+        }
+    }
+
+    #[test]
+    fn other_select_content_remains_unsupported() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><select><option>one</option></select>"
         ));
     }
 
     #[test]
     fn select_inside_open_table_remains_unsupported() {
-        assert!(select_is_inside_unclosed_table(
+        assert!(!is_supported_direct_select_table_token_case(
             "<!doctype html><table><select><tr>"
         ));
     }
 
     #[test]
-    fn select_like_tag_name_prefix_is_not_classified_as_select() {
-        assert!(!select_is_inside_unclosed_table(
-            "<!doctype html><table><selectx><tr>"
+    fn select_after_other_markup_remains_unsupported() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><table></table><select><tr>"
         ));
     }
 
     #[test]
-    fn select_after_closed_table_is_not_classified_as_select_in_table() {
-        assert!(!select_is_inside_unclosed_table(
-            "<!doctype html><table></table><select><tr>"
+    fn select_like_tag_name_prefix_is_not_eligible() {
+        assert!(!is_supported_direct_select_table_token_case(
+            "<!doctype html><selectx><tr>"
         ));
     }
 
