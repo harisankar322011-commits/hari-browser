@@ -123,9 +123,10 @@ impl TempNode {
 ///
 /// This parser is intentionally conservative in scope: it supports element nesting,
 /// end-tag unwinding, comments, doctypes, quoted/unquoted/boolean attributes, void
-/// elements, script/style/iframe raw text, title/textarea RCDATA, and a limited character
-/// reference subset. It performs no JavaScript execution or networking. Callers must
-/// not treat successful parsing as a content-safety verdict.
+/// elements, script/style/iframe raw text, plaintext through end-of-file,
+/// title/textarea RCDATA, and a limited character-reference subset. It performs no
+/// JavaScript execution or networking. Callers must not treat successful parsing as a
+/// content-safety verdict.
 pub fn parse_document(bytes: &[u8], limits: &HtmlLimits) -> Result<Node, ParseError> {
     // Callers may tighten these limits but cannot raise the absolute safety ceilings.
     let effective_limits = HtmlLimits {
@@ -215,6 +216,7 @@ impl<'a> Parser<'a> {
                 "script" => Some("script"),
                 "style" => Some("style"),
                 "iframe" => Some("iframe"),
+                "plaintext" => Some("plaintext"),
                 "textarea" => Some("textarea"),
                 "title" => Some("title"),
                 _ => None,
@@ -228,6 +230,17 @@ impl<'a> Parser<'a> {
         tag_name: &str,
         ignore_initial_lf: bool,
     ) -> Result<(), ParseError> {
+        // The PLAINTEXT tokenizer state has no exit transition: even apparent
+        // closing tags and character references remain literal characters.
+        if tag_name == "plaintext" {
+            let raw = &self.source[self.position..];
+            self.position = self.bytes.len();
+            if !raw.is_empty() {
+                self.add_node(NodeKind::Text(raw.to_owned()), Vec::new())?;
+            }
+            return Ok(());
+        }
+
         if let Some(end) = self.find_raw_closing(self.position, tag_name) {
             if end > self.position {
                 let raw = &self.source[self.position..end];
@@ -452,6 +465,7 @@ impl<'a> Parser<'a> {
                 | "nav"
                 | "ol"
                 | "p"
+                | "plaintext"
                 | "pre"
                 | "search"
                 | "section"
