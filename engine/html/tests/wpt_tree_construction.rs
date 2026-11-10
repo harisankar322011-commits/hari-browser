@@ -677,7 +677,9 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
         return Some("plaintext tokenizer state is not implemented");
     }
     if select_is_inside_unclosed_table(&case.input) {
-        return Some("select inside an open table context is outside the bounded table-mode subset");
+        return Some(
+            "select inside an open table context is outside the bounded table-mode subset",
+        );
     }
     None
 }
