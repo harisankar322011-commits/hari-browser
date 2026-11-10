@@ -916,8 +916,7 @@ mod tests {
     use super::{
         CaseResult, ComparisonMode, DumpNode, TestCase, evaluate_case,
         is_supported_direct_select_table_token_case, is_supported_plaintext_case,
-        parse_fixture_cases, parse_reference_tree,
-        project_implicit_body, serialize_hari_node,
+        parse_fixture_cases, parse_reference_tree, project_implicit_body, serialize_hari_node,
     };
     use hari_engine_html::{Attribute, Node, NodeKind};
 
