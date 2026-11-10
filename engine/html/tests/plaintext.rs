@@ -34,8 +34,7 @@ fn plaintext_consumes_the_rest_of_the_document_as_literal_text() {
 
 #[test]
 fn plaintext_start_tag_closes_an_open_paragraph() {
-    let document =
-        parse_document(b"<p>intro<plaintext>raw", &HtmlLimits::default()).unwrap();
+    let document = parse_document(b"<p>intro<plaintext>raw", &HtmlLimits::default()).unwrap();
 
     assert_eq!(document.children.len(), 2);
     assert_eq!(element(&document.children[0], "p").text_content(), "intro");
