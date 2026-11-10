@@ -521,14 +521,26 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// Returns true while an explicit head element remains open.
-    fn has_open_head_element(&self) -> bool {
-        self.open_elements.iter().any(|&index| {
-            matches!(
-                &self.nodes[index].kind,
-                NodeKind::Element { tag_name } if tag_name == "head"
-            )
-        })
+    /// Returns true only when a plain select is the current node.
+    ///
+    /// A select nested in an open table uses a different, currently unsupported path.
+    fn is_plain_select_current_node(&self) -> bool {
+        let Some(&current_index) = self.open_elements.last() else {
+            return false;
+        };
+        let current_is_select = matches!(
+            &self.nodes[current_index].kind,
+            NodeKind::Element { tag_name } if tag_name == "select"
+        );
+        current_is_select && !self.has_open_table_ancestor()
+    }
+
+    /// Table-structural start tags ignored by this bounded direct-select subset.
+    fn is_ignored_table_start_tag_in_select(tag_name: &str) -> bool {
+        matches!(
+            tag_name,
+            "caption" | "tbody" | "tfoot" | "thead" | "tr" | "td" | "th"
+        )
     }
 
     /// Returns true when any table element is open on the stack.
@@ -838,11 +850,10 @@ impl<'a> Parser<'a> {
             }
         }
 
-        // Keep explicit head construction intact; apply this bounded body-mode
-        // subset only after the head has closed and while no table is open.
-        if !self.has_open_head_element()
-            && !self.has_open_table_ancestor()
-            && Self::is_ignored_body_start_tag(&tag_name)
+        // In this bounded direct-select subset, table-structural start tags
+        // are ignored only when select is current and no table ancestor is open.
+        if self.is_plain_select_current_node()
+            && Self::is_ignored_table_start_tag_in_select(&tag_name)
         {
             return Ok(());
         }
