@@ -15,13 +15,13 @@ fn find_element<'a>(node: &'a Node, tag_name: &str) -> Option<&'a Node> {
         .find_map(|child| find_element(child, tag_name))
 }
 
-const IGNORED_OUTSIDE_TABLE: &[&str] = &[
+const IGNORED_BODY_START_TAGS: &[&str] = &[
     "caption", "col", "colgroup", "frame", "head", "tbody", "td", "tfoot", "th", "thead", "tr",
 ];
 
 #[test]
 fn table_structure_start_tags_are_ignored_outside_table_context() {
-    for tag_name in IGNORED_OUTSIDE_TABLE {
+    for tag_name in IGNORED_BODY_START_TAGS {
         let source = format!("<div><{tag_name} data-probe=\"ignored\">tail</div>");
         let document = parse_document(source.as_bytes(), &HtmlLimits::default())
             .expect("valid bounded HTML input");
