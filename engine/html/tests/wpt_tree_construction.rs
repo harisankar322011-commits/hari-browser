@@ -675,7 +675,9 @@ fn known_unsupported_case(case: &TestCase) -> Option<&'static str> {
     if contains_ascii_case_insensitive(&case.input, "<select")
         && !is_supported_direct_select_table_token_case(&case.input)
     {
-        return Some("select cases beyond the bounded direct structural-token subset are unsupported");
+        return Some(
+            "select cases beyond the bounded direct structural-token subset are unsupported",
+        );
     }
     None
 }
