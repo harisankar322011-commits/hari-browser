@@ -830,9 +830,8 @@ impl<'a> Parser<'a> {
         }
 
         // In the bounded body-mode subset, these structural start tags are
-        // ignored outside table context. Select-in-table remains separate.
-        if !self.has_open_table_ancestor() && Self::is_ignored_body_start_tag(&tag_name)
-        {
+        // ignored outside table context. Open-table handling remains separate.
+        if !self.has_open_table_ancestor() && Self::is_ignored_body_start_tag(&tag_name) {
             return Ok(());
         }
 
