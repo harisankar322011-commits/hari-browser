@@ -521,6 +521,16 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
+    /// Returns true after the parser has entered the document body.
+    fn has_open_body_element(&self) -> bool {
+        self.open_elements.iter().any(|&index| {
+            matches!(
+                &self.nodes[index].kind,
+                NodeKind::Element { tag_name } if tag_name == "body"
+            )
+        })
+    }
+
     /// Returns true when any table element is open on the stack.
     ///
     /// The bounded body-mode recovery below does not replace table insertion modes.
@@ -829,9 +839,12 @@ impl<'a> Parser<'a> {
             }
         }
 
-        // In the bounded body-mode subset, these structural start tags are
-        // ignored outside table context. Open-table handling remains separate.
-        if !self.has_open_table_ancestor() && Self::is_ignored_body_start_tag(&tag_name) {
+        // In the bounded body-mode subset, ignore these tags only after body
+        // parsing has begun and while no table element is open.
+        if self.has_open_body_element()
+            && !self.has_open_table_ancestor()
+            && Self::is_ignored_body_start_tag(&tag_name)
+        {
             return Ok(());
         }
 
