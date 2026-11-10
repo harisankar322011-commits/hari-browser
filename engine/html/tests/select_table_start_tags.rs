@@ -16,7 +16,7 @@ fn find_element<'a>(node: &'a Node, tag_name: &str) -> Option<&'a Node> {
 }
 
 const IGNORED_BODY_START_TAGS: &[&str] = &[
-    "caption", "col", "colgroup", "frame", "head", "tbody", "td", "tfoot", "th", "thead", "tr",
+    "caption", "col", "colgroup", "frame", "tbody", "td", "tfoot", "th", "thead", "tr",
 ];
 
 #[test]
