@@ -521,12 +521,12 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// Returns true after the parser has entered the document body.
-    fn has_open_body_element(&self) -> bool {
+    /// Returns true while an explicit head element remains open.
+    fn has_open_head_element(&self) -> bool {
         self.open_elements.iter().any(|&index| {
             matches!(
                 &self.nodes[index].kind,
-                NodeKind::Element { tag_name } if tag_name == "body"
+                NodeKind::Element { tag_name } if tag_name == "head"
             )
         })
     }
@@ -551,7 +551,6 @@ impl<'a> Parser<'a> {
                 | "col"
                 | "colgroup"
                 | "frame"
-                | "head"
                 | "tbody"
                 | "td"
                 | "tfoot"
@@ -839,9 +838,9 @@ impl<'a> Parser<'a> {
             }
         }
 
-        // In the bounded body-mode subset, ignore these tags only after body
-        // parsing has begun and while no table element is open.
-        if self.has_open_body_element()
+        // Keep explicit head construction intact; apply this bounded body-mode
+        // subset only after the head has closed and while no table is open.
+        if !self.has_open_head_element()
             && !self.has_open_table_ancestor()
             && Self::is_ignored_body_start_tag(&tag_name)
         {
