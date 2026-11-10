@@ -521,7 +521,6 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    /// Returns the tag name at a position in the open-element stack.
     /// Returns true only when a plain, non-table select is the current node.
     ///
     /// Select-in-table has a distinct insertion-mode rule and remains unsupported;
@@ -555,6 +554,7 @@ impl<'a> Parser<'a> {
         )
     }
 
+    /// Returns the tag name at a position in the open-element stack.
     fn open_element_tag(&self, stack_position: usize) -> Option<&str> {
         let index = *self.open_elements.get(stack_position)?;
         match &self.nodes[index].kind {
