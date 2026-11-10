@@ -15,8 +15,7 @@ fn find_element<'a>(node: &'a Node, tag_name: &str) -> Option<&'a Node> {
         .find_map(|child| find_element(child, tag_name))
 }
 
-const SELECT_IGNORED_TAGS: &[&str] =
-    &["caption", "tbody", "tfoot", "thead", "tr", "td", "th"];
+const SELECT_IGNORED_TAGS: &[&str] = &["caption", "tbody", "tfoot", "thead", "tr", "td", "th"];
 
 #[test]
 fn table_structural_start_tags_are_ignored_when_select_is_current() {
