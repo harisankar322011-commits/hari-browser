@@ -612,6 +612,14 @@ fn select_is_inside_unclosed_table(input: &str) -> bool {
     let Some(select_start) = lower_input.find("<select") else {
         return false;
     };
+    let select_name_end = select_start + "<select".len();
+    if !lower_input
+        .as_bytes()
+        .get(select_name_end)
+        .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(*byte, b'>' | b'/'))
+    {
+        return false;
+    }
     let before_select = &lower_input[..select_start];
     let Some(table_start) = before_select.rfind("<table") else {
         return false;
@@ -620,7 +628,7 @@ fn select_is_inside_unclosed_table(input: &str) -> bool {
     if !before_select
         .as_bytes()
         .get(table_name_end)
-        .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(byte, b'>' | b'/'))
+        .is_some_and(|byte| byte.is_ascii_whitespace() || matches!(*byte, b'>' | b'/'))
     {
         return false;
     }
@@ -1017,6 +1025,13 @@ mod tests {
     fn select_inside_open_table_remains_unsupported() {
         assert!(select_is_inside_unclosed_table(
             "<!doctype html><table><select><tr>"
+        ));
+    }
+
+    #[test]
+    fn select_like_tag_name_prefix_is_not_classified_as_select() {
+        assert!(!select_is_inside_unclosed_table(
+            "<!doctype html><table><selectx><tr>"
         ));
     }
 
