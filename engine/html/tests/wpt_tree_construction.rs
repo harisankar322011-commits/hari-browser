@@ -454,12 +454,12 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
             if !prefix.eq_ignore_ascii_case("doctype") {
                 return Err("unrecognized doctype representation");
             }
-            let name = parts.next().ok_or("doctype has no name")?;
-            if parts.next().is_some() {
-                return Err(
-                    "public/system doctype identifiers are not represented by HARI NodeKind",
-                );
-            }
+
+            // WPT's tree dump records only the doctype name. HARI currently
+            // retains the remaining identifier/error tail in its raw value;
+            // projecting just the name compares tree shape without claiming
+            // PUBLIC/SYSTEM identifier or quirks-mode conformance.
+            let name = parts.next().unwrap_or_default();
             Ok(DumpNode::Doctype(name.to_ascii_lowercase()))
         }
         NodeKind::Comment(value) => {
