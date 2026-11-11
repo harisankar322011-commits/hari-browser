@@ -454,12 +454,12 @@ fn serialize_hari_node(node: &Node) -> Result<DumpNode, &'static str> {
             if !prefix.eq_ignore_ascii_case("doctype") {
                 return Err("unrecognized doctype representation");
             }
-            let name = parts.next().ok_or("doctype has no name")?;
-            if parts.next().is_some() {
-                return Err(
-                    "public/system doctype identifiers are not represented by HARI NodeKind",
-                );
-            }
+
+            // WPT's tree dump records only the doctype name. HARI currently
+            // retains the remaining identifier/error tail in its raw value;
+            // projecting just the name compares tree shape without claiming
+            // PUBLIC/SYSTEM identifier or quirks-mode conformance.
+            let name = parts.next().unwrap_or_default();
             Ok(DumpNode::Doctype(name.to_ascii_lowercase()))
         }
         NodeKind::Comment(value) => {
@@ -1221,5 +1221,50 @@ mod tests {
         };
         assert_eq!(attributes[0].0, "\u{10000}");
         assert_eq!(attributes[1].0, "\u{E000}");
+    }
+
+    #[test]
+    fn doctype_serializer_projects_a_missing_name_as_empty() {
+        let node = Node {
+            kind: NodeKind::Doctype("DOCTYPE".to_owned()),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+
+        assert_eq!(
+            serialize_hari_node(&node).unwrap(),
+            DumpNode::Doctype(String::new())
+        );
+    }
+
+    #[test]
+    fn doctype_serializer_compares_the_name_when_identifiers_are_present() {
+        let node = Node {
+            kind: NodeKind::Doctype(
+                "DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://example.test/html.dtd\""
+                    .to_owned(),
+            ),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+
+        assert_eq!(
+            serialize_hari_node(&node).unwrap(),
+            DumpNode::Doctype("html".to_owned())
+        );
+    }
+
+    #[test]
+    fn doctype_serializer_projects_name_before_malformed_trailing_tokens() {
+        let node = Node {
+            kind: NodeKind::Doctype("DOCTYPE potato taco".to_owned()),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+
+        assert_eq!(
+            serialize_hari_node(&node).unwrap(),
+            DumpNode::Doctype("potato".to_owned())
+        );
     }
 }
