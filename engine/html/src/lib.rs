@@ -338,7 +338,13 @@ impl<'a> Parser<'a> {
     /// HTML treats unrecognized declarations and processing-instruction syntax as
     /// bogus comments, ending at the first greater-than sign or end of input.
     fn parse_bogus_comment(&mut self) -> Result<(), ParseError> {
-        let start = self.position + 2;
+        // For "<?", the question mark is reconsumed as the first character of
+        // the bogus comment. For "<!", the declaration opener is consumed.
+        let start = if self.bytes.get(self.position + 1) == Some(&b'?') {
+            self.position + 1
+        } else {
+            self.position + 2
+        };
         let end = find_byte(self.bytes, start, b'>').unwrap_or(self.bytes.len());
         let value = self.source[start..end].to_owned();
         self.position = if end < self.bytes.len() { end + 1 } else { end };
