@@ -15,10 +15,7 @@ fn paragraph_then_block(source: &[u8], expected_block: &str) {
         2,
         "the block start tag must close the preceding paragraph"
     );
-    assert_eq!(
-        element(&document.children[0], "p").text_content(),
-        "foo"
-    );
+    assert_eq!(element(&document.children[0], "p").text_content(), "foo");
 
     let block = element(&document.children[1], expected_block);
     assert_eq!(block.text_content(), "barbaz");
