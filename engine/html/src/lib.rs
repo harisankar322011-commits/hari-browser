@@ -327,9 +327,23 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_doctype(&mut self) -> Result<(), ParseError> {
-        let start = self.position + 2;
-        let end = find_byte(self.bytes, start, b'>').unwrap_or(self.bytes.len());
-        let value = self.source[start..end].trim().to_owned();
+        let keyword_end = self.position + 9;
+        let end = find_byte(self.bytes, keyword_end, b'>').unwrap_or(self.bytes.len());
+        let after_keyword = &self.source[keyword_end..end];
+
+        // HTML reconsumes the next character in the before-doctype-name state
+        // when whitespace after DOCTYPE is missing. Insert only the missing
+        // separator; retain the existing bounded name/identifier representation.
+        let value = if after_keyword
+            .as_bytes()
+            .first()
+            .is_some_and(u8::is_ascii_whitespace)
+        {
+            format!("DOCTYPE{after_keyword}").trim().to_owned()
+        } else {
+            format!("DOCTYPE {after_keyword}").trim().to_owned()
+        };
+
         self.position = if end < self.bytes.len() { end + 1 } else { end };
         self.add_node(NodeKind::Doctype(value), Vec::new())?;
         Ok(())
@@ -991,11 +1005,10 @@ impl<'a> Parser<'a> {
         let Some(tail) = self.bytes.get(index..) else {
             return false;
         };
-        tail.len() >= 9
-            && tail[..9].eq_ignore_ascii_case(b"<!doctype")
-            && tail
-                .get(9)
-                .is_none_or(|byte| byte.is_ascii_whitespace() || *byte == b'>')
+
+        // The DOCTYPE keyword is recognized before checking the whitespace
+        // separator. Missing whitespace is a parse error, not a bogus comment.
+        tail.len() >= 9 && tail[..9].eq_ignore_ascii_case(b"<!doctype")
     }
 
     fn starts_bogus_comment(&self, index: usize) -> bool {
