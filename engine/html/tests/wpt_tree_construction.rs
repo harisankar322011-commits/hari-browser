@@ -1267,5 +1267,4 @@ mod tests {
             DumpNode::Doctype("potato".to_owned())
         );
     }
-
 }
