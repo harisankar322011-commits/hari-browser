@@ -297,13 +297,31 @@ impl<'a> Parser<'a> {
 
     fn parse_comment(&mut self) -> Result<(), ParseError> {
         let start = self.position + 4;
-        let content_end = find_bytes(self.bytes, start, b"-->").unwrap_or(self.bytes.len());
-        let value = self.source[start..content_end].to_owned();
-        if content_end == self.bytes.len() {
-            self.position = self.bytes.len();
-        } else {
-            self.position = content_end + 3;
+
+        // The two abrupt-closing forms create an empty comment and leave the
+        // following input for the normal tokenizer loop.
+        if self.bytes.get(start) == Some(&b'>') {
+            self.position = start + 1;
+            self.add_node(NodeKind::Comment(String::new()), Vec::new())?;
+            return Ok(());
         }
+        if self.bytes.get(start) == Some(&b'-') && self.bytes.get(start + 1) == Some(&b'>') {
+            self.position = start + 2;
+            self.add_node(NodeKind::Comment(String::new()), Vec::new())?;
+            return Ok(());
+        }
+
+        let normal_end = find_bytes(self.bytes, start, b"-->");
+        let bang_end = find_bytes(self.bytes, start, b"--!>");
+        let (content_end, terminator_length) = match (normal_end, bang_end) {
+            (Some(normal), Some(bang)) if bang < normal => (bang, 4),
+            (Some(normal), _) => (normal, 3),
+            (None, Some(bang)) => (bang, 4),
+            (None, None) => (self.bytes.len(), 0),
+        };
+
+        let value = self.source[start..content_end].to_owned();
+        self.position = content_end + terminator_length;
         self.add_node(NodeKind::Comment(value), Vec::new())?;
         Ok(())
     }
