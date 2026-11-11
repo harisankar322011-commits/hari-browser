@@ -1410,7 +1410,7 @@ mod tests {
         ));
         assert!(matches!(
             document.children[1].kind,
-            NodeKind::Comment(ref value) if value == "xml version=\"1.0\"?"
+            NodeKind::Comment(ref value) if value == "?xml version=\"1.0\"?"
         ));
         assert_eq!(
             element(&document.children[2], "p").text_content(),
