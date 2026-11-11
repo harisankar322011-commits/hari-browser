@@ -1222,4 +1222,50 @@ mod tests {
         assert_eq!(attributes[0].0, "\u{10000}");
         assert_eq!(attributes[1].0, "\u{E000}");
     }
+
+    #[test]
+    fn doctype_serializer_projects_a_missing_name_as_empty() {
+        let node = Node {
+            kind: NodeKind::Doctype("DOCTYPE".to_owned()),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+
+        assert_eq!(
+            serialize_hari_node(&node).unwrap(),
+            DumpNode::Doctype(String::new())
+        );
+    }
+
+    #[test]
+    fn doctype_serializer_compares_the_name_when_identifiers_are_present() {
+        let node = Node {
+            kind: NodeKind::Doctype(
+                "DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://example.test/html.dtd\""
+                    .to_owned(),
+            ),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+
+        assert_eq!(
+            serialize_hari_node(&node).unwrap(),
+            DumpNode::Doctype("html".to_owned())
+        );
+    }
+
+    #[test]
+    fn doctype_serializer_projects_name_before_malformed_trailing_tokens() {
+        let node = Node {
+            kind: NodeKind::Doctype("DOCTYPE potato taco".to_owned()),
+            attributes: Vec::new(),
+            children: Vec::new(),
+        };
+
+        assert_eq!(
+            serialize_hari_node(&node).unwrap(),
+            DumpNode::Doctype("potato".to_owned())
+        );
+    }
+
 }
