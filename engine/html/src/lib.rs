@@ -439,6 +439,7 @@ impl<'a> Parser<'a> {
                 | "article"
                 | "aside"
                 | "blockquote"
+                | "center"
                 | "dd"
                 | "details"
                 | "dialog"
@@ -460,6 +461,7 @@ impl<'a> Parser<'a> {
                 | "hgroup"
                 | "hr"
                 | "li"
+                | "listing"
                 | "main"
                 | "menu"
                 | "nav"
@@ -469,6 +471,7 @@ impl<'a> Parser<'a> {
                 | "pre"
                 | "search"
                 | "section"
+                | "summary"
                 | "table"
                 | "ul"
         )
