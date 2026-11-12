@@ -1331,21 +1331,17 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
         if !matches!(quote, b'\'' | b'"') {
             return find_byte(bytes, cursor, b'>');
         }
-        let Some(after_public_identifier) = find_byte(bytes, cursor + 1, quote) else {
-            return None;
-        };
+        let after_public_identifier = find_byte(bytes, cursor + 1, quote)?;
         cursor = after_public_identifier + 1;
         skip_doctype_whitespace(bytes, &mut cursor);
 
         // A PUBLIC doctype may have a second, SYSTEM identifier. If present,
         // it is quoted independently and may also contain '>'.
-        if let Some(&quote) = bytes.get(cursor) {
-            if matches!(quote, b'\'' | b'"') {
-                let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
-                    return None;
-                };
-                cursor = after_system_identifier + 1;
-            }
+        if let Some(&quote) = bytes.get(cursor)
+            && matches!(quote, 0x27 | b'"')
+        {
+            let after_system_identifier = find_byte(bytes, cursor + 1, quote)?;
+            cursor = after_system_identifier + 1;
         }
 
         return find_byte(bytes, cursor, b'>');
@@ -1361,9 +1357,7 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
         if !matches!(quote, b'\'' | b'"') {
             return find_byte(bytes, cursor, b'>');
         }
-        let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
-            return None;
-        };
+        let after_system_identifier = find_byte(bytes, cursor + 1, quote)?;
         return find_byte(bytes, after_system_identifier + 1, b'>');
     }
 
