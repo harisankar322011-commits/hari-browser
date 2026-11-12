@@ -1325,9 +1325,12 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
         cursor += b"public".len();
         skip_doctype_whitespace(bytes, &mut cursor);
 
-        let Some(&quote) = bytes.get(cursor).filter(|byte| matches!(byte, b'\'' | b'"')) else {
+        let Some(&quote) = bytes.get(cursor) else {
             return find_byte(bytes, cursor, b'>');
         };
+        if !matches!(quote, b'\'' | b'"') {
+            return find_byte(bytes, cursor, b'>');
+        }
         let Some(after_public_identifier) = find_byte(bytes, cursor + 1, quote) else {
             return None;
         };
@@ -1336,11 +1339,13 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
 
         // A PUBLIC doctype may have a second, SYSTEM identifier. If present,
         // it is quoted independently and may also contain '>'.
-        if let Some(&quote) = bytes.get(cursor).filter(|byte| matches!(byte, b'\'' | b'"')) {
-            let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
-                return None;
-            };
-            cursor = after_system_identifier + 1;
+        if let Some(&quote) = bytes.get(cursor) {
+            if matches!(quote, b'\'' | b'"') {
+                let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
+                    return None;
+                };
+                cursor = after_system_identifier + 1;
+            }
         }
 
         return find_byte(bytes, cursor, b'>');
@@ -1350,9 +1355,12 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
         cursor += b"system".len();
         skip_doctype_whitespace(bytes, &mut cursor);
 
-        let Some(&quote) = bytes.get(cursor).filter(|byte| matches!(byte, b'\'' | b'"')) else {
+        let Some(&quote) = bytes.get(cursor) else {
             return find_byte(bytes, cursor, b'>');
         };
+        if !matches!(quote, b'\'' | b'"') {
+            return find_byte(bytes, cursor, b'>');
+        }
         let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
             return None;
         };
@@ -1378,10 +1386,9 @@ fn doctype_keyword_at(bytes: &[u8], start: usize, keyword: &[u8]) -> bool {
         return false;
     }
 
-    matches!(
-        bytes.get(start + keyword.len()),
-        None | Some(b'>' | b'\'' | b'"' | b' ' | b'\\t' | b'\\n' | b'\\r' | b'\\x0C')
-    )
+    bytes
+        .get(start + keyword.len())
+        .is_none_or(|byte| byte.is_ascii_whitespace() || matches!(*byte, b'>' | b'\'' | b'"'))
 }
 
 fn find_byte(bytes: &[u8], from: usize, target: u8) -> Option<usize> {
