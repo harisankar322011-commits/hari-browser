@@ -328,7 +328,7 @@ impl<'a> Parser<'a> {
 
     fn parse_doctype(&mut self) -> Result<(), ParseError> {
         let keyword_end = self.position + 9;
-        let end = find_byte(self.bytes, keyword_end, b'>').unwrap_or(self.bytes.len());
+        let end = find_doctype_end(self.bytes, keyword_end).unwrap_or(self.bytes.len());
         let after_keyword = &self.source[keyword_end..end];
 
         // HTML reconsumes the next character in the before-doctype-name state
@@ -1291,6 +1291,96 @@ fn is_void_element(tag_name: &str) -> bool {
             | "source"
             | "track"
             | "wbr"
+    )
+}
+
+/// Finds the DOCTYPE terminator without treating `>` inside a valid quoted
+/// PUBLIC or SYSTEM identifier as the end of the token.
+///
+/// This is deliberately only a token-boundary helper; it does not parse or
+/// normalize the identifier values and does not implement the full DOCTYPE
+/// tokenizer state machine.
+fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
+    let mut cursor = from;
+    skip_doctype_whitespace(bytes, &mut cursor);
+
+    // Consume the name first. Quotes only protect '>' after a recognized
+    // PUBLIC or SYSTEM keyword; malformed trailing sequences remain bogus.
+    while let Some(&byte) = bytes.get(cursor) {
+        if byte == b'>' {
+            return Some(cursor);
+        }
+        if byte.is_ascii_whitespace() {
+            break;
+        }
+        cursor += 1;
+    }
+
+    if cursor >= bytes.len() {
+        return None;
+    }
+    skip_doctype_whitespace(bytes, &mut cursor);
+
+    if doctype_keyword_at(bytes, cursor, b"public") {
+        cursor += b"public".len();
+        skip_doctype_whitespace(bytes, &mut cursor);
+
+        let Some(&quote) = bytes.get(cursor).filter(|byte| matches!(byte, b'\'' | b'"')) else {
+            return find_byte(bytes, cursor, b'>');
+        };
+        let Some(after_public_identifier) = find_byte(bytes, cursor + 1, quote) else {
+            return None;
+        };
+        cursor = after_public_identifier + 1;
+        skip_doctype_whitespace(bytes, &mut cursor);
+
+        // A PUBLIC doctype may have a second, SYSTEM identifier. If present,
+        // it is quoted independently and may also contain '>'.
+        if let Some(&quote) = bytes.get(cursor).filter(|byte| matches!(byte, b'\'' | b'"')) {
+            let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
+                return None;
+            };
+            cursor = after_system_identifier + 1;
+        }
+
+        return find_byte(bytes, cursor, b'>');
+    }
+
+    if doctype_keyword_at(bytes, cursor, b"system") {
+        cursor += b"system".len();
+        skip_doctype_whitespace(bytes, &mut cursor);
+
+        let Some(&quote) = bytes.get(cursor).filter(|byte| matches!(byte, b'\'' | b'"')) else {
+            return find_byte(bytes, cursor, b'>');
+        };
+        let Some(after_system_identifier) = find_byte(bytes, cursor + 1, quote) else {
+            return None;
+        };
+        return find_byte(bytes, after_system_identifier + 1, b'>');
+    }
+
+    // An unrecognized token after the name enters the parser's existing
+    // bounded bogus-doctype recovery: the first '>' terminates it.
+    find_byte(bytes, cursor, b'>')
+}
+
+fn skip_doctype_whitespace(bytes: &[u8], cursor: &mut usize) {
+    while bytes.get(*cursor).is_some_and(u8::is_ascii_whitespace) {
+        *cursor += 1;
+    }
+}
+
+fn doctype_keyword_at(bytes: &[u8], start: usize, keyword: &[u8]) -> bool {
+    if !bytes
+        .get(start..start.saturating_add(keyword.len()))
+        .is_some_and(|candidate| candidate.eq_ignore_ascii_case(keyword))
+    {
+        return false;
+    }
+
+    matches!(
+        bytes.get(start + keyword.len()),
+        None | Some(b'>' | b'\'' | b'"' | b' ' | b'\\t' | b'\\n' | b'\\r' | b'\\x0C')
     )
 }
 
