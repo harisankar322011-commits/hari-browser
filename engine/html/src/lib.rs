@@ -4,7 +4,10 @@
 //! or fetch subresources. It supports numeric references and the complete bundled
 //! HTML5 named-reference table, including legacy and multi-codepoint values.
 
+mod doctype;
 mod named_entities;
+
+pub use doctype::DoctypeInfo;
 
 use hari_engine_core::{EngineLimits, InputError, validate_document_input};
 use named_entities::{MAX_NAMED_REFERENCE_NAME_LENGTH, NAMED_REFERENCES};
@@ -73,6 +76,17 @@ impl Node {
     pub fn tag_name(&self) -> Option<&str> {
         match &self.kind {
             NodeKind::Element { tag_name } => Some(tag_name),
+            _ => None,
+        }
+    }
+
+    /// Returns structured DOCTYPE metadata when this node is a DOCTYPE.
+    ///
+    /// The force-quirks flag is token-level metadata, not the document's final
+    /// quirks-mode classification.
+    pub fn doctype_info(&self) -> Option<DoctypeInfo> {
+        match &self.kind {
+            NodeKind::Doctype(raw) => Some(DoctypeInfo::from_raw(raw)),
             _ => None,
         }
     }
@@ -1333,10 +1347,15 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
         }
         let after_public_identifier = find_byte(bytes, cursor + 1, quote)?;
         cursor = after_public_identifier + 1;
+        let after_public_identifier_quote = cursor;
         skip_doctype_whitespace(bytes, &mut cursor);
 
-        // A PUBLIC doctype may have a second, SYSTEM identifier. If present,
-        // it is quoted independently and may also contain '>'.
+        // A PUBLIC doctype may have a second, SYSTEM identifier only after
+        // whitespace. Without that separator, the token enters bogus-doctype
+        // recovery and the first following '>' terminates it.
+        if cursor == after_public_identifier_quote {
+            return find_byte(bytes, cursor, b'>');
+        }
         if let Some(&quote) = bytes.get(cursor)
             && matches!(quote, 0x27 | b'"')
         {
