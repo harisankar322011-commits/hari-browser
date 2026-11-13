@@ -1347,10 +1347,15 @@ fn find_doctype_end(bytes: &[u8], from: usize) -> Option<usize> {
         }
         let after_public_identifier = find_byte(bytes, cursor + 1, quote)?;
         cursor = after_public_identifier + 1;
+        let after_public_identifier_quote = cursor;
         skip_doctype_whitespace(bytes, &mut cursor);
 
-        // A PUBLIC doctype may have a second, SYSTEM identifier. If present,
-        // it is quoted independently and may also contain '>'.
+        // A PUBLIC doctype may have a second, SYSTEM identifier only after
+        // whitespace. Without that separator, the token enters bogus-doctype
+        // recovery and the first following '>' terminates it.
+        if cursor == after_public_identifier_quote {
+            return find_byte(bytes, cursor, b'>');
+        }
         if let Some(&quote) = bytes.get(cursor)
             && matches!(quote, 0x27 | b'"')
         {
