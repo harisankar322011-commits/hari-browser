@@ -61,6 +61,25 @@ fn system_identifier_requires_whitespace_after_the_public_identifier() {
 }
 
 #[test]
+fn unseparated_second_quote_does_not_extend_the_doctype_token() {
+    let document = parse_document(
+        b"<!DOCTYPE html PUBLIC 'HARI PUBLIC''SYSTEM>tail",
+        &HtmlLimits::default(),
+    )
+    .unwrap();
+
+    assert_eq!(document.children.len(), 2);
+    let info = document.children[0].doctype_info().unwrap();
+    assert_eq!(info.public_identifier.as_deref(), Some("HARI PUBLIC"));
+    assert_eq!(info.system_identifier, None);
+    assert!(info.force_quirks);
+    assert!(matches!(
+        &document.children[1].kind,
+        NodeKind::Text(value) if value == "tail"
+    ));
+}
+
+#[test]
 fn system_identifier_is_exposed() {
     let info = parse_doctype(b"<!DOCTYPE html SYSTEM 'https://example.test/hari.dtd'>");
 
