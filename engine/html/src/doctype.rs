@@ -56,9 +56,13 @@ impl DoctypeInfo {
                 return Self::new(name, Some(public_identifier), None, true);
             }
 
+            let after_public_identifier = cursor;
             skip_whitespace(bytes, &mut cursor);
             if cursor == bytes.len() {
                 return Self::new(name, Some(public_identifier), None, false);
+            }
+            if cursor == after_public_identifier {
+                return Self::new(name, Some(public_identifier), None, true);
             }
 
             if !matches!(bytes.get(cursor), Some(b'\'' | b'"')) {
