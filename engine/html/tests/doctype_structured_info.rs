@@ -66,9 +66,7 @@ fn system_identifier_is_exposed() {
 
 #[test]
 fn doctype_name_and_keywords_are_ascii_case_insensitive() {
-    let info = parse_doctype(
-        b"<!dOcTyPe HTML pUbLiC 'HARI PUBLIC' 'HARI SYSTEM'>",
-    );
+    let info = parse_doctype(b"<!dOcTyPe HTML pUbLiC 'HARI PUBLIC' 'HARI SYSTEM'>");
 
     assert_eq!(info.name, "html");
     assert_eq!(info.public_identifier.as_deref(), Some("HARI PUBLIC"));
@@ -131,7 +129,7 @@ fn non_doctype_nodes_do_not_expose_doctype_information() {
 
     assert!(document.doctype_info().is_none());
     assert!(matches!(
-        document.children[0].kind,
+        &document.children[0].kind,
         NodeKind::Element { .. }
     ));
 }
