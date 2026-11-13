@@ -52,6 +52,15 @@ fn public_identifier_can_appear_without_a_system_identifier() {
 }
 
 #[test]
+fn system_identifier_requires_whitespace_after_the_public_identifier() {
+    let info = parse_doctype(b"<!DOCTYPE html PUBLIC 'HARI PUBLIC''HARI SYSTEM'>");
+
+    assert_eq!(info.public_identifier.as_deref(), Some("HARI PUBLIC"));
+    assert_eq!(info.system_identifier, None);
+    assert!(info.force_quirks);
+}
+
+#[test]
 fn system_identifier_is_exposed() {
     let info = parse_doctype(b"<!DOCTYPE html SYSTEM 'https://example.test/hari.dtd'>");
 
