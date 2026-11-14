@@ -155,7 +155,7 @@ impl DoctypeInfo {
                 return Self::new(name, Some(public_identifier), None, true);
             }
 
-            if !matches!(bytes.get(cursor), Some(b'\\'' | b'"')) {
+            if !matches!(bytes.get(cursor), Some(b'\'' | b'"')) {
                 return Self::new(name, Some(public_identifier), None, true);
             }
 
@@ -277,7 +277,7 @@ fn starts_with_ascii_case_insensitive(value: &str, prefix: &str) -> bool {
 fn read_identifier(source: &str, cursor: &mut usize) -> Option<(String, bool)> {
     let bytes = source.as_bytes();
     let quote = *bytes.get(*cursor)?;
-    if !matches!(quote, b'\\'' | b'"') {
+    if !matches!(quote, b'\'' | b'"') {
         return None;
     }
 
@@ -302,7 +302,7 @@ fn skip_whitespace(bytes: &[u8], cursor: &mut usize) {
 }
 
 fn is_whitespace(byte: u8) -> bool {
-    matches!(byte, b'\\t' | b'\\n' | b'\\x0C' | b'\\r' | b' ')
+    matches!(byte, b'\t' | b'\n' | b'\x0C' | b'\r' | b' ')
 }
 
 #[cfg(test)]
