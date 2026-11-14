@@ -7,7 +7,7 @@
 mod doctype;
 mod named_entities;
 
-pub use doctype::DoctypeInfo;
+pub use doctype::{DoctypeInfo, DoctypeMode};
 
 use hari_engine_core::{EngineLimits, InputError, validate_document_input};
 use named_entities::{MAX_NAMED_REFERENCE_NAME_LENGTH, NAMED_REFERENCES};
