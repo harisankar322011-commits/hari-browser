@@ -100,6 +100,8 @@ fn every_legacy_public_identifier_prefix_selects_quirks_mode() {
         "-//W3C//DTD HTML 3.2 Final//",
         "-//W3C//DTD HTML 3.2//",
         "-//W3C//DTD HTML 3.2S Draft//",
+        "-//W3C//DTD HTML 4.0 Frameset//",
+        "-//W3C//DTD HTML 4.0 Transitional//",
         "-//W3C//DTD HTML Experimental 19960712//",
         "-//W3C//DTD HTML Experimental 970421//",
         "-//W3C//DTD W3 HTML//",
