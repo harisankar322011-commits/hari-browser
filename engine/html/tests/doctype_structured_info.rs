@@ -52,31 +52,27 @@ fn public_identifier_can_appear_without_a_system_identifier() {
 }
 
 #[test]
-fn system_identifier_requires_whitespace_after_the_public_identifier() {
+fn adjacent_system_identifier_is_parsed_without_setting_force_quirks() {
     let info = parse_doctype(b"<!DOCTYPE html PUBLIC 'HARI PUBLIC''HARI SYSTEM'>");
 
     assert_eq!(info.public_identifier.as_deref(), Some("HARI PUBLIC"));
-    assert_eq!(info.system_identifier, None);
-    assert!(info.force_quirks);
+    assert_eq!(info.system_identifier.as_deref(), Some("HARI SYSTEM"));
+    assert!(!info.force_quirks);
 }
 
 #[test]
-fn unseparated_second_quote_does_not_extend_the_doctype_token() {
+fn unterminated_adjacent_system_identifier_consumes_through_eof() {
     let document = parse_document(
         b"<!DOCTYPE html PUBLIC 'HARI PUBLIC''SYSTEM>tail",
         &HtmlLimits::default(),
     )
     .unwrap();
 
-    assert_eq!(document.children.len(), 2);
+    assert_eq!(document.children.len(), 1);
     let info = document.children[0].doctype_info().unwrap();
     assert_eq!(info.public_identifier.as_deref(), Some("HARI PUBLIC"));
-    assert_eq!(info.system_identifier, None);
+    assert_eq!(info.system_identifier.as_deref(), Some("SYSTEM>tail"));
     assert!(info.force_quirks);
-    assert!(matches!(
-        &document.children[1].kind,
-        NodeKind::Text(value) if value == "tail"
-    ));
 }
 
 #[test]
@@ -144,10 +140,18 @@ fn unterminated_system_identifier_is_preserved_and_sets_force_quirks() {
 }
 
 #[test]
-fn unexpected_trailing_tokens_after_an_identifier_set_force_quirks() {
+fn unexpected_trailing_characters_after_system_identifier_do_not_set_force_quirks() {
     let info = parse_doctype(b"<!DOCTYPE html SYSTEM 'hari.dtd' trailing");
 
     assert_eq!(info.system_identifier.as_deref(), Some("hari.dtd"));
+    assert!(!info.force_quirks);
+}
+
+#[test]
+fn unexpected_trailing_characters_after_public_identifier_set_force_quirks() {
+    let info = parse_doctype(b"<!DOCTYPE html PUBLIC 'hari' trailing");
+
+    assert_eq!(info.public_identifier.as_deref(), Some("hari"));
     assert!(info.force_quirks);
 }
 
