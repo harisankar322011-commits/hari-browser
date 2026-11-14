@@ -45,9 +45,7 @@ fn exact_legacy_public_and_system_identifiers_select_quirks_mode() {
     }
 
     assert_eq!(
-        mode(
-            "<!DOCTYPE html SYSTEM 'http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd'>"
-        ),
+        mode("<!DOCTYPE html SYSTEM 'http://www.ibm.com/data/dtd/v11/ibmxhtml1-transitional.dtd'>"),
         DoctypeMode::Quirks
     );
 }
@@ -133,7 +131,11 @@ fn xhtml_10_frameset_and_transitional_select_limited_quirks_mode() {
         "-//W3C//DTD XHTML 1.0 Transitional//EN",
     ] {
         let input = format!("<!DOCTYPE html PUBLIC '{public_identifier}'>");
-        assert_eq!(mode(&input), DoctypeMode::LimitedQuirks, "{public_identifier}");
+        assert_eq!(
+            mode(&input),
+            DoctypeMode::LimitedQuirks,
+            "{public_identifier}"
+        );
     }
 }
 
@@ -143,14 +145,25 @@ fn html_401_frameset_and_transitional_depend_on_nonempty_system_identifier() {
         "-//W3C//DTD HTML 4.01 Frameset//EN",
         "-//W3C//DTD HTML 4.01 Transitional//EN",
     ] {
-        let with_system =
-            format!("<!DOCTYPE html PUBLIC '{public_identifier}' 'legacy.dtd'>");
+        let with_system = format!("<!DOCTYPE html PUBLIC '{public_identifier}' 'legacy.dtd'>");
         let without_system = format!("<!DOCTYPE html PUBLIC '{public_identifier}'>");
         let empty_system = format!("<!DOCTYPE html PUBLIC '{public_identifier}' ''>");
 
-        assert_eq!(mode(&with_system), DoctypeMode::LimitedQuirks, "{public_identifier}");
-        assert_eq!(mode(&without_system), DoctypeMode::Quirks, "{public_identifier}");
-        assert_eq!(mode(&empty_system), DoctypeMode::Quirks, "{public_identifier}");
+        assert_eq!(
+            mode(&with_system),
+            DoctypeMode::LimitedQuirks,
+            "{public_identifier}"
+        );
+        assert_eq!(
+            mode(&without_system),
+            DoctypeMode::Quirks,
+            "{public_identifier}"
+        );
+        assert_eq!(
+            mode(&empty_system),
+            DoctypeMode::Quirks,
+            "{public_identifier}"
+        );
     }
 }
 
@@ -160,10 +173,7 @@ fn legacy_identifier_comparisons_are_ascii_case_insensitive() {
         mode("<!DOCTYPE HTML PUBLIC '-//w3c//dtd xhtml 1.0 transitional//en'>"),
         DoctypeMode::LimitedQuirks
     );
-    assert_eq!(
-        mode("<!DOCTYPE html PUBLIC 'html'>"),
-        DoctypeMode::Quirks
-    );
+    assert_eq!(mode("<!DOCTYPE html PUBLIC 'html'>"), DoctypeMode::Quirks);
     assert_eq!(
         mode("<!DOCTYPE html SYSTEM 'HTTP://WWW.IBM.COM/DATA/DTD/V11/IBMXHTML1-TRANSITIONAL.DTD'>"),
         DoctypeMode::Quirks
