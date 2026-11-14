@@ -146,23 +146,21 @@ impl DoctypeInfo {
                 return Self::new(name, Some(public_identifier), None, true);
             }
 
-            let after_public_identifier = cursor;
             skip_whitespace(bytes, &mut cursor);
             if cursor == bytes.len() {
                 return Self::new(name, Some(public_identifier), None, false);
-            }
-            if cursor == after_public_identifier {
-                return Self::new(name, Some(public_identifier), None, true);
             }
 
             if !matches!(bytes.get(cursor), Some(b'\'' | b'"')) {
                 return Self::new(name, Some(public_identifier), None, true);
             }
 
+            // The HTML tokenizer accepts an adjacent quoted SYSTEM identifier
+            // after a PUBLIC identifier, while reporting a missing-whitespace
+            // parse error. That parse error does not set force-quirks.
             let (system_identifier, terminated) =
                 read_identifier(after_keyword, &mut cursor).expect("quote was checked above");
-            skip_whitespace(bytes, &mut cursor);
-            let force_quirks = !terminated || cursor != bytes.len();
+            let force_quirks = !terminated;
             return Self::new(
                 name,
                 Some(public_identifier),
@@ -182,7 +180,7 @@ impl DoctypeInfo {
                 name,
                 None,
                 Some(system_identifier),
-                !terminated || cursor != bytes.len(),
+                !terminated,
             );
         }
 
