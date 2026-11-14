@@ -176,12 +176,7 @@ impl DoctypeInfo {
                 return Self::new(name, None, None, true);
             };
             skip_whitespace(bytes, &mut cursor);
-            return Self::new(
-                name,
-                None,
-                Some(system_identifier),
-                !terminated,
-            );
+            return Self::new(name, None, Some(system_identifier), !terminated);
         }
 
         Self::new(name, None, None, true)
