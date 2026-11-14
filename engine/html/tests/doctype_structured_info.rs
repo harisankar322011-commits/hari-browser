@@ -61,22 +61,18 @@ fn adjacent_system_identifier_is_parsed_without_setting_force_quirks() {
 }
 
 #[test]
-fn unseparated_second_quote_does_not_extend_the_doctype_token() {
+fn unterminated_adjacent_system_identifier_consumes_through_eof() {
     let document = parse_document(
         b"<!DOCTYPE html PUBLIC 'HARI PUBLIC''SYSTEM>tail",
         &HtmlLimits::default(),
     )
     .unwrap();
 
-    assert_eq!(document.children.len(), 2);
+    assert_eq!(document.children.len(), 1);
     let info = document.children[0].doctype_info().unwrap();
     assert_eq!(info.public_identifier.as_deref(), Some("HARI PUBLIC"));
-    assert_eq!(info.system_identifier, None);
+    assert_eq!(info.system_identifier.as_deref(), Some("SYSTEM>tail"));
     assert!(info.force_quirks);
-    assert!(matches!(
-        &document.children[1].kind,
-        NodeKind::Text(value) if value == "tail"
-    ));
 }
 
 #[test]
