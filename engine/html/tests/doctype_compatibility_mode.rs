@@ -117,9 +117,7 @@ fn every_legacy_public_identifier_prefix_selects_quirks_mode() {
 #[test]
 fn adjacent_public_and_system_identifiers_use_the_system_identifier_for_mode_selection() {
     assert_eq!(
-        mode(
-            "<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN''legacy.dtd'>"
-        ),
+        mode("<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN''legacy.dtd'>"),
         DoctypeMode::LimitedQuirks
     );
 }
