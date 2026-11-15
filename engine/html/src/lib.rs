@@ -116,6 +116,18 @@ impl Node {
     }
 }
 
+/// A parsed normal HTML document and the compatibility mode selected by its preamble.
+///
+/// The mode is parser metadata. The current CSS and layout prototypes do not yet
+/// implement the rendering differences associated with quirks or limited-quirks mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParsedDocument {
+    /// The existing HARI document tree.
+    pub root: Node,
+    /// The mode selected by the first eligible DOCTYPE, or quirks when it is missing.
+    pub mode: DoctypeMode,
+}
+
 #[derive(Debug)]
 struct TempNode {
     kind: NodeKind,
@@ -135,13 +147,22 @@ impl TempNode {
 
 /// Parses a UTF-8 HTML byte sequence into a simple tree.
 ///
-/// This parser is intentionally conservative in scope: it supports element nesting,
-/// end-tag unwinding, comments, doctypes, quoted/unquoted/boolean attributes, void
-/// elements, script/style/iframe raw text, plaintext through end-of-file,
-/// title/textarea RCDATA, and a limited character-reference subset. It performs no
-/// JavaScript execution or networking. Callers must not treat successful parsing as a
-/// content-safety verdict.
+/// This compatibility wrapper preserves the original tree-only API. Call
+/// parse_document_with_mode when the caller also needs the selected document mode.
 pub fn parse_document(bytes: &[u8], limits: &HtmlLimits) -> Result<Node, ParseError> {
+    Ok(parse_document_with_mode(bytes, limits)?.root)
+}
+
+/// Parses a normal HTML document and returns its tree plus selected compatibility mode.
+///
+/// The initial insertion mode accepts only the first DOCTYPE before any non-whitespace
+/// character, start tag, or end tag. Leading comments and HTML whitespace do not end
+/// that mode. A missing DOCTYPE selects quirks mode. This API does not implement
+/// iframe srcdoc parsing or apply quirks-specific CSS/layout behavior.
+pub fn parse_document_with_mode(
+    bytes: &[u8],
+    limits: &HtmlLimits,
+) -> Result<ParsedDocument, ParseError> {
     // Callers may tighten these limits but cannot raise the absolute safety ceilings.
     let effective_limits = HtmlLimits {
         max_document_bytes: limits.max_document_bytes.min(HARD_MAX_DOCUMENT_BYTES),
@@ -162,7 +183,9 @@ pub fn parse_document(bytes: &[u8], limits: &HtmlLimits) -> Result<Node, ParseEr
 
     let mut parser = Parser::new(source, &effective_limits);
     parser.parse()?;
-    Ok(materialize(0, &parser.nodes))
+    let mode = parser.document_mode.unwrap_or(DoctypeMode::Quirks);
+    let root = materialize(0, &parser.nodes);
+    Ok(ParsedDocument { root, mode })
 }
 
 struct Parser<'a> {
@@ -173,6 +196,9 @@ struct Parser<'a> {
     nodes: Vec<TempNode>,
     open_elements: Vec<usize>,
     ignore_next_lf: bool,
+    initial_insertion_mode: bool,
+    before_html_mode: bool,
+    document_mode: Option<DoctypeMode>,
 }
 
 impl<'a> Parser<'a> {
@@ -192,6 +218,9 @@ impl<'a> Parser<'a> {
             nodes: vec![TempNode::new(NodeKind::Document, Vec::new())],
             open_elements: vec![0],
             ignore_next_lf: false,
+            initial_insertion_mode: true,
+            before_html_mode: false,
+            document_mode: None,
         }
     }
 
@@ -213,14 +242,31 @@ impl<'a> Parser<'a> {
             } else if self.starts_bogus_comment(self.position) {
                 self.parse_bogus_comment()?;
             } else if self.is_end_tag_start(self.position) {
+                self.leave_document_preamble();
                 self.parse_end_tag();
             } else if self.is_start_tag_start(self.position) {
+                self.leave_document_preamble();
                 self.parse_start_tag()?;
             } else {
                 self.parse_text(ignore_initial_lf)?;
             }
         }
+
+        // EOF in the initial insertion mode without a DOCTYPE selects quirks mode.
+        if self.initial_insertion_mode {
+            self.document_mode = Some(DoctypeMode::Quirks);
+            self.initial_insertion_mode = false;
+        }
         Ok(())
+    }
+
+    /// Leaves the initial/before-html preamble when a non-whitespace token arrives.
+    fn leave_document_preamble(&mut self) {
+        if self.initial_insertion_mode {
+            self.document_mode = Some(DoctypeMode::Quirks);
+            self.initial_insertion_mode = false;
+        }
+        self.before_html_mode = false;
     }
 
     fn current_raw_text_element(&self) -> Option<&'static str> {
@@ -359,7 +405,16 @@ impl<'a> Parser<'a> {
         };
 
         self.position = if end < self.bytes.len() { end + 1 } else { end };
-        self.add_node(NodeKind::Doctype(value), Vec::new())?;
+
+        // Only a DOCTYPE token received in the initial insertion mode is retained
+        // and allowed to select the document's compatibility mode. Later doctypes
+        // are parse errors and are ignored by the HTML tree builder.
+        if self.initial_insertion_mode {
+            self.document_mode = Some(DoctypeInfo::from_raw(&value).compatibility_mode());
+            self.initial_insertion_mode = false;
+            self.before_html_mode = true;
+            self.add_node(NodeKind::Doctype(value), Vec::new())?;
+        }
         Ok(())
     }
 
@@ -992,6 +1047,23 @@ impl<'a> Parser<'a> {
         if !skipped_cr_line_ending {
             suppress_initial_lf_character(&mut value, ignore_initial_lf);
         }
+
+        // Initial and before-html insertion modes ignore ASCII whitespace. A
+        // non-whitespace character ends the preamble; if no DOCTYPE was seen,
+        // that transition selects quirks mode.
+        if self.initial_insertion_mode || self.before_html_mode {
+            let first_non_whitespace = value
+                .char_indices()
+                .find(|(_, character)| !matches!(*character, '\t' | '\n' | '\x0C' | '\r' | ' '))
+                .map(|(index, _)| index);
+            if let Some(index) = first_non_whitespace {
+                self.leave_document_preamble();
+                value = value[index..].to_owned();
+            } else {
+                value.clear();
+            }
+        }
+
         self.position = end;
         if !value.is_empty() {
             self.add_node(NodeKind::Text(value), Vec::new())?;
