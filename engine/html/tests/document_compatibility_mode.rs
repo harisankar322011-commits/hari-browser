@@ -103,10 +103,12 @@ fn start_tag_before_doctype_sets_quirks_and_ignores_late_doctype() {
         &parsed.root.children[0].kind,
         NodeKind::Element { tag_name } if tag_name == "html"
     ));
-    assert!(parsed.root.children[0]
-        .children
-        .iter()
-        .all(|node| !matches!(&node.kind, NodeKind::Doctype(_))));
+    assert!(
+        parsed.root.children[0]
+            .children
+            .iter()
+            .all(|node| !matches!(&node.kind, NodeKind::Doctype(_)))
+    );
 }
 
 #[test]
