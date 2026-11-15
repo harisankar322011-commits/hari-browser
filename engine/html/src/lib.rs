@@ -1054,9 +1054,7 @@ impl<'a> Parser<'a> {
         if self.initial_insertion_mode || self.before_html_mode {
             let first_non_whitespace = value
                 .char_indices()
-                .find(|(_, character)| {
-                    !matches!(*character, '\t' | '\n' | '\x0C' | '\r' | ' ')
-                })
+                .find(|(_, character)| !matches!(*character, '\t' | '\n' | '\x0C' | '\r' | ' '))
                 .map(|(index, _)| index);
             if let Some(index) = first_non_whitespace {
                 self.leave_document_preamble();
