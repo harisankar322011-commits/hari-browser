@@ -1,8 +1,10 @@
 //! HARI DOM — an isolated, arena-backed tree model.
 //! This is a small project-specific DOM foundation, not a standards-compliant browser DOM.
 
+use hari_engine_html::{
+    Attribute, HtmlLimits, Node as HtmlNode, ParseError, parse_document_with_mode,
+};
 pub use hari_engine_html::{DoctypeMode, NodeKind};
-use hari_engine_html::{Attribute, HtmlLimits, Node as HtmlNode, ParseError, parse_document_with_mode};
 
 const HARD_MAX_NODES: usize = 100_000;
 const HARD_MAX_DEPTH: usize = 512;
@@ -137,8 +139,8 @@ impl DomDocument {
 
     /// Imports a parsed HTML document and preserves its selected compatibility mode.
     pub fn from_html(bytes: &[u8], limits: &DomLimits) -> Result<Self, DomError> {
-        let parsed = parse_document_with_mode(bytes, &HtmlLimits::default())
-            .map_err(DomError::Html)?;
+        let parsed =
+            parse_document_with_mode(bytes, &HtmlLimits::default()).map_err(DomError::Html)?;
         let mut document = Self::new(*limits);
         document.compatibility_mode = parsed.mode;
         for child in &parsed.root.children {
@@ -402,7 +404,7 @@ impl DomDocument {
 
 #[cfg(test)]
 mod tests {
-    use super::{DocumentState, DoctypeMode, DomDocument, DomError, DomLimits, NodeId};
+    use super::{DoctypeMode, DocumentState, DomDocument, DomError, DomLimits, NodeId};
     use hari_engine_html::NodeKind;
 
     fn child_tag(document: &DomDocument, parent: NodeId, expected: &str) -> NodeId {
@@ -587,7 +589,10 @@ mod tests {
                 DoctypeMode::LimitedQuirks,
             ),
             (b"<p>missing doctype</p>", DoctypeMode::Quirks),
-            (b"<!DOCTYPE html PUBLIC><p>malformed doctype</p>", DoctypeMode::Quirks),
+            (
+                b"<!DOCTYPE html PUBLIC><p>malformed doctype</p>",
+                DoctypeMode::Quirks,
+            ),
         ];
 
         for (source, expected) in cases {
@@ -599,12 +604,11 @@ mod tests {
 
     #[test]
     fn document_compatibility_mode_survives_dom_lifecycle_changes() {
-        let mut document = DomDocument::from_html(b"<p>no doctype</p>", &DomLimits::default())
-            .unwrap();
+        let mut document =
+            DomDocument::from_html(b"<p>no doctype</p>", &DomLimits::default()).unwrap();
         assert_eq!(document.compatibility_mode(), DoctypeMode::Quirks);
 
         document.close().unwrap();
         assert_eq!(document.compatibility_mode(), DoctypeMode::Quirks);
     }
-
 }

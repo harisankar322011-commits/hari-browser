@@ -6,7 +6,9 @@
 //! bounded selector subset supports type, universal, class, ID, compound,
 //! descendant, and child selectors, but not sibling combinators, attribute selectors, or pseudo-classes.
 
-use hari_engine_dom::{DoctypeMode, DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind};
+use hari_engine_dom::{
+    DoctypeMode, DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind,
+};
 
 const HARD_MAX_LAYOUT_BOXES: usize = 100_000;
 const HARD_MAX_CSS_BYTES: usize = 256 * 1024;
@@ -1393,5 +1395,4 @@ mod tests {
             assert_eq!(result.root, legacy_layout);
         }
     }
-
 }
