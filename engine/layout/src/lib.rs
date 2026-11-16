@@ -629,7 +629,10 @@ pub fn compute_layout_with_mode(
 ) -> Result<LayoutResult, LayoutError> {
     let document_mode = document.compatibility_mode();
     let root = compute_layout(document, stylesheet, options)?;
-    Ok(LayoutResult { root, document_mode })
+    Ok(LayoutResult {
+        root,
+        document_mode,
+    })
 }
 
 /// Computes basic vertical-flow boxes for a ready HARI DOM tree.
