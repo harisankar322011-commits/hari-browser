@@ -6,7 +6,9 @@
 //! bounded selector subset supports type, universal, class, ID, compound,
 //! descendant, and child selectors, but not sibling combinators, attribute selectors, or pseudo-classes.
 
-use hari_engine_dom::{DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind};
+use hari_engine_dom::{
+    DoctypeMode, DocumentState, DomDocument, DomError, DomNode, NodeId, NodeKind,
+};
 
 const HARD_MAX_LAYOUT_BOXES: usize = 100_000;
 const HARD_MAX_CSS_BYTES: usize = 256 * 1024;
@@ -74,6 +76,16 @@ pub struct LayoutBox {
     pub background_color: Option<[u8; 4]>,
     pub children: Vec<LayoutBox>,
     flow_advance: u32,
+}
+
+/// A computed layout tree paired with the document mode selected by the HTML parser.
+///
+/// The mode is exposed for downstream rendering policy. The current layout prototype
+/// does not yet apply quirks-specific CSS or box-model behavior.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LayoutResult {
+    pub root: LayoutBox,
+    pub document_mode: DoctypeMode,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -607,6 +619,22 @@ fn parse_px(value: &str) -> Result<u32, CssError> {
     Ok(parsed)
 }
 
+/// Computes a layout tree and preserves the DOM document's compatibility mode.
+///
+/// This is metadata propagation only; it does not yet change CSS cascade or geometry.
+pub fn compute_layout_with_mode(
+    document: &DomDocument,
+    stylesheet: &StyleSheet,
+    options: &LayoutOptions,
+) -> Result<LayoutResult, LayoutError> {
+    let document_mode = document.compatibility_mode();
+    let root = compute_layout(document, stylesheet, options)?;
+    Ok(LayoutResult {
+        root,
+        document_mode,
+    })
+}
+
 /// Computes basic vertical-flow boxes for a ready HARI DOM tree.
 pub fn compute_layout(
     document: &DomDocument,
@@ -903,9 +931,9 @@ mod tests {
     use super::{
         BoxKind, CssError, Display, HARD_MAX_CSS_SELECTOR_IDENTIFIER_BYTES,
         HARD_MAX_CSS_SELECTOR_PARTS, LayoutError, LayoutOptions, Rect, Selector, StyleSheet,
-        compute_layout,
+        compute_layout, compute_layout_with_mode,
     };
-    use hari_engine_dom::{DomDocument, DomLimits, NodeId};
+    use hari_engine_dom::{DoctypeMode, DomDocument, DomLimits, NodeId};
 
     fn fixture() -> DomDocument {
         DomDocument::from_html(
@@ -1345,5 +1373,29 @@ mod tests {
         assert_eq!(layout.node_id, NodeId(0));
         assert!(matches!(layout.kind, BoxKind::Document));
         assert!(matches!(layout.display, Display::Block));
+    }
+
+    #[test]
+    fn layout_result_preserves_document_mode_without_changing_existing_geometry() {
+        let cases: [(&[u8], DoctypeMode); 3] = [
+            (b"<!doctype html><p>standards</p>", DoctypeMode::NoQuirks),
+            (
+                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><p>limited</p>",
+                DoctypeMode::LimitedQuirks,
+            ),
+            (b"<p>missing doctype</p>", DoctypeMode::Quirks),
+        ];
+
+        let stylesheet = StyleSheet::parse("p { width: 120px; margin: 4px; }").unwrap();
+        let options = LayoutOptions::default();
+
+        for (source, expected_mode) in cases {
+            let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
+            let legacy_layout = compute_layout(&document, &stylesheet, &options).unwrap();
+            let result = compute_layout_with_mode(&document, &stylesheet, &options).unwrap();
+
+            assert_eq!(result.document_mode, expected_mode);
+            assert_eq!(result.root, legacy_layout);
+        }
     }
 }

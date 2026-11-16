@@ -1,8 +1,10 @@
 //! HARI DOM — an isolated, arena-backed tree model.
 //! This is a small project-specific DOM foundation, not a standards-compliant browser DOM.
 
-pub use hari_engine_html::NodeKind;
-use hari_engine_html::{Attribute, HtmlLimits, Node as HtmlNode, ParseError, parse_document};
+use hari_engine_html::{
+    Attribute, HtmlLimits, Node as HtmlNode, ParseError, parse_document_with_mode,
+};
+pub use hari_engine_html::{DoctypeMode, NodeKind};
 
 const HARD_MAX_NODES: usize = 100_000;
 const HARD_MAX_DEPTH: usize = 512;
@@ -113,6 +115,7 @@ pub struct DomDocument {
     nodes: Vec<DomNode>,
     limits: DomLimits,
     state: DocumentState,
+    compatibility_mode: DoctypeMode,
 }
 
 impl DomDocument {
@@ -130,13 +133,17 @@ impl DomDocument {
             }],
             limits,
             state: DocumentState::Building,
+            compatibility_mode: DoctypeMode::NoQuirks,
         }
     }
 
+    /// Imports a parsed HTML document and preserves its selected compatibility mode.
     pub fn from_html(bytes: &[u8], limits: &DomLimits) -> Result<Self, DomError> {
-        let parsed = parse_document(bytes, &HtmlLimits::default()).map_err(DomError::Html)?;
+        let parsed =
+            parse_document_with_mode(bytes, &HtmlLimits::default()).map_err(DomError::Html)?;
         let mut document = Self::new(*limits);
-        for child in &parsed.children {
+        document.compatibility_mode = parsed.mode;
+        for child in &parsed.root.children {
             document.import_subtree(child, document.root())?;
         }
         document.finish_loading()?;
@@ -151,6 +158,12 @@ impl DomDocument {
     }
     pub fn limits(&self) -> DomLimits {
         self.limits
+    }
+
+    /// Returns the compatibility mode selected while parsing this document.
+    /// Manually constructed documents default to no-quirks mode.
+    pub fn compatibility_mode(&self) -> DoctypeMode {
+        self.compatibility_mode
     }
 
     pub fn node(&self, id: NodeId) -> Result<&DomNode, DomError> {
@@ -391,7 +404,7 @@ impl DomDocument {
 
 #[cfg(test)]
 mod tests {
-    use super::{DocumentState, DomDocument, DomError, DomLimits, NodeId};
+    use super::{DoctypeMode, DocumentState, DomDocument, DomError, DomLimits, NodeId};
     use hari_engine_html::NodeKind;
 
     fn child_tag(document: &DomDocument, parent: NodeId, expected: &str) -> NodeId {
@@ -559,5 +572,43 @@ mod tests {
             document.create_element("not>valid"),
             Err(DomError::InvalidName)
         );
+    }
+
+    #[test]
+    fn manually_constructed_documents_default_to_no_quirks_mode() {
+        let document = DomDocument::new(DomLimits::default());
+        assert_eq!(document.compatibility_mode(), DoctypeMode::NoQuirks);
+    }
+
+    #[test]
+    fn from_html_preserves_all_selected_document_compatibility_modes() {
+        let cases: [(&[u8], DoctypeMode); 4] = [
+            (b"<!doctype html><p>standards</p>", DoctypeMode::NoQuirks),
+            (
+                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><p>limited</p>",
+                DoctypeMode::LimitedQuirks,
+            ),
+            (b"<p>missing doctype</p>", DoctypeMode::Quirks),
+            (
+                b"<!DOCTYPE html PUBLIC><p>malformed doctype</p>",
+                DoctypeMode::Quirks,
+            ),
+        ];
+
+        for (source, expected) in cases {
+            let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
+            assert_eq!(document.compatibility_mode(), expected);
+            document.validate_invariants().unwrap();
+        }
+    }
+
+    #[test]
+    fn document_compatibility_mode_survives_dom_lifecycle_changes() {
+        let mut document =
+            DomDocument::from_html(b"<p>no doctype</p>", &DomLimits::default()).unwrap();
+        assert_eq!(document.compatibility_mode(), DoctypeMode::Quirks);
+
+        document.close().unwrap();
+        assert_eq!(document.compatibility_mode(), DoctypeMode::Quirks);
     }
 }
