@@ -1399,7 +1399,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn id_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
         let cases: [(&[u8], DoctypeMode, bool); 3] = [
