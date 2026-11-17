@@ -196,7 +196,7 @@ impl CompoundSelector {
         })
     }
 
-    fn matches(&self, tag_name: &str, node: &DomNode) -> bool {
+    fn matches(&self, tag_name: &str, node: &DomNode, quirks_mode: bool) -> bool {
         if self
             .tag_name
             .as_deref()
@@ -205,19 +205,29 @@ impl CompoundSelector {
             return false;
         }
 
-        if self
-            .id
-            .as_deref()
-            .is_some_and(|expected| node.attribute("id") != Some(expected))
-        {
-            return false;
+        if let Some(expected) = self.id.as_deref() {
+            let Some(actual) = node.attribute("id") else {
+                return false;
+            };
+            let matches = if quirks_mode {
+                expected.eq_ignore_ascii_case(actual)
+            } else {
+                expected == actual
+            };
+            if !matches {
+                return false;
+            }
         }
 
         let class_attribute = node.attribute("class").unwrap_or_default();
         self.classes.iter().all(|expected| {
-            class_attribute
-                .split_ascii_whitespace()
-                .any(|actual| actual == expected)
+            class_attribute.split_ascii_whitespace().any(|actual| {
+                if quirks_mode {
+                    actual.eq_ignore_ascii_case(expected)
+                } else {
+                    actual == expected
+                }
+            })
         })
     }
 
@@ -316,17 +326,24 @@ impl Selector {
     }
 
     fn matches(&self, document: &DomDocument, node_id: NodeId) -> bool {
-        self.matches_from(document, node_id, self.compounds.len() - 1)
+        let quirks_mode = document.compatibility_mode() == DoctypeMode::Quirks;
+        self.matches_from(document, node_id, self.compounds.len() - 1, quirks_mode)
     }
 
-    fn matches_from(&self, document: &DomDocument, node_id: NodeId, index: usize) -> bool {
+    fn matches_from(
+        &self,
+        document: &DomDocument,
+        node_id: NodeId,
+        index: usize,
+        quirks_mode: bool,
+    ) -> bool {
         let Ok(node) = document.node(node_id) else {
             return false;
         };
         let Some(tag_name) = node.tag_name() else {
             return false;
         };
-        if !self.compounds[index].matches(tag_name, node) {
+        if !self.compounds[index].matches(tag_name, node, quirks_mode) {
             return false;
         }
         if index == 0 {
@@ -335,12 +352,12 @@ impl Selector {
 
         let mut ancestor = node.parent();
         match self.combinators[index - 1] {
-            SelectorCombinator::Child => {
-                ancestor.is_some_and(|parent_id| self.matches_from(document, parent_id, index - 1))
-            }
+            SelectorCombinator::Child => ancestor.is_some_and(|parent_id| {
+                self.matches_from(document, parent_id, index - 1, quirks_mode)
+            }),
             SelectorCombinator::Descendant => {
                 while let Some(parent_id) = ancestor {
-                    if self.matches_from(document, parent_id, index - 1) {
+                    if self.matches_from(document, parent_id, index - 1, quirks_mode) {
                         return true;
                     }
                     ancestor = document
