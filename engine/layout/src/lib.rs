@@ -1399,21 +1399,22 @@ mod tests {
         }
     }
 
+
     #[test]
     fn id_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
         let cases: [(&[u8], DoctypeMode, bool); 3] = [
             (
-                b"<!doctype html><div id=\\"Hero\\"><p>target</p></div>",
+                b"<!doctype html><div id='Hero'><p>target</p></div>",
                 DoctypeMode::NoQuirks,
                 false,
             ),
             (
-                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><div id=\\"Hero\\"><p>target</p></div>",
+                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><div id='Hero'><p>target</p></div>",
                 DoctypeMode::LimitedQuirks,
                 false,
             ),
             (
-                b"<div id=\\"Hero\\"><p>target</p></div>",
+                b"<div id='Hero'><p>target</p></div>",
                 DoctypeMode::Quirks,
                 true,
             ),
@@ -1434,17 +1435,17 @@ mod tests {
     fn class_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
         let cases: [(&[u8], DoctypeMode, bool); 3] = [
             (
-                b"<!doctype html><p class=\\"featured NOTICE\\">target</p>",
+                b"<!doctype html><p class='featured NOTICE'>target</p>",
                 DoctypeMode::NoQuirks,
                 false,
             ),
             (
-                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><p class=\\"featured NOTICE\\">target</p>",
+                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><p class='featured NOTICE'>target</p>",
                 DoctypeMode::LimitedQuirks,
                 false,
             ),
             (
-                b"<p class=\\"featured NOTICE\\">target</p>",
+                b"<p class='featured NOTICE'>target</p>",
                 DoctypeMode::Quirks,
                 true,
             ),
@@ -1464,7 +1465,7 @@ mod tests {
     #[test]
     fn quirks_class_matching_still_requires_an_exact_ascii_whitespace_token() {
         let document = DomDocument::from_html(
-            b"<p class=\\"Noticeable\\">target</p>",
+            b"<p class='Noticeable'>target</p>",
             &DomLimits::default(),
         )
         .unwrap();
