@@ -1400,6 +1400,7 @@ mod tests {
     }
 
 
+
     #[test]
     fn id_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
         let cases: [(&[u8], DoctypeMode, bool); 3] = [
@@ -1427,7 +1428,10 @@ mod tests {
             let layout =
                 compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
             let expected_color = should_match.then_some([255, 0, 0, 255]);
-            assert_eq!(find_text(&layout, "target").unwrap().text_color, expected_color);
+            assert_eq!(
+                find_text(&layout, "target").unwrap().text_color,
+                expected_color
+            );
         }
     }
 
@@ -1455,20 +1459,20 @@ mod tests {
         for (source, expected_mode, should_match) in cases {
             let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
             assert_eq!(document.compatibility_mode(), expected_mode);
-            let layout =
-                compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+            let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
             let expected_color = should_match.then_some([0, 0, 255, 255]);
-            assert_eq!(find_text(&layout, "target").unwrap().text_color, expected_color);
+            assert_eq!(
+                find_text(&layout, "target").unwrap().text_color,
+                expected_color
+            );
         }
     }
 
     #[test]
     fn quirks_class_matching_still_requires_an_exact_ascii_whitespace_token() {
-        let document = DomDocument::from_html(
-            b"<p class='Noticeable'>target</p>",
-            &DomLimits::default(),
-        )
-        .unwrap();
+        let document =
+            DomDocument::from_html(b"<p class='Noticeable'>target</p>", &DomLimits::default())
+                .unwrap();
         assert_eq!(document.compatibility_mode(), DoctypeMode::Quirks);
 
         let stylesheet = StyleSheet::parse(".notice { color: green; }").unwrap();
@@ -1476,5 +1480,4 @@ mod tests {
 
         assert_eq!(find_text(&layout, "target").unwrap().text_color, None);
     }
-
 }
