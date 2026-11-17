@@ -196,7 +196,7 @@ impl CompoundSelector {
         })
     }
 
-    fn matches(&self, tag_name: &str, node: &DomNode) -> bool {
+    fn matches(&self, tag_name: &str, node: &DomNode, quirks_mode: bool) -> bool {
         if self
             .tag_name
             .as_deref()
@@ -205,19 +205,29 @@ impl CompoundSelector {
             return false;
         }
 
-        if self
-            .id
-            .as_deref()
-            .is_some_and(|expected| node.attribute("id") != Some(expected))
-        {
-            return false;
+        if let Some(expected) = self.id.as_deref() {
+            let Some(actual) = node.attribute("id") else {
+                return false;
+            };
+            let matches = if quirks_mode {
+                expected.eq_ignore_ascii_case(actual)
+            } else {
+                expected == actual
+            };
+            if !matches {
+                return false;
+            }
         }
 
         let class_attribute = node.attribute("class").unwrap_or_default();
         self.classes.iter().all(|expected| {
-            class_attribute
-                .split_ascii_whitespace()
-                .any(|actual| actual == expected)
+            class_attribute.split_ascii_whitespace().any(|actual| {
+                if quirks_mode {
+                    actual.eq_ignore_ascii_case(expected)
+                } else {
+                    actual == expected
+                }
+            })
         })
     }
 
@@ -316,17 +326,24 @@ impl Selector {
     }
 
     fn matches(&self, document: &DomDocument, node_id: NodeId) -> bool {
-        self.matches_from(document, node_id, self.compounds.len() - 1)
+        let quirks_mode = document.compatibility_mode() == DoctypeMode::Quirks;
+        self.matches_from(document, node_id, self.compounds.len() - 1, quirks_mode)
     }
 
-    fn matches_from(&self, document: &DomDocument, node_id: NodeId, index: usize) -> bool {
+    fn matches_from(
+        &self,
+        document: &DomDocument,
+        node_id: NodeId,
+        index: usize,
+        quirks_mode: bool,
+    ) -> bool {
         let Ok(node) = document.node(node_id) else {
             return false;
         };
         let Some(tag_name) = node.tag_name() else {
             return false;
         };
-        if !self.compounds[index].matches(tag_name, node) {
+        if !self.compounds[index].matches(tag_name, node, quirks_mode) {
             return false;
         }
         if index == 0 {
@@ -335,12 +352,12 @@ impl Selector {
 
         let mut ancestor = node.parent();
         match self.combinators[index - 1] {
-            SelectorCombinator::Child => {
-                ancestor.is_some_and(|parent_id| self.matches_from(document, parent_id, index - 1))
-            }
+            SelectorCombinator::Child => ancestor.is_some_and(|parent_id| {
+                self.matches_from(document, parent_id, index - 1, quirks_mode)
+            }),
             SelectorCombinator::Descendant => {
                 while let Some(parent_id) = ancestor {
-                    if self.matches_from(document, parent_id, index - 1) {
+                    if self.matches_from(document, parent_id, index - 1, quirks_mode) {
                         return true;
                     }
                     ancestor = document
@@ -1396,6 +1413,113 @@ mod tests {
 
             assert_eq!(result.document_mode, expected_mode);
             assert_eq!(result.root, legacy_layout);
+        }
+    }
+
+    #[test]
+    fn id_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
+        let cases: [(&[u8], DoctypeMode, bool); 3] = [
+            (
+                b"<!doctype html><div id='Hero'><p>target</p></div>",
+                DoctypeMode::NoQuirks,
+                false,
+            ),
+            (
+                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><div id='Hero'><p>target</p></div>",
+                DoctypeMode::LimitedQuirks,
+                false,
+            ),
+            (
+                b"<div id='Hero'><p>target</p></div>",
+                DoctypeMode::Quirks,
+                true,
+            ),
+        ];
+        let stylesheet = StyleSheet::parse("#hero { color: red; }").unwrap();
+
+        for (source, expected_mode, should_match) in cases {
+            let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
+            assert_eq!(document.compatibility_mode(), expected_mode);
+            let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+            let expected_color = should_match.then_some([255, 0, 0, 255]);
+            assert_eq!(
+                find_text(&layout, "target").unwrap().text_color,
+                expected_color
+            );
+        }
+    }
+
+    #[test]
+    fn class_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
+        let cases: [(&[u8], DoctypeMode, bool); 3] = [
+            (
+                b"<!doctype html><p class='featured NOTICE'>target</p>",
+                DoctypeMode::NoQuirks,
+                false,
+            ),
+            (
+                b"<!doctype html PUBLIC '-//W3C//DTD XHTML 1.0 Transitional//EN'><p class='featured NOTICE'>target</p>",
+                DoctypeMode::LimitedQuirks,
+                false,
+            ),
+            (
+                b"<p class='featured NOTICE'>target</p>",
+                DoctypeMode::Quirks,
+                true,
+            ),
+        ];
+        let stylesheet = StyleSheet::parse(".notice { color: blue; }").unwrap();
+
+        for (source, expected_mode, should_match) in cases {
+            let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
+            assert_eq!(document.compatibility_mode(), expected_mode);
+            let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+            let expected_color = should_match.then_some([0, 0, 255, 255]);
+            assert_eq!(
+                find_text(&layout, "target").unwrap().text_color,
+                expected_color
+            );
+        }
+    }
+
+    #[test]
+    fn quirks_class_matching_still_requires_an_exact_ascii_whitespace_token() {
+        let document =
+            DomDocument::from_html(b"<p class='Noticeable'>target</p>", &DomLimits::default())
+                .unwrap();
+        assert_eq!(document.compatibility_mode(), DoctypeMode::Quirks);
+
+        let stylesheet = StyleSheet::parse(".notice { color: green; }").unwrap();
+        let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+
+        assert_eq!(find_text(&layout, "target").unwrap().text_color, None);
+    }
+
+    #[test]
+    fn quirks_mode_case_insensitivity_is_preserved_across_descendant_chains() {
+        let cases: [(&[u8], DoctypeMode, bool); 2] = [
+            (
+                b"<!doctype html><main id='Hero'><p class='NOTICE'>target</p></main>",
+                DoctypeMode::NoQuirks,
+                false,
+            ),
+            (
+                b"<main id='Hero'><p class='NOTICE'>target</p></main>",
+                DoctypeMode::Quirks,
+                true,
+            ),
+        ];
+        let stylesheet = StyleSheet::parse("main#hero .notice { color: purple; }").unwrap();
+
+        for (source, expected_mode, should_match) in cases {
+            let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
+            assert_eq!(document.compatibility_mode(), expected_mode);
+            let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+            let expected_color = should_match.then_some([128, 0, 128, 255]);
+            assert_eq!(
+                find_text(&layout, "target").unwrap().text_color,
+                expected_color
+            );
         }
     }
 }
