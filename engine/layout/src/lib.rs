@@ -1494,4 +1494,32 @@ mod tests {
 
         assert_eq!(find_text(&layout, "target").unwrap().text_color, None);
     }
+
+    #[test]
+    fn quirks_mode_case_insensitivity_is_preserved_across_descendant_chains() {
+        let cases: [(&[u8], DoctypeMode, bool); 2] = [
+            (
+                b"<!doctype html><main id='Hero'><p class='NOTICE'>target</p></main>",
+                DoctypeMode::NoQuirks,
+                false,
+            ),
+            (
+                b"<main id='Hero'><p class='NOTICE'>target</p></main>",
+                DoctypeMode::Quirks,
+                true,
+            ),
+        ];
+        let stylesheet = StyleSheet::parse("main#hero .notice { color: purple; }").unwrap();
+
+        for (source, expected_mode, should_match) in cases {
+            let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
+            assert_eq!(document.compatibility_mode(), expected_mode);
+            let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+            let expected_color = should_match.then_some([128, 0, 128, 255]);
+            assert_eq!(
+                find_text(&layout, "target").unwrap().text_color,
+                expected_color
+            );
+        }
+    }
 }
