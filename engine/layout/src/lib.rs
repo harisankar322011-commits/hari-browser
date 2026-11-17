@@ -1400,7 +1400,6 @@ mod tests {
     }
 
 
-
     #[test]
     fn id_selectors_are_ascii_case_insensitive_only_in_quirks_mode() {
         let cases: [(&[u8], DoctypeMode, bool); 3] = [
@@ -1425,8 +1424,7 @@ mod tests {
         for (source, expected_mode, should_match) in cases {
             let document = DomDocument::from_html(source, &DomLimits::default()).unwrap();
             assert_eq!(document.compatibility_mode(), expected_mode);
-            let layout =
-                compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
+            let layout = compute_layout(&document, &stylesheet, &LayoutOptions::default()).unwrap();
             let expected_color = should_match.then_some([255, 0, 0, 255]);
             assert_eq!(
                 find_text(&layout, "target").unwrap().text_color,
